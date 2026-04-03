@@ -11,18 +11,14 @@ import { AppHeader } from "@/components/app-header";
 import Dashboard from "@/pages/dashboard";
 import ProjectView from "@/pages/project-view";
 import TemplateLibrary from "@/pages/template-library";
+import VendorEvaluation from "@/pages/vendor-evaluation";
+import StakeholderFeedback from "@/pages/stakeholder-feedback";
+import CompliancePage from "@/pages/compliance";
+import GoLivePage from "@/pages/go-live";
+import HealthCheckPage from "@/pages/health-check";
 import NotFound from "@/pages/not-found";
-
-function AppRouter() {
-  return (
-    <Switch>
-      <Route path="/" component={Dashboard} />
-      <Route path="/projects/:id" component={ProjectView} />
-      <Route path="/templates" component={TemplateLibrary} />
-      <Route component={NotFound} />
-    </Switch>
-  );
-}
+import WorkshopView from "@/pages/workshop";
+import Portfolio from "@/pages/portfolio";
 
 const sidebarStyle = {
   "--sidebar-width": "18rem",
@@ -37,7 +33,18 @@ function AppLayout() {
         <div className="flex flex-col flex-1 min-w-0">
           <AppHeader />
           <main className="flex-1 overflow-y-auto overscroll-contain">
-            <AppRouter />
+            <Switch>
+              <Route path="/" component={Dashboard} />
+              <Route path="/portfolio" component={Portfolio} />
+              <Route path="/projects/:id/evaluation" component={VendorEvaluation} />
+              <Route path="/projects/:id/stakeholder-feedback" component={StakeholderFeedback} />
+              <Route path="/projects/:id/compliance" component={CompliancePage} />
+              <Route path="/projects/:id/go-live" component={GoLivePage} />
+              <Route path="/projects/:id/health-check" component={HealthCheckPage} />
+              <Route path="/projects/:id" component={ProjectView} />
+              <Route path="/templates" component={TemplateLibrary} />
+              <Route component={NotFound} />
+            </Switch>
           </main>
         </div>
       </div>
@@ -51,7 +58,10 @@ function App() {
       <ThemeProvider>
         <TooltipProvider>
           <Router hook={useHashLocation}>
-            <AppLayout />
+            <Switch>
+              <Route path="/workshop/:token" component={WorkshopView} />
+              <Route component={AppLayout} />
+            </Switch>
           </Router>
           <Toaster />
         </TooltipProvider>

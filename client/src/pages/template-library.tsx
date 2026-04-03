@@ -1,7 +1,10 @@
 import { useState, useMemo } from "react";
-import { templateRequirements, CATEGORIES, MODULE_PREFIXES } from "@shared/templates";
+import { useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { MODULE_PREFIXES } from "@shared/templates";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Table,
@@ -11,14 +14,77 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, BookTemplate, ChevronRight } from "lucide-react";
+import { Search, BookTemplate } from "lucide-react";
+
+interface TemplateItem {
+  category: string;
+  functionalArea: string;
+  prefix: string;
+  subCategory: string;
+  description: string;
+  criticality: string;
+}
+
+interface TemplateSummary {
+  categories: Record<string, string[]>;
+  prefixes: Record<string, string>;
+  summary: Record<string, Record<string, number>>;
+  totalCount: number;
+}
+
+interface TemplateData {
+  categories: Record<string, string[]>;
+  prefixes: Record<string, string>;
+  grouped: Record<string, Record<string, TemplateItem[]>>;
+}
 
 export default function TemplateLibrary() {
   const [selectedArea, setSelectedArea] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Lightweight summary for sidebar counts
+  const { data: summary } = useQuery<TemplateSummary>({
+    queryKey: ["/api/templates/summary"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/templates/summary");
+      return res.json();
+    },
+    staleTime: Infinity,
+  });
+
+  // Full template data (only fetched once, cached)
+  const { data: templateData, isLoading } = useQuery<TemplateData>({
+    queryKey: ["/api/templates"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/templates");
+      return res.json();
+    },
+    staleTime: Infinity,
+  });
+
+  const areaCounts = useMemo(() => {
+    if (!summary) return {};
+    const counts: Record<string, number> = {};
+    for (const modCounts of Object.values(summary.summary)) {
+      for (const [mod, count] of Object.entries(modCounts)) {
+        counts[mod] = count;
+      }
+    }
+    return counts;
+  }, [summary]);
+
+  const CATEGORIES = summary?.categories || {};
+  const totalCount = summary?.totalCount || 0;
+
+  // Flatten and filter templates
   const filteredTemplates = useMemo(() => {
-    let templates = templateRequirements;
+    if (!templateData) return [];
+    let templates: TemplateItem[] = [];
+    for (const areas of Object.values(templateData.grouped)) {
+      for (const items of Object.values(areas)) {
+        templates = templates.concat(items);
+      }
+    }
     if (selectedArea) {
       templates = templates.filter(t => t.functionalArea === selectedArea);
     }
@@ -31,16 +97,7 @@ export default function TemplateLibrary() {
       );
     }
     return templates;
-  }, [selectedArea, searchQuery]);
-
-  // Count templates per area
-  const areaCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-    for (const t of templateRequirements) {
-      counts[t.functionalArea] = (counts[t.functionalArea] || 0) + 1;
-    }
-    return counts;
-  }, []);
+  }, [templateData, selectedArea, searchQuery]);
 
   return (
     <div className="flex h-full" data-testid="page-template-library">
@@ -52,7 +109,7 @@ export default function TemplateLibrary() {
             Template Library
           </h2>
           <p className="text-[11px] text-muted-foreground mt-0.5">
-            {templateRequirements.length} pre-built requirements across {Object.keys(areaCounts).length} modules
+            {totalCount} pre-built requirements across {Object.keys(areaCounts).length} modules
           </p>
         </div>
         <ScrollArea className="flex-1">
@@ -63,7 +120,7 @@ export default function TemplateLibrary() {
                 !selectedArea ? "bg-primary text-primary-foreground dark:bg-accent dark:text-accent-foreground" : "text-muted-foreground hover:bg-muted"
               }`}
             >
-              All Templates ({templateRequirements.length})
+              All Templates ({totalCount})
             </button>
             {Object.entries(CATEGORIES).map(([cat, areas]) => (
               <div key={cat} className="mb-2">
@@ -112,7 +169,11 @@ export default function TemplateLibrary() {
         </div>
 
         <div className="flex-1 overflow-auto">
-          {filteredTemplates.length > 0 ? (
+          {isLoading ? (
+            <div className="p-4 space-y-2">
+              {[1,2,3,4,5].map(i => <Skeleton key={i} className="h-10 w-full" />)}
+            </div>
+          ) : filteredTemplates.length > 0 ? (
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/30">

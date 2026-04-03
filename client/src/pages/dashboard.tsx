@@ -25,6 +25,7 @@ import {
   AlertTriangle,
   Trash2,
   FolderOpen,
+  ArrowRight,
 } from "lucide-react";
 
 interface ProjectWithStats extends Project {
@@ -37,15 +38,32 @@ interface ProjectWithStats extends Project {
   };
 }
 
+const STATUS_LABELS: Record<string, string> = {
+  draft: "Draft",
+  requirements_review: "Requirements Review",
+  stakeholder_workshop: "Stakeholder Workshop",
+  vendor_evaluation: "Vendor Evaluation",
+  final_report: "Final Report",
+  complete: "Complete",
+  active: "Active",
+  finalized: "Finalized",
+};
+
 function statusBadge(status: string) {
   const map: Record<string, string> = {
-    draft: "bg-muted text-muted-foreground",
+    draft: "bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-800/30 dark:text-gray-400 dark:border-gray-700/30",
+    requirements_review: "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-700/30",
+    stakeholder_workshop: "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-[#d4a853] dark:border-amber-700/30",
+    vendor_evaluation: "bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:border-purple-700/30",
+    final_report: "bg-teal-100 text-teal-700 border-teal-200 dark:bg-teal-900/30 dark:text-teal-400 dark:border-teal-700/30",
+    complete: "bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-700/30",
     active: "bg-primary/10 text-primary dark:bg-accent/20 dark:text-accent",
     finalized: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
   };
+  const label = STATUS_LABELS[status] || status;
   return (
-    <Badge variant="outline" className={`text-[10px] font-semibold uppercase tracking-wide ${map[status] || ""}`}>
-      {status}
+    <Badge variant="outline" className={`text-[10px] font-semibold uppercase tracking-wide ${map[status] || "bg-muted text-muted-foreground"}`} data-testid={`badge-status-${status}`}>
+      {label}
     </Badge>
   );
 }
@@ -55,6 +73,7 @@ export default function Dashboard() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [newName, setNewName] = useState("");
   const [newDesc, setNewDesc] = useState("");
+  const [newModules, setNewModules] = useState<Record<string, boolean>>({ selection: true, ivv: false, health_check: false });
 
   const { data: projects, isLoading } = useQuery<ProjectWithStats[]>({
     queryKey: ["/api/projects"],
@@ -62,10 +81,12 @@ export default function Dashboard() {
 
   const createMutation = useMutation({
     mutationFn: async () => {
+      const modules = Object.entries(newModules).filter(([, v]) => v).map(([k]) => k);
       const res = await apiRequest("POST", "/api/projects", {
         name: newName,
         description: newDesc,
         status: "draft",
+        engagementModules: JSON.stringify(modules),
       });
       return res.json();
     },
@@ -74,6 +95,7 @@ export default function Dashboard() {
       setDialogOpen(false);
       setNewName("");
       setNewDesc("");
+      setNewModules({ selection: true, ivv: false, health_check: false });
       toast({ title: "Project created", description: "Your new project is ready." });
     },
     onError: (err: Error) => {
@@ -137,6 +159,27 @@ export default function Dashboard() {
                   data-testid="input-project-description"
                 />
               </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Engagement Modules</label>
+                <div className="space-y-2">
+                  {([
+                    { key: "selection", label: "Selection", desc: "Requirements, vendor evaluation, stakeholder feedback" },
+                    { key: "ivv", label: "IV&V Oversight", desc: "Contract compliance, checkpoints, deviations" },
+                    { key: "health_check", label: "Health Check & Rescue", desc: "RAID log, budget/schedule, assessments" },
+                  ] as const).map(mod => (
+                    <label key={mod.key} className="flex items-start gap-2.5 cursor-pointer">
+                      <input type="checkbox" className="mt-0.5 accent-[#d4a853]" checked={newModules[mod.key]}
+                        onChange={e => setNewModules(prev => ({ ...prev, [mod.key]: e.target.checked }))}
+                        data-testid={`module-${mod.key}`}
+                      />
+                      <div>
+                        <span className="text-sm font-medium">{mod.label}</span>
+                        <p className="text-xs text-muted-foreground">{mod.desc}</p>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
               <Button
                 onClick={() => createMutation.mutate()}
                 disabled={!newName.trim() || createMutation.isPending}
@@ -186,6 +229,14 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Portfolio Link */}
+      {projects && projects.length >= 2 && (
+        <Link href="/portfolio" className="inline-flex items-center gap-1.5 text-xs font-medium text-primary dark:text-accent hover:underline no-underline" data-testid="link-portfolio-insights">
+          View Portfolio Insights
+          <ArrowRight className="w-3.5 h-3.5" />
+        </Link>
+      )}
 
       {/* Project List */}
       {isLoading ? (

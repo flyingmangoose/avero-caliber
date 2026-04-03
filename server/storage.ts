@@ -1,10 +1,36 @@
 import {
   type Project, type InsertProject, projects,
   type Requirement, type InsertRequirement, requirements,
+  type Vendor, type InsertVendor, vendors,
+  type ProjectVendorSettings, type InsertProjectVendorSettings, projectVendorSettings,
+  type VendorRequirementScore, type InsertVendorRequirementScore, vendorRequirementScores,
+  type WorkshopLink, workshopLinks,
+  type WorkshopFeedback, workshopFeedback,
+  type CustomCriteria, customCriteria,
+  type CustomCriteriaScore, customCriteriaScores,
+  type ChatMessage, chatMessages,
+  type VendorIntelligence, vendorIntelligence,
+  type ContractBaseline, contractBaselines,
+  type ContractDeliverable, contractDeliverables,
+  type ComplianceEvidence, complianceEvidence,
+  type IvvCheckpoint, ivvCheckpoints,
+  type Deviation, deviations,
+  type PulseReport, pulseReports,
+  type CheckpointAssessment, checkpointAssessments,
+  type GoLiveScorecard, goLiveScorecard,
+  type IntegrationConnection, integrationConnections,
+  type SyncLog, syncLogs,
+  type HealthCheckAssessment, healthCheckAssessments,
+  type RaidItem, raidItems,
+  type BudgetTracking, budgetTracking,
+  type ScheduleTracking, scheduleTracking,
 } from "@shared/schema";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import Database from "better-sqlite3";
-import { eq, and, like, sql, desc } from "drizzle-orm";
+import { eq, and, like, sql, desc, inArray } from "drizzle-orm";
+import { vendorProfiles, defaultModuleWeights, getVendorModuleRating, generateVendorResponse } from "@shared/vendors";
+import { templateRequirements } from "@shared/templates";
+import { sampleRfpScores } from "@shared/portland-scores";
 
 const sqlite = new Database("data.db");
 sqlite.pragma("journal_mode = WAL");
@@ -34,9 +60,309 @@ sqlite.exec(`
     comments TEXT NOT NULL DEFAULT '',
     created_at TEXT NOT NULL
   );
+  CREATE TABLE IF NOT EXISTS vendors (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    short_name TEXT NOT NULL,
+    description TEXT NOT NULL,
+    market TEXT NOT NULL,
+    strengths TEXT NOT NULL,
+    weaknesses TEXT NOT NULL,
+    module_ratings TEXT NOT NULL,
+    color TEXT NOT NULL DEFAULT '#1a2744',
+    platform_type TEXT NOT NULL DEFAULT 'erp',
+    covered_modules TEXT NOT NULL DEFAULT '[]'
+  );
+  CREATE TABLE IF NOT EXISTS project_vendor_settings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    module_weights TEXT NOT NULL,
+    selected_vendors TEXT NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS vendor_requirement_scores (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    requirement_id INTEGER NOT NULL REFERENCES requirements(id) ON DELETE CASCADE,
+    vendor_id INTEGER NOT NULL REFERENCES vendors(id),
+    score TEXT NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS workshop_links (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    token TEXT NOT NULL UNIQUE,
+    stakeholder_name TEXT NOT NULL,
+    stakeholder_email TEXT NOT NULL DEFAULT '',
+    modules TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    expires_at TEXT,
+    is_active INTEGER NOT NULL DEFAULT 1
+  );
+  CREATE TABLE IF NOT EXISTS workshop_feedback (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    workshop_link_id INTEGER NOT NULL REFERENCES workshop_links(id) ON DELETE CASCADE,
+    requirement_id INTEGER NOT NULL REFERENCES requirements(id) ON DELETE CASCADE,
+    criticality TEXT,
+    comment TEXT NOT NULL DEFAULT '',
+    flagged_for_discussion INTEGER NOT NULL DEFAULT 0,
+    status TEXT NOT NULL DEFAULT 'pending',
+    updated_at TEXT NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS custom_criteria (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    weight INTEGER NOT NULL DEFAULT 5,
+    created_at TEXT NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS custom_criteria_scores (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    criteria_id INTEGER NOT NULL REFERENCES custom_criteria(id) ON DELETE CASCADE,
+    vendor_id INTEGER NOT NULL REFERENCES vendors(id),
+    score INTEGER NOT NULL,
+    notes TEXT NOT NULL DEFAULT ''
+  );
+  CREATE TABLE IF NOT EXISTS chat_messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    role TEXT NOT NULL,
+    content TEXT NOT NULL,
+    created_at TEXT NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS vendor_intelligence (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    vendor_id INTEGER NOT NULL REFERENCES vendors(id),
+    dimension TEXT NOT NULL,
+    score INTEGER,
+    summary TEXT,
+    evidence TEXT,
+    concerns TEXT,
+    source_document TEXT,
+    created_at TEXT NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS contract_baselines (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    vendor_id INTEGER,
+    contract_name TEXT NOT NULL,
+    contract_date TEXT,
+    total_value TEXT,
+    start_date TEXT,
+    end_date TEXT,
+    source_document TEXT,
+    notes TEXT,
+    created_at TEXT NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS contract_deliverables (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    baseline_id INTEGER NOT NULL REFERENCES contract_baselines(id) ON DELETE CASCADE,
+    category TEXT NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    due_date TEXT,
+    status TEXT NOT NULL DEFAULT 'not_started',
+    priority TEXT NOT NULL DEFAULT 'standard',
+    contract_reference TEXT,
+    notes TEXT,
+    completed_date TEXT,
+    external_id TEXT,
+    external_url TEXT,
+    created_at TEXT NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS compliance_evidence (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    deliverable_id INTEGER NOT NULL REFERENCES contract_deliverables(id) ON DELETE CASCADE,
+    type TEXT NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT,
+    file_name TEXT,
+    file_content TEXT,
+    assessment_result TEXT,
+    assessor_notes TEXT,
+    created_at TEXT NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS ivv_checkpoints (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    baseline_id INTEGER NOT NULL REFERENCES contract_baselines(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    phase TEXT NOT NULL,
+    scheduled_date TEXT,
+    completed_date TEXT,
+    status TEXT NOT NULL DEFAULT 'upcoming',
+    overall_assessment TEXT,
+    recommendations TEXT,
+    findings TEXT,
+    created_at TEXT NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS deviations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    baseline_id INTEGER NOT NULL REFERENCES contract_baselines(id) ON DELETE CASCADE,
+    deliverable_id INTEGER,
+    severity TEXT NOT NULL,
+    category TEXT NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL,
+    contract_reference TEXT,
+    actual_delivery TEXT,
+    impact TEXT,
+    status TEXT NOT NULL DEFAULT 'open',
+    resolution TEXT,
+    escalation_due TEXT,
+    escalation_status TEXT DEFAULT 'pending',
+    escalated_at TEXT,
+    created_at TEXT NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS integration_connections (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    contract_id INTEGER REFERENCES contract_baselines(id),
+    platform TEXT NOT NULL,
+    name TEXT NOT NULL,
+    config TEXT NOT NULL,
+    field_mapping TEXT,
+    status TEXT NOT NULL DEFAULT 'active',
+    last_sync_at TEXT,
+    last_sync_status TEXT,
+    last_sync_message TEXT,
+    sync_item_count INTEGER DEFAULT 0,
+    created_at TEXT NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS sync_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    connection_id INTEGER NOT NULL REFERENCES integration_connections(id) ON DELETE CASCADE,
+    status TEXT NOT NULL,
+    items_synced INTEGER DEFAULT 0,
+    items_created INTEGER DEFAULT 0,
+    items_updated INTEGER DEFAULT 0,
+    items_skipped INTEGER DEFAULT 0,
+    errors TEXT,
+    duration INTEGER,
+    created_at TEXT NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS pulse_reports (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    baseline_id INTEGER NOT NULL REFERENCES contract_baselines(id) ON DELETE CASCADE,
+    overall_posture TEXT NOT NULL,
+    posture_trend TEXT,
+    narrative TEXT NOT NULL,
+    risk_highlights TEXT,
+    milestone_status TEXT,
+    decision_items TEXT,
+    metrics TEXT,
+    week_ending TEXT NOT NULL,
+    created_at TEXT NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS checkpoint_assessments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    checkpoint_id INTEGER NOT NULL REFERENCES ivv_checkpoints(id) ON DELETE CASCADE,
+    dimension TEXT NOT NULL,
+    rating TEXT NOT NULL,
+    observation TEXT,
+    evidence TEXT,
+    recommendation TEXT,
+    created_at TEXT NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS go_live_scorecard (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    baseline_id INTEGER NOT NULL REFERENCES contract_baselines(id) ON DELETE CASCADE,
+    criteria TEXT NOT NULL,
+    overall_score INTEGER,
+    overall_readiness TEXT,
+    assessor_notes TEXT,
+    assessed_at TEXT NOT NULL,
+    created_at TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS health_check_assessments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    domain TEXT NOT NULL,
+    overall_rating TEXT,
+    findings TEXT,
+    summary TEXT,
+    assessed_by TEXT,
+    created_at TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS raid_items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    type TEXT NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT,
+    severity TEXT,
+    status TEXT DEFAULT 'open',
+    owner TEXT,
+    due_date TEXT,
+    resolution TEXT,
+    si_reported INTEGER DEFAULT 0,
+    si_discrepancy TEXT,
+    created_at TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS budget_tracking (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    category TEXT NOT NULL,
+    description TEXT NOT NULL,
+    amount INTEGER NOT NULL,
+    date TEXT,
+    notes TEXT,
+    created_at TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS schedule_tracking (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    milestone TEXT NOT NULL,
+    original_date TEXT,
+    current_date TEXT,
+    actual_date TEXT,
+    status TEXT DEFAULT 'on_track',
+    variance_days INTEGER,
+    notes TEXT,
+    created_at TEXT NOT NULL
+  );
 `);
+
 // Enable foreign keys
 sqlite.pragma("foreign_keys = ON");
+
+// Seed vendor data if not present
+function seedVendors() {
+  const existing = db.select().from(vendors).all();
+  if (existing.length > 0) return; // already seeded
+
+  for (const vp of vendorProfiles) {
+    db.insert(vendors).values({
+      name: vp.name,
+      shortName: vp.shortName,
+      description: vp.description,
+      market: vp.market,
+      strengths: JSON.stringify(vp.strengths),
+      weaknesses: JSON.stringify(vp.weaknesses),
+      moduleRatings: JSON.stringify(vp.moduleRatings),
+      color: vp.color,
+      platformType: vp.platformType,
+      coveredModules: JSON.stringify(vp.coveredModules),
+    }).run();
+  }
+}
+
+seedVendors();
+
+// Score conversion: S=5, F=4, C=3, T=2, N=0
+export function scoreToNumber(score: string): number {
+  switch (score) {
+    case "S": return 5;
+    case "F": return 4;
+    case "C": return 3;
+    case "T": return 2;
+    case "N": return 0;
+    default: return 0;
+  }
+}
 
 export interface IStorage {
   // Projects
@@ -67,6 +393,215 @@ export interface IStorage {
     moduleCoverage: number;
     responseStats: Record<string, number>;
   };
+
+  // Vendors
+  getVendors(): Vendor[];
+  getVendor(id: number): Vendor | undefined;
+  getVendorByShortName(shortName: string): Vendor | undefined;
+
+  // Project Vendor Settings
+  getProjectVendorSettings(projectId: number): ProjectVendorSettings | undefined;
+  upsertProjectVendorSettings(projectId: number, moduleWeights: Record<string, number>, selectedVendors: number[]): ProjectVendorSettings;
+
+  // Vendor Requirement Scores
+  getVendorScores(projectId: number, vendorId?: number): VendorRequirementScore[];
+  upsertVendorScore(projectId: number, requirementId: number, vendorId: number, score: string): VendorRequirementScore;
+  bulkUpsertVendorScores(scores: Array<{ projectId: number; requirementId: number; vendorId: number; score: string }>): void;
+  generateVendorScores(projectId: number): void;
+
+  // Evaluation calculation
+  calculateEvaluation(projectId: number): EvaluationResult;
+
+  // Load sample RFP data with real vendor responses
+  loadSampleRfpData(projectId: number): { requirementsCreated: number; scoresCreated: number };
+
+  // Workshop Links
+  createWorkshopLink(data: { projectId: number; stakeholderName: string; stakeholderEmail: string; modules: string[] }): WorkshopLink;
+  getWorkshopLinks(projectId: number): WorkshopLink[];
+  getWorkshopLinkByToken(token: string): WorkshopLink | undefined;
+  deactivateWorkshopLink(id: number): void;
+
+  // Workshop Feedback
+  getWorkshopFeedback(workshopLinkId: number): WorkshopFeedback[];
+  upsertWorkshopFeedback(workshopLinkId: number, requirementId: number, data: { criticality?: string; comment?: string; flaggedForDiscussion?: boolean; status?: string }): WorkshopFeedback;
+  getWorkshopSummary(projectId: number): WorkshopSummaryResult;
+
+  // Custom Criteria
+  getCustomCriteria(projectId: number): (CustomCriteria & { scores: CustomCriteriaScore[] })[];
+  createCustomCriterion(data: { projectId: number; name: string; description: string; weight: number }): CustomCriteria;
+  updateCustomCriterion(id: number, data: Partial<{ name: string; description: string; weight: number }>): CustomCriteria | undefined;
+  deleteCustomCriterion(id: number): void;
+  upsertCustomCriteriaScores(criteriaId: number, scores: Array<{ vendorId: number; score: number; notes: string }>): void;
+
+  // Chat Messages
+  addChatMessage(projectId: number, role: string, content: string): ChatMessage;
+  getChatMessages(projectId: number): ChatMessage[];
+  clearChatMessages(projectId: number): void;
+
+  // Vendor Intelligence
+  addVendorIntelligence(data: { projectId: number; vendorId: number; dimension: string; score: number | null; summary: string | null; evidence: string | null; concerns: string | null; sourceDocument: string | null }): VendorIntelligence;
+  getVendorIntelligence(projectId: number, vendorId?: number): VendorIntelligence[];
+  deleteVendorIntelligence(projectId: number, vendorId: number): void;
+  deleteVendorIntelligenceById(id: number): void;
+
+  // Contract Baselines
+  createContractBaseline(data: { projectId: number; vendorId?: number | null; contractName: string; contractDate?: string | null; totalValue?: string | null; startDate?: string | null; endDate?: string | null; sourceDocument?: string | null; notes?: string | null }): ContractBaseline;
+  getContractBaselines(projectId: number): ContractBaseline[];
+  getContractBaseline(id: number): ContractBaseline | undefined;
+  updateContractBaseline(id: number, data: Partial<{ vendorId: number | null; contractName: string; contractDate: string | null; totalValue: string | null; startDate: string | null; endDate: string | null; sourceDocument: string | null; notes: string | null }>): ContractBaseline | undefined;
+  deleteContractBaseline(id: number): void;
+
+  // Contract Deliverables
+  createDeliverable(data: { baselineId: number; category: string; name: string; description?: string | null; dueDate?: string | null; status?: string; priority?: string; contractReference?: string | null; notes?: string | null; externalId?: string | null; externalUrl?: string | null }): ContractDeliverable;
+  getDeliverables(baselineId: number): ContractDeliverable[];
+  updateDeliverable(id: number, data: Partial<{ category: string; name: string; description: string | null; dueDate: string | null; status: string; priority: string; contractReference: string | null; notes: string | null; completedDate: string | null; externalId: string | null; externalUrl: string | null }>): ContractDeliverable | undefined;
+  deleteDeliverable(id: number): void;
+  createDeliverablesBulk(items: Array<{ baselineId: number; category: string; name: string; description?: string | null; dueDate?: string | null; status?: string; priority?: string; contractReference?: string | null; notes?: string | null }>): ContractDeliverable[];
+
+  // Compliance Evidence
+  addEvidence(data: { deliverableId: number; type: string; title: string; description?: string | null; fileName?: string | null; fileContent?: string | null; assessmentResult?: string | null; assessorNotes?: string | null }): ComplianceEvidence;
+  getEvidence(deliverableId: number): ComplianceEvidence[];
+  deleteEvidence(id: number): void;
+
+  // IV&V Checkpoints
+  createCheckpoint(data: { baselineId: number; name: string; phase: string; scheduledDate?: string | null; status?: string; overallAssessment?: string | null; recommendations?: string | null; findings?: string | null }): IvvCheckpoint;
+  getCheckpoints(baselineId: number): IvvCheckpoint[];
+  getCheckpoint(id: number): IvvCheckpoint | undefined;
+  updateCheckpoint(id: number, data: Partial<{ name: string; phase: string; scheduledDate: string | null; completedDate: string | null; status: string; overallAssessment: string | null; recommendations: string | null; findings: string | null }>): IvvCheckpoint | undefined;
+  deleteCheckpoint(id: number): void;
+
+  // Deviations
+  createDeviation(data: { baselineId: number; deliverableId?: number | null; severity: string; category: string; title: string; description: string; contractReference?: string | null; actualDelivery?: string | null; impact?: string | null; status?: string; resolution?: string | null }): Deviation;
+  getDeviations(baselineId: number): Deviation[];
+  updateDeviation(id: number, data: Partial<{ severity: string; category: string; title: string; description: string; contractReference: string | null; actualDelivery: string | null; impact: string | null; status: string; resolution: string | null; deliverableId: number | null; escalationStatus: string; escalatedAt: string | null }>): Deviation | undefined;
+  deleteDeviation(id: number): void;
+  getDeviation(id: number): Deviation | undefined;
+
+  // Compliance Summary
+  getComplianceSummary(projectId: number): any;
+
+  // Pulse Reports
+  createPulseReport(data: { baselineId: number; overallPosture: string; postureTrend?: string | null; narrative: string; riskHighlights?: string | null; milestoneStatus?: string | null; decisionItems?: string | null; metrics?: string | null; weekEnding: string }): PulseReport;
+  getPulseReports(baselineId: number): PulseReport[];
+  getPulseReport(id: number): PulseReport | undefined;
+
+  // Checkpoint Assessments
+  saveCheckpointAssessment(checkpointId: number, dimensions: Array<{ dimension: string; rating: string; observation?: string | null; evidence?: string | null; recommendation?: string | null }>): CheckpointAssessment[];
+  getCheckpointAssessment(checkpointId: number): CheckpointAssessment[];
+
+  // Go-Live Scorecard
+  saveGoLiveScorecard(data: { baselineId: number; criteria: string; overallScore?: number | null; overallReadiness?: string | null; assessorNotes?: string | null; assessedAt: string }): GoLiveScorecard;
+  getGoLiveScorecard(baselineId: number): GoLiveScorecard | undefined;
+
+  // Escalation Status
+  getEscalationStatus(projectId: number): Deviation[];
+
+  // Integration Connections
+  createIntegrationConnection(data: { projectId: number; contractId?: number | null; platform: string; name: string; config: string; fieldMapping?: string | null; status?: string }): IntegrationConnection;
+  getIntegrationConnections(projectId: number): IntegrationConnection[];
+  getIntegrationConnection(id: number): IntegrationConnection | undefined;
+  updateIntegrationConnection(id: number, data: Partial<{ contractId: number | null; platform: string; name: string; config: string; fieldMapping: string | null; status: string; lastSyncAt: string | null; lastSyncStatus: string | null; lastSyncMessage: string | null; syncItemCount: number }>): IntegrationConnection | undefined;
+  deleteIntegrationConnection(id: number): void;
+
+  // Sync Logs
+  addSyncLog(data: { connectionId: number; status: string; itemsSynced?: number; itemsCreated?: number; itemsUpdated?: number; itemsSkipped?: number; errors?: string | null; duration?: number | null }): SyncLog;
+  getSyncLogs(connectionId: number, limit?: number): SyncLog[];
+
+  // Deliverable by external ID (for upsert during sync)
+  findDeliverableByExternalId(baselineId: number, externalId: string): ContractDeliverable | undefined;
+
+  // Engagement Modules
+  updateProjectModules(projectId: number, modules: string[]): Project | undefined;
+
+  // Health Check Assessments
+  createHealthCheckAssessment(data: { projectId: number; domain: string; overallRating?: string | null; findings?: string | null; summary?: string | null; assessedBy?: string | null }): HealthCheckAssessment;
+  getHealthCheckAssessments(projectId: number): HealthCheckAssessment[];
+  updateHealthCheckAssessment(id: number, data: Partial<{ domain: string; overallRating: string | null; findings: string | null; summary: string | null; assessedBy: string | null }>): HealthCheckAssessment | undefined;
+  deleteHealthCheckAssessment(id: number): void;
+
+  // RAID Items
+  createRaidItem(data: { projectId: number; type: string; title: string; description?: string | null; severity?: string | null; status?: string; owner?: string | null; dueDate?: string | null; resolution?: string | null; siReported?: number; siDiscrepancy?: string | null }): RaidItem;
+  getRaidItems(projectId: number, filters?: { type?: string; status?: string }): RaidItem[];
+  updateRaidItem(id: number, data: Partial<{ type: string; title: string; description: string | null; severity: string | null; status: string; owner: string | null; dueDate: string | null; resolution: string | null; siReported: number; siDiscrepancy: string | null }>): RaidItem | undefined;
+  deleteRaidItem(id: number): void;
+
+  // Budget Tracking
+  createBudgetEntry(data: { projectId: number; category: string; description: string; amount: number; date?: string | null; notes?: string | null }): BudgetTracking;
+  getBudgetEntries(projectId: number): BudgetTracking[];
+  updateBudgetEntry(id: number, data: Partial<{ category: string; description: string; amount: number; date: string | null; notes: string | null }>): BudgetTracking | undefined;
+  deleteBudgetEntry(id: number): void;
+  getBudgetSummary(projectId: number): { originalContract: number; totalChangeOrders: number; totalAdditionalFunding: number; totalActualSpend: number; variance: number };
+
+  // Schedule Tracking
+  createScheduleEntry(data: { projectId: number; milestone: string; originalDate?: string | null; currentDate?: string | null; actualDate?: string | null; status?: string; varianceDays?: number | null; notes?: string | null }): ScheduleTracking;
+  getScheduleEntries(projectId: number): ScheduleTracking[];
+  updateScheduleEntry(id: number, data: Partial<{ milestone: string; originalDate: string | null; currentDate: string | null; actualDate: string | null; status: string; varianceDays: number | null; notes: string | null }>): ScheduleTracking | undefined;
+  deleteScheduleEntry(id: number): void;
+}
+
+export interface WorkshopSummaryResult {
+  links: Array<{
+    id: number;
+    stakeholderName: string;
+    stakeholderEmail: string;
+    modules: string[];
+    createdAt: string;
+    expiresAt: string | null;
+    isActive: boolean;
+    feedbackStats: { total: number; pending: number; approved: number; rejected: number; flagged: number; commented: number };
+  }>;
+  aggregated: {
+    totalFeedback: number;
+    approvalRate: number;
+    flaggedCount: number;
+    criticalityChanges: Array<{ reqId: number; reqNumber: string; module: string; originalCriticality: string; stakeholderCriticality: string; stakeholderName: string }>;
+    topConcerns: Array<{ reqId: number; reqNumber: string; module: string; description: string; flagCount: number; commentCount: number; comments: Array<{ stakeholder: string; comment: string }> }>;
+    moduleBreakdown: Array<{ module: string; feedbackCount: number; approvedCount: number; rejectedCount: number; flaggedCount: number }>;
+    consensusItems: Array<{ reqId: number; reqNumber: string; module: string; description: string; allApproved: boolean; allRejected: boolean; mixed: boolean }>;
+  };
+  // Legacy fields for backward compat
+  totalLinks: number;
+  totalFeedback: number;
+  pendingCount: number;
+  approvedCount: number;
+  rejectedCount: number;
+  flaggedCount: number;
+}
+
+export interface ModuleScore {
+  functionalArea: string;
+  category: string;
+  weight: number;
+  score: number; // 0-100%
+  requirementCount: number;
+  criticalGapCount: number;
+}
+
+export interface VendorEvaluationResult {
+  vendorId: number;
+  vendorName: string;
+  vendorShortName: string;
+  color: string;
+  overallScore: number; // 0-100
+  moduleScores: Record<string, ModuleScore>;
+}
+
+export interface GapItem {
+  requirementId: number;
+  reqNumber: string;
+  functionalArea: string;
+  category: string;
+  subCategory: string;
+  description: string;
+  criticality: string;
+  scores: Record<number, string>; // vendorId -> score
+}
+
+export interface EvaluationResult {
+  vendors: VendorEvaluationResult[];
+  gaps: GapItem[];
+  moduleWeights: Record<string, number>;
+  selectedVendorIds: number[];
 }
 
 export class DatabaseStorage implements IStorage {
@@ -96,7 +631,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   deleteProject(id: number): void {
-    // Delete requirements first (cascade doesn't always work with drizzle)
+    db.delete(vendorRequirementScores).where(eq(vendorRequirementScores.projectId, id)).run();
+    db.delete(projectVendorSettings).where(eq(projectVendorSettings.projectId, id)).run();
     db.delete(requirements).where(eq(requirements.projectId, id)).run();
     db.delete(projects).where(eq(projects.id, id)).run();
   }
@@ -148,6 +684,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   deleteRequirement(id: number): void {
+    db.delete(vendorRequirementScores).where(eq(vendorRequirementScores.requirementId, id)).run();
     db.delete(requirements).where(eq(requirements.id, id)).run();
   }
 
@@ -191,6 +728,1257 @@ export class DatabaseStorage implements IStorage {
       moduleCoverage: modules.size,
       responseStats,
     };
+  }
+
+  // ==================== VENDORS ====================
+
+  getVendors(): Vendor[] {
+    return db.select().from(vendors).all();
+  }
+
+  getVendor(id: number): Vendor | undefined {
+    return db.select().from(vendors).where(eq(vendors.id, id)).get();
+  }
+
+  getVendorByShortName(shortName: string): Vendor | undefined {
+    return db.select().from(vendors).where(eq(vendors.shortName, shortName)).get();
+  }
+
+  // ==================== PROJECT VENDOR SETTINGS ====================
+
+  getProjectVendorSettings(projectId: number): ProjectVendorSettings | undefined {
+    return db.select().from(projectVendorSettings)
+      .where(eq(projectVendorSettings.projectId, projectId))
+      .get();
+  }
+
+  upsertProjectVendorSettings(
+    projectId: number,
+    moduleWeights: Record<string, number>,
+    selectedVendors: number[]
+  ): ProjectVendorSettings {
+    const existing = this.getProjectVendorSettings(projectId);
+    if (existing) {
+      return db.update(projectVendorSettings)
+        .set({
+          moduleWeights: JSON.stringify(moduleWeights),
+          selectedVendors: JSON.stringify(selectedVendors),
+        })
+        .where(eq(projectVendorSettings.projectId, projectId))
+        .returning().get();
+    } else {
+      return db.insert(projectVendorSettings).values({
+        projectId,
+        moduleWeights: JSON.stringify(moduleWeights),
+        selectedVendors: JSON.stringify(selectedVendors),
+      }).returning().get();
+    }
+  }
+
+  // ==================== VENDOR REQUIREMENT SCORES ====================
+
+  getVendorScores(projectId: number, vendorId?: number): VendorRequirementScore[] {
+    const conditions = [eq(vendorRequirementScores.projectId, projectId)];
+    if (vendorId !== undefined) {
+      conditions.push(eq(vendorRequirementScores.vendorId, vendorId));
+    }
+    return db.select().from(vendorRequirementScores)
+      .where(and(...conditions))
+      .all();
+  }
+
+  upsertVendorScore(projectId: number, requirementId: number, vendorId: number, score: string): VendorRequirementScore {
+    const existing = db.select().from(vendorRequirementScores)
+      .where(and(
+        eq(vendorRequirementScores.projectId, projectId),
+        eq(vendorRequirementScores.requirementId, requirementId),
+        eq(vendorRequirementScores.vendorId, vendorId),
+      )).get();
+
+    if (existing) {
+      return db.update(vendorRequirementScores)
+        .set({ score })
+        .where(eq(vendorRequirementScores.id, existing.id))
+        .returning().get();
+    } else {
+      return db.insert(vendorRequirementScores).values({
+        projectId,
+        requirementId,
+        vendorId,
+        score,
+      }).returning().get();
+    }
+  }
+
+  bulkUpsertVendorScores(scores: Array<{ projectId: number; requirementId: number; vendorId: number; score: string }>): void {
+    for (const s of scores) {
+      this.upsertVendorScore(s.projectId, s.requirementId, s.vendorId, s.score);
+    }
+  }
+
+  generateVendorScores(projectId: number): void {
+    // Get all requirements for this project
+    const reqs = this.getRequirements(projectId);
+    if (reqs.length === 0) return;
+
+    // Get all vendors
+    const allVendors = this.getVendors();
+
+    // Get or create settings
+    let settings = this.getProjectVendorSettings(projectId);
+    if (!settings) {
+      settings = this.upsertProjectVendorSettings(
+        projectId,
+        defaultModuleWeights,
+        allVendors.map(v => v.id)
+      );
+    }
+
+    // Generate scores for each vendor × requirement
+    const scoresToInsert: Array<{ projectId: number; requirementId: number; vendorId: number; score: string }> = [];
+
+    for (const vendor of allVendors) {
+      // Find the matching vendor profile
+      const profile = vendorProfiles.find(vp => vp.shortName === vendor.shortName);
+      if (!profile) continue;
+
+      for (let i = 0; i < reqs.length; i++) {
+        const req = reqs[i];
+        const moduleRating = getVendorModuleRating(profile, req.functionalArea);
+        const score = generateVendorResponse(
+          moduleRating,
+          req.criticality,
+          i
+        );
+        scoresToInsert.push({
+          projectId,
+          requirementId: req.id,
+          vendorId: vendor.id,
+          score,
+        });
+      }
+    }
+
+    this.bulkUpsertVendorScores(scoresToInsert);
+  }
+
+  // ==================== LOAD SAMPLE RFP DATA ====================
+
+  loadSampleRfpData(projectId: number): { requirementsCreated: number; scoresCreated: number } {
+    // 1. Delete existing requirements & scores for this project
+    db.delete(vendorRequirementScores).where(eq(vendorRequirementScores.projectId, projectId)).run();
+    db.delete(requirements).where(eq(requirements.projectId, projectId)).run();
+    db.delete(projectVendorSettings).where(eq(projectVendorSettings.projectId, projectId)).run();
+
+    // 2. Get all vendors (already seeded)
+    const allVendors = this.getVendors();
+    const vendorByShortName = new Map(allVendors.map(v => [v.shortName, v]));
+
+    // 3. Bulk insert all 1,260 requirements using real req numbers
+    const now = new Date().toISOString();
+    const createdReqs: Array<{ id: number; reqNumber: string }> = [];
+
+    // Use sqlite (better-sqlite3) transaction for synchronous batch inserts
+    sqlite.transaction(() => {
+      for (const tmpl of templateRequirements) {
+        const inserted = db.insert(requirements).values({
+          projectId,
+          reqNumber: tmpl.reqNumber,
+          category: tmpl.category,
+          functionalArea: tmpl.functionalArea,
+          subCategory: tmpl.subCategory,
+          description: tmpl.description,
+          criticality: tmpl.criticality,
+          vendorResponse: null,
+          comments: "",
+          createdAt: now,
+        }).returning().get();
+        createdReqs.push({ id: inserted.id, reqNumber: inserted.reqNumber });
+      }
+    })();
+
+    // 4. Set up vendor evaluation settings with all vendors selected
+    this.upsertProjectVendorSettings(
+      projectId,
+      defaultModuleWeights,
+      allVendors.map(v => v.id)
+    );
+
+    // 5. Bulk insert real scores from sampleRfpScores
+    let scoresCreated = 0;
+    sqlite.transaction(() => {
+      for (const { id: reqId, reqNumber } of createdReqs) {
+        const scoresByVendor = sampleRfpScores[reqNumber];
+        if (!scoresByVendor) continue;
+
+        for (const [shortName, score] of Object.entries(scoresByVendor)) {
+          const vendor = vendorByShortName.get(shortName);
+          if (!vendor) continue;
+
+          db.insert(vendorRequirementScores).values({
+            projectId,
+            requirementId: reqId,
+            vendorId: vendor.id,
+            score,
+          }).run();
+          scoresCreated++;
+        }
+      }
+    })();
+
+    return { requirementsCreated: createdReqs.length, scoresCreated };
+  }
+
+  // ==================== EVALUATION CALCULATION ====================
+
+  calculateEvaluation(projectId: number): EvaluationResult {
+    const settings = this.getProjectVendorSettings(projectId);
+    const allVendors = this.getVendors();
+    const reqs = this.getRequirements(projectId);
+
+    // Parse settings
+    const moduleWeights: Record<string, number> = settings
+      ? JSON.parse(settings.moduleWeights)
+      : { ...defaultModuleWeights };
+    const selectedVendorIds: number[] = settings
+      ? JSON.parse(settings.selectedVendors)
+      : allVendors.map(v => v.id);
+
+    const selectedVendors = allVendors.filter(v => selectedVendorIds.includes(v.id));
+
+    // Get all scores for this project
+    const allScores = this.getVendorScores(projectId);
+    // Build a lookup map: requirementId:vendorId -> score
+    const scoreMap = new Map<string, string>();
+    for (const s of allScores) {
+      scoreMap.set(`${s.requirementId}:${s.vendorId}`, s.score);
+    }
+
+    // Group requirements by functional area
+    const reqsByModule = new Map<string, Requirement[]>();
+    for (const req of reqs) {
+      const arr = reqsByModule.get(req.functionalArea) || [];
+      arr.push(req);
+      reqsByModule.set(req.functionalArea, arr);
+    }
+
+    const vendorResults: VendorEvaluationResult[] = [];
+
+    for (const vendor of selectedVendors) {
+      const moduleScores: Record<string, ModuleScore> = {};
+      let weightedSum = 0;
+      let totalWeight = 0;
+
+      for (const [functionalArea, areaReqs] of reqsByModule.entries()) {
+        const weight = moduleWeights[functionalArea] ?? 5;
+        let numerator = 0;
+        let denominator = 0;
+        let criticalGapCount = 0;
+
+        for (const req of areaReqs) {
+          // Not Required / Not Applicable requirements are excluded from scoring
+          if (req.criticality === "Not Required" || req.criticality === "Not Applicable") continue;
+          const critMultiplier = req.criticality === "Critical" ? 1.5 : 1.0;
+          const maxScore = 5 * critMultiplier;
+          const scoreCode = scoreMap.get(`${req.id}:${vendor.id}`) || "N";
+          const scoreVal = scoreToNumber(scoreCode) * critMultiplier;
+
+          numerator += scoreVal;
+          denominator += maxScore;
+
+          if (req.criticality === "Critical" && (scoreCode === "T" || scoreCode === "N")) {
+            criticalGapCount++;
+          }
+        }
+
+        const moduleScore = denominator > 0 ? (numerator / denominator) * 100 : 0;
+
+        moduleScores[functionalArea] = {
+          functionalArea,
+          category: areaReqs[0]?.category || "",
+          weight,
+          score: Math.round(moduleScore * 10) / 10,
+          requirementCount: areaReqs.length,
+          criticalGapCount,
+        };
+
+        weightedSum += moduleScore * weight;
+        totalWeight += weight;
+      }
+
+      const overallScore = totalWeight > 0 ? weightedSum / totalWeight : 0;
+
+      vendorResults.push({
+        vendorId: vendor.id,
+        vendorName: vendor.name,
+        vendorShortName: vendor.shortName,
+        color: vendor.color,
+        overallScore: Math.round(overallScore * 10) / 10,
+        moduleScores,
+      });
+    }
+
+    // Sort by overall score descending
+    vendorResults.sort((a, b) => b.overallScore - a.overallScore);
+
+    // Gap analysis: requirements where ALL selected vendors score C, T, or N
+    const gaps: GapItem[] = [];
+    for (const req of reqs) {
+      const reqScores: Record<number, string> = {};
+      let hasGap = false;
+
+      for (const vendor of selectedVendors) {
+        const scoreCode = scoreMap.get(`${req.id}:${vendor.id}`) || "";
+        reqScores[vendor.id] = scoreCode;
+        if (scoreCode === "C" || scoreCode === "T" || scoreCode === "N") {
+          hasGap = true;
+        }
+      }
+
+      if (hasGap && selectedVendors.length > 0) {
+        gaps.push({
+          requirementId: req.id,
+          reqNumber: req.reqNumber,
+          functionalArea: req.functionalArea,
+          category: req.category,
+          subCategory: req.subCategory,
+          description: req.description,
+          criticality: req.criticality,
+          scores: reqScores,
+        });
+      }
+    }
+
+    return {
+      vendors: vendorResults,
+      gaps,
+      moduleWeights,
+      selectedVendorIds,
+    };
+  }
+
+  // ==================== WORKSHOP LINKS ====================
+
+  createWorkshopLink(data: { projectId: number; stakeholderName: string; stakeholderEmail: string; modules: string[] }): WorkshopLink {
+    const token = crypto.randomUUID();
+    const now = new Date().toISOString();
+    return db.insert(workshopLinks).values({
+      projectId: data.projectId,
+      token,
+      stakeholderName: data.stakeholderName,
+      stakeholderEmail: data.stakeholderEmail,
+      modules: JSON.stringify(data.modules),
+      createdAt: now,
+      expiresAt: null,
+      isActive: 1,
+    }).returning().get();
+  }
+
+  getWorkshopLinks(projectId: number): WorkshopLink[] {
+    return db.select().from(workshopLinks).where(eq(workshopLinks.projectId, projectId)).all();
+  }
+
+  getWorkshopLinkByToken(token: string): WorkshopLink | undefined {
+    return db.select().from(workshopLinks).where(eq(workshopLinks.token, token)).get();
+  }
+
+  deactivateWorkshopLink(id: number): void {
+    db.update(workshopLinks).set({ isActive: 0 }).where(eq(workshopLinks.id, id)).run();
+  }
+
+  // ==================== WORKSHOP FEEDBACK ====================
+
+  getWorkshopFeedback(workshopLinkId: number): WorkshopFeedback[] {
+    return db.select().from(workshopFeedback).where(eq(workshopFeedback.workshopLinkId, workshopLinkId)).all();
+  }
+
+  upsertWorkshopFeedback(workshopLinkId: number, requirementId: number, data: { criticality?: string; comment?: string; flaggedForDiscussion?: boolean; status?: string }): WorkshopFeedback {
+    const now = new Date().toISOString();
+    const existing = db.select().from(workshopFeedback)
+      .where(and(eq(workshopFeedback.workshopLinkId, workshopLinkId), eq(workshopFeedback.requirementId, requirementId)))
+      .get();
+
+    if (existing) {
+      const updated: Partial<typeof workshopFeedback.$inferInsert> = { updatedAt: now };
+      if (data.criticality !== undefined) updated.criticality = data.criticality;
+      if (data.comment !== undefined) updated.comment = data.comment;
+      if (data.flaggedForDiscussion !== undefined) updated.flaggedForDiscussion = data.flaggedForDiscussion ? 1 : 0;
+      if (data.status !== undefined) updated.status = data.status;
+      return db.update(workshopFeedback).set(updated)
+        .where(eq(workshopFeedback.id, existing.id))
+        .returning().get();
+    } else {
+      return db.insert(workshopFeedback).values({
+        workshopLinkId,
+        requirementId,
+        criticality: data.criticality ?? null,
+        comment: data.comment ?? "",
+        flaggedForDiscussion: data.flaggedForDiscussion ? 1 : 0,
+        status: data.status ?? "pending",
+        updatedAt: now,
+      }).returning().get();
+    }
+  }
+
+  getWorkshopSummary(projectId: number): WorkshopSummaryResult {
+    const links = db.select().from(workshopLinks).where(eq(workshopLinks.projectId, projectId)).all();
+    const linkIds = links.map(l => l.id);
+
+    const emptyResult: WorkshopSummaryResult = {
+      links: [],
+      aggregated: { totalFeedback: 0, approvalRate: 0, flaggedCount: 0, criticalityChanges: [], topConcerns: [], moduleBreakdown: [], consensusItems: [] },
+      totalLinks: 0, totalFeedback: 0, pendingCount: 0, approvedCount: 0, rejectedCount: 0, flaggedCount: 0,
+    };
+
+    if (linkIds.length === 0) return emptyResult;
+
+    const allFeedback = db.select().from(workshopFeedback).where(inArray(workshopFeedback.workshopLinkId, linkIds)).all();
+    const allReqs = db.select().from(requirements).where(eq(requirements.projectId, projectId)).all();
+    const reqMap = new Map(allReqs.map(r => [r.id, r]));
+
+    // Build link-to-name map
+    const linkMap = new Map(links.map(l => [l.id, l]));
+
+    // Per-link stats
+    const linkResults = links.map(l => {
+      const fb = allFeedback.filter(f => f.workshopLinkId === l.id);
+      return {
+        id: l.id,
+        stakeholderName: l.stakeholderName,
+        stakeholderEmail: l.stakeholderEmail,
+        modules: JSON.parse(l.modules) as string[],
+        createdAt: l.createdAt,
+        expiresAt: l.expiresAt,
+        isActive: l.isActive === 1,
+        feedbackStats: {
+          total: fb.length,
+          pending: fb.filter(f => f.status === "pending").length,
+          approved: fb.filter(f => f.status === "approved").length,
+          rejected: fb.filter(f => f.status === "rejected").length,
+          flagged: fb.filter(f => f.flaggedForDiscussion === 1).length,
+          commented: fb.filter(f => f.comment && f.comment.length > 0).length,
+        },
+      };
+    });
+
+    // Legacy counts
+    const pendingCount = allFeedback.filter(f => f.status === "pending").length;
+    const approvedCount = allFeedback.filter(f => f.status === "approved").length;
+    const rejectedCount = allFeedback.filter(f => f.status === "rejected").length;
+    const flaggedCount = allFeedback.filter(f => f.flaggedForDiscussion === 1).length;
+    const reviewedCount = approvedCount + rejectedCount;
+    const approvalRate = reviewedCount > 0 ? Math.round((approvedCount / reviewedCount) * 100) : 0;
+
+    // Criticality changes
+    const criticalityChanges: WorkshopSummaryResult["aggregated"]["criticalityChanges"] = [];
+    for (const fb of allFeedback) {
+      if (!fb.criticality) continue;
+      const req = reqMap.get(fb.requirementId);
+      if (!req) continue;
+      if (fb.criticality !== req.criticality) {
+        const link = linkMap.get(fb.workshopLinkId);
+        criticalityChanges.push({
+          reqId: req.id,
+          reqNumber: req.reqNumber,
+          module: req.functionalArea,
+          originalCriticality: req.criticality,
+          stakeholderCriticality: fb.criticality,
+          stakeholderName: link?.stakeholderName || "Unknown",
+        });
+      }
+    }
+
+    // Top concerns (flagged or commented)
+    const concernMap = new Map<number, { flagCount: number; commentCount: number; comments: Array<{ stakeholder: string; comment: string }> }>();
+    for (const fb of allFeedback) {
+      if (fb.flaggedForDiscussion !== 1 && (!fb.comment || fb.comment.length === 0)) continue;
+      if (!concernMap.has(fb.requirementId)) {
+        concernMap.set(fb.requirementId, { flagCount: 0, commentCount: 0, comments: [] });
+      }
+      const c = concernMap.get(fb.requirementId)!;
+      if (fb.flaggedForDiscussion === 1) c.flagCount++;
+      if (fb.comment && fb.comment.length > 0) {
+        c.commentCount++;
+        const link = linkMap.get(fb.workshopLinkId);
+        c.comments.push({ stakeholder: link?.stakeholderName || "Unknown", comment: fb.comment });
+      }
+    }
+    const topConcerns = [...concernMap.entries()]
+      .map(([reqId, data]) => {
+        const req = reqMap.get(reqId);
+        return {
+          reqId,
+          reqNumber: req?.reqNumber || "",
+          module: req?.functionalArea || "",
+          description: req?.description || "",
+          ...data,
+        };
+      })
+      .sort((a, b) => (b.flagCount + b.commentCount) - (a.flagCount + a.commentCount))
+      .slice(0, 20);
+
+    // Module breakdown
+    const modMap = new Map<string, { feedbackCount: number; approvedCount: number; rejectedCount: number; flaggedCount: number }>();
+    for (const fb of allFeedback) {
+      const req = reqMap.get(fb.requirementId);
+      const mod = req?.functionalArea || "Unknown";
+      if (!modMap.has(mod)) modMap.set(mod, { feedbackCount: 0, approvedCount: 0, rejectedCount: 0, flaggedCount: 0 });
+      const m = modMap.get(mod)!;
+      m.feedbackCount++;
+      if (fb.status === "approved") m.approvedCount++;
+      if (fb.status === "rejected") m.rejectedCount++;
+      if (fb.flaggedForDiscussion === 1) m.flaggedCount++;
+    }
+    const moduleBreakdown = [...modMap.entries()].map(([module, data]) => ({ module, ...data })).sort((a, b) => b.feedbackCount - a.feedbackCount);
+
+    // Consensus items — requirements with feedback from multiple stakeholders
+    const reqFbMap = new Map<number, Array<{ status: string; linkId: number }>>();
+    for (const fb of allFeedback) {
+      if (!reqFbMap.has(fb.requirementId)) reqFbMap.set(fb.requirementId, []);
+      reqFbMap.get(fb.requirementId)!.push({ status: fb.status, linkId: fb.workshopLinkId });
+    }
+    const consensusItems: WorkshopSummaryResult["aggregated"]["consensusItems"] = [];
+    for (const [reqId, fbs] of reqFbMap.entries()) {
+      if (fbs.length < 2) continue; // need multiple to have consensus
+      const req = reqMap.get(reqId);
+      if (!req) continue;
+      const allApproved = fbs.every(f => f.status === "approved");
+      const allRejected = fbs.every(f => f.status === "rejected");
+      const mixed = !allApproved && !allRejected && fbs.some(f => f.status === "approved") && fbs.some(f => f.status === "rejected");
+      if (allApproved || allRejected || mixed) {
+        consensusItems.push({ reqId: req.id, reqNumber: req.reqNumber, module: req.functionalArea, description: req.description, allApproved, allRejected, mixed });
+      }
+    }
+
+    return {
+      links: linkResults,
+      aggregated: { totalFeedback: allFeedback.length, approvalRate, flaggedCount, criticalityChanges, topConcerns, moduleBreakdown, consensusItems },
+      totalLinks: links.length,
+      totalFeedback: allFeedback.length,
+      pendingCount,
+      approvedCount,
+      rejectedCount,
+      flaggedCount,
+    };
+  }
+
+  // ==================== CUSTOM CRITERIA ====================
+
+  getCustomCriteria(projectId: number): (CustomCriteria & { scores: CustomCriteriaScore[] })[] {
+    const criteria = db.select().from(customCriteria).where(eq(customCriteria.projectId, projectId)).all();
+    return criteria.map(c => {
+      const scores = db.select().from(customCriteriaScores).where(eq(customCriteriaScores.criteriaId, c.id)).all();
+      return { ...c, scores };
+    });
+  }
+
+  createCustomCriterion(data: { projectId: number; name: string; description: string; weight: number }): CustomCriteria {
+    const now = new Date().toISOString();
+    return db.insert(customCriteria).values({
+      projectId: data.projectId,
+      name: data.name,
+      description: data.description,
+      weight: data.weight,
+      createdAt: now,
+    }).returning().get();
+  }
+
+  updateCustomCriterion(id: number, data: Partial<{ name: string; description: string; weight: number }>): CustomCriteria | undefined {
+    return db.update(customCriteria).set(data).where(eq(customCriteria.id, id)).returning().get();
+  }
+
+  deleteCustomCriterion(id: number): void {
+    db.delete(customCriteriaScores).where(eq(customCriteriaScores.criteriaId, id)).run();
+    db.delete(customCriteria).where(eq(customCriteria.id, id)).run();
+  }
+
+  upsertCustomCriteriaScores(criteriaId: number, scores: Array<{ vendorId: number; score: number; notes: string }>): void {
+    for (const s of scores) {
+      const existing = db.select().from(customCriteriaScores)
+        .where(and(eq(customCriteriaScores.criteriaId, criteriaId), eq(customCriteriaScores.vendorId, s.vendorId)))
+        .get();
+      if (existing) {
+        db.update(customCriteriaScores).set({ score: s.score, notes: s.notes })
+          .where(eq(customCriteriaScores.id, existing.id)).run();
+      } else {
+        db.insert(customCriteriaScores).values({
+          criteriaId,
+          vendorId: s.vendorId,
+          score: s.score,
+          notes: s.notes,
+        }).run();
+      }
+    }
+  }
+
+  // Chat Messages
+  addChatMessage(projectId: number, role: string, content: string): ChatMessage {
+    const now = new Date().toISOString();
+    return db.insert(chatMessages).values({
+      projectId,
+      role,
+      content,
+      createdAt: now,
+    }).returning().get();
+  }
+
+  getChatMessages(projectId: number): ChatMessage[] {
+    return db.select().from(chatMessages)
+      .where(eq(chatMessages.projectId, projectId))
+      .all();
+  }
+
+  clearChatMessages(projectId: number): void {
+    db.delete(chatMessages).where(eq(chatMessages.projectId, projectId)).run();
+  }
+
+  // Vendor Intelligence
+  addVendorIntelligence(data: { projectId: number; vendorId: number; dimension: string; score: number | null; summary: string | null; evidence: string | null; concerns: string | null; sourceDocument: string | null }): VendorIntelligence {
+    const now = new Date().toISOString();
+    return db.insert(vendorIntelligence).values({
+      projectId: data.projectId,
+      vendorId: data.vendorId,
+      dimension: data.dimension,
+      score: data.score,
+      summary: data.summary,
+      evidence: data.evidence,
+      concerns: data.concerns,
+      sourceDocument: data.sourceDocument,
+      createdAt: now,
+    }).returning().get();
+  }
+
+  getVendorIntelligence(projectId: number, vendorId?: number): VendorIntelligence[] {
+    if (vendorId) {
+      return db.select().from(vendorIntelligence)
+        .where(and(eq(vendorIntelligence.projectId, projectId), eq(vendorIntelligence.vendorId, vendorId)))
+        .all();
+    }
+    return db.select().from(vendorIntelligence)
+      .where(eq(vendorIntelligence.projectId, projectId))
+      .all();
+  }
+
+  deleteVendorIntelligence(projectId: number, vendorId: number): void {
+    db.delete(vendorIntelligence)
+      .where(and(eq(vendorIntelligence.projectId, projectId), eq(vendorIntelligence.vendorId, vendorId)))
+      .run();
+  }
+
+  deleteVendorIntelligenceById(id: number): void {
+    db.delete(vendorIntelligence).where(eq(vendorIntelligence.id, id)).run();
+  }
+
+  // ==================== CONTRACT BASELINES ====================
+
+  createContractBaseline(data: { projectId: number; vendorId?: number | null; contractName: string; contractDate?: string | null; totalValue?: string | null; startDate?: string | null; endDate?: string | null; sourceDocument?: string | null; notes?: string | null }): ContractBaseline {
+    const now = new Date().toISOString();
+    return db.insert(contractBaselines).values({
+      projectId: data.projectId,
+      vendorId: data.vendorId ?? null,
+      contractName: data.contractName,
+      contractDate: data.contractDate ?? null,
+      totalValue: data.totalValue ?? null,
+      startDate: data.startDate ?? null,
+      endDate: data.endDate ?? null,
+      sourceDocument: data.sourceDocument ?? null,
+      notes: data.notes ?? null,
+      createdAt: now,
+    }).returning().get();
+  }
+
+  getContractBaselines(projectId: number): ContractBaseline[] {
+    return db.select().from(contractBaselines)
+      .where(eq(contractBaselines.projectId, projectId))
+      .all();
+  }
+
+  getContractBaseline(id: number): ContractBaseline | undefined {
+    return db.select().from(contractBaselines)
+      .where(eq(contractBaselines.id, id))
+      .get();
+  }
+
+  updateContractBaseline(id: number, data: Partial<{ vendorId: number | null; contractName: string; contractDate: string | null; totalValue: string | null; startDate: string | null; endDate: string | null; sourceDocument: string | null; notes: string | null }>): ContractBaseline | undefined {
+    return db.update(contractBaselines).set(data).where(eq(contractBaselines.id, id)).returning().get();
+  }
+
+  deleteContractBaseline(id: number): void {
+    db.delete(contractBaselines).where(eq(contractBaselines.id, id)).run();
+  }
+
+  // ==================== CONTRACT DELIVERABLES ====================
+
+  createDeliverable(data: { baselineId: number; category: string; name: string; description?: string | null; dueDate?: string | null; status?: string; priority?: string; contractReference?: string | null; notes?: string | null; externalId?: string | null; externalUrl?: string | null }): ContractDeliverable {
+    const now = new Date().toISOString();
+    return db.insert(contractDeliverables).values({
+      baselineId: data.baselineId,
+      category: data.category,
+      name: data.name,
+      description: data.description ?? null,
+      dueDate: data.dueDate ?? null,
+      status: data.status || "not_started",
+      priority: data.priority || "standard",
+      contractReference: data.contractReference ?? null,
+      notes: data.notes ?? null,
+      externalId: data.externalId ?? null,
+      externalUrl: data.externalUrl ?? null,
+      createdAt: now,
+    }).returning().get();
+  }
+
+  getDeliverables(baselineId: number): ContractDeliverable[] {
+    return db.select().from(contractDeliverables)
+      .where(eq(contractDeliverables.baselineId, baselineId))
+      .all();
+  }
+
+  updateDeliverable(id: number, data: Partial<{ category: string; name: string; description: string | null; dueDate: string | null; status: string; priority: string; contractReference: string | null; notes: string | null; completedDate: string | null }>): ContractDeliverable | undefined {
+    return db.update(contractDeliverables).set(data).where(eq(contractDeliverables.id, id)).returning().get();
+  }
+
+  deleteDeliverable(id: number): void {
+    db.delete(contractDeliverables).where(eq(contractDeliverables.id, id)).run();
+  }
+
+  createDeliverablesBulk(items: Array<{ baselineId: number; category: string; name: string; description?: string | null; dueDate?: string | null; status?: string; priority?: string; contractReference?: string | null; notes?: string | null }>): ContractDeliverable[] {
+    const now = new Date().toISOString();
+    const results: ContractDeliverable[] = [];
+    for (const item of items) {
+      const created = db.insert(contractDeliverables).values({
+        baselineId: item.baselineId,
+        category: item.category,
+        name: item.name,
+        description: item.description ?? null,
+        dueDate: item.dueDate ?? null,
+        status: item.status || "not_started",
+        priority: item.priority || "standard",
+        contractReference: item.contractReference ?? null,
+        notes: item.notes ?? null,
+        createdAt: now,
+      }).returning().get();
+      results.push(created);
+    }
+    return results;
+  }
+
+  // ==================== COMPLIANCE EVIDENCE ====================
+
+  addEvidence(data: { deliverableId: number; type: string; title: string; description?: string | null; fileName?: string | null; fileContent?: string | null; assessmentResult?: string | null; assessorNotes?: string | null }): ComplianceEvidence {
+    const now = new Date().toISOString();
+    return db.insert(complianceEvidence).values({
+      deliverableId: data.deliverableId,
+      type: data.type,
+      title: data.title,
+      description: data.description ?? null,
+      fileName: data.fileName ?? null,
+      fileContent: data.fileContent ?? null,
+      assessmentResult: data.assessmentResult ?? null,
+      assessorNotes: data.assessorNotes ?? null,
+      createdAt: now,
+    }).returning().get();
+  }
+
+  getEvidence(deliverableId: number): ComplianceEvidence[] {
+    return db.select().from(complianceEvidence)
+      .where(eq(complianceEvidence.deliverableId, deliverableId))
+      .all();
+  }
+
+  deleteEvidence(id: number): void {
+    db.delete(complianceEvidence).where(eq(complianceEvidence.id, id)).run();
+  }
+
+  // ==================== IV&V CHECKPOINTS ====================
+
+  createCheckpoint(data: { baselineId: number; name: string; phase: string; scheduledDate?: string | null; status?: string; overallAssessment?: string | null; recommendations?: string | null; findings?: string | null }): IvvCheckpoint {
+    const now = new Date().toISOString();
+    return db.insert(ivvCheckpoints).values({
+      baselineId: data.baselineId,
+      name: data.name,
+      phase: data.phase,
+      scheduledDate: data.scheduledDate ?? null,
+      status: data.status || "upcoming",
+      overallAssessment: data.overallAssessment ?? null,
+      recommendations: data.recommendations ?? null,
+      findings: data.findings ?? null,
+      createdAt: now,
+    }).returning().get();
+  }
+
+  getCheckpoints(baselineId: number): IvvCheckpoint[] {
+    return db.select().from(ivvCheckpoints)
+      .where(eq(ivvCheckpoints.baselineId, baselineId))
+      .all();
+  }
+
+  getCheckpoint(id: number): IvvCheckpoint | undefined {
+    return db.select().from(ivvCheckpoints)
+      .where(eq(ivvCheckpoints.id, id))
+      .get();
+  }
+
+  updateCheckpoint(id: number, data: Partial<{ name: string; phase: string; scheduledDate: string | null; completedDate: string | null; status: string; overallAssessment: string | null; recommendations: string | null; findings: string | null }>): IvvCheckpoint | undefined {
+    return db.update(ivvCheckpoints).set(data).where(eq(ivvCheckpoints.id, id)).returning().get();
+  }
+
+  deleteCheckpoint(id: number): void {
+    db.delete(ivvCheckpoints).where(eq(ivvCheckpoints.id, id)).run();
+  }
+
+  // ==================== DEVIATIONS ====================
+
+  createDeviation(data: { baselineId: number; deliverableId?: number | null; severity: string; category: string; title: string; description: string; contractReference?: string | null; actualDelivery?: string | null; impact?: string | null; status?: string; resolution?: string | null }): Deviation {
+    const now = new Date().toISOString();
+
+    // Calculate escalation due based on severity
+    let escalationDue: string | null = null;
+    const nowDate = new Date();
+    switch (data.severity) {
+      case "critical":
+        escalationDue = new Date(nowDate.getTime() + 8 * 60 * 60 * 1000).toISOString();
+        break;
+      case "major":
+        escalationDue = new Date(nowDate.getTime() + 24 * 60 * 60 * 1000).toISOString();
+        break;
+      case "minor": {
+        // Next Monday
+        const daysUntilMonday = (8 - nowDate.getDay()) % 7 || 7;
+        const nextMonday = new Date(nowDate);
+        nextMonday.setDate(nextMonday.getDate() + daysUntilMonday);
+        nextMonday.setHours(9, 0, 0, 0);
+        escalationDue = nextMonday.toISOString();
+        break;
+      }
+      // observation: no SLA
+    }
+
+    return db.insert(deviations).values({
+      baselineId: data.baselineId,
+      deliverableId: data.deliverableId ?? null,
+      severity: data.severity,
+      category: data.category,
+      title: data.title,
+      description: data.description,
+      contractReference: data.contractReference ?? null,
+      actualDelivery: data.actualDelivery ?? null,
+      impact: data.impact ?? null,
+      status: data.status || "open",
+      resolution: data.resolution ?? null,
+      escalationDue,
+      escalationStatus: escalationDue ? "pending" : null,
+      createdAt: now,
+    }).returning().get();
+  }
+
+  getDeviations(baselineId: number): Deviation[] {
+    return db.select().from(deviations)
+      .where(eq(deviations.baselineId, baselineId))
+      .all();
+  }
+
+  getDeviation(id: number): Deviation | undefined {
+    return db.select().from(deviations).where(eq(deviations.id, id)).get();
+  }
+
+  updateDeviation(id: number, data: Partial<{ severity: string; category: string; title: string; description: string; contractReference: string | null; actualDelivery: string | null; impact: string | null; status: string; resolution: string | null; deliverableId: number | null; escalationStatus: string; escalatedAt: string | null }>): Deviation | undefined {
+    return db.update(deviations).set(data).where(eq(deviations.id, id)).returning().get();
+  }
+
+  deleteDeviation(id: number): void {
+    db.delete(deviations).where(eq(deviations.id, id)).run();
+  }
+
+  // ==================== COMPLIANCE SUMMARY ====================
+
+  getComplianceSummary(projectId: number): any {
+    const baselines = this.getContractBaselines(projectId);
+
+    let totalDeliverables = 0;
+    let acceptedDeliverables = 0;
+    const deliverableStats: Record<string, number> = {
+      total: 0, accepted: 0, delivered: 0, in_progress: 0, at_risk: 0, non_compliant: 0, not_started: 0, waived: 0,
+    };
+    const openDeviations: Record<string, number> = { critical: 0, major: 0, minor: 0, observation: 0 };
+    const allCheckpoints: IvvCheckpoint[] = [];
+    const allActivity: Array<{ type: string; id: number; title: string; createdAt: string }> = [];
+
+    for (const baseline of baselines) {
+      const deliverables = this.getDeliverables(baseline.id);
+      totalDeliverables += deliverables.length;
+      deliverableStats.total += deliverables.length;
+
+      for (const d of deliverables) {
+        if (d.status === "accepted") acceptedDeliverables++;
+        deliverableStats[d.status] = (deliverableStats[d.status] || 0) + 1;
+        allActivity.push({ type: "deliverable", id: d.id, title: d.name, createdAt: d.createdAt });
+      }
+
+      const checkpoints = this.getCheckpoints(baseline.id);
+      allCheckpoints.push(...checkpoints);
+      for (const cp of checkpoints) {
+        allActivity.push({ type: "checkpoint", id: cp.id, title: cp.name, createdAt: cp.createdAt });
+      }
+
+      const devs = this.getDeviations(baseline.id);
+      for (const dev of devs) {
+        if (dev.status !== "resolved") {
+          openDeviations[dev.severity] = (openDeviations[dev.severity] || 0) + 1;
+        }
+        allActivity.push({ type: "deviation", id: dev.id, title: dev.title, createdAt: dev.createdAt });
+      }
+    }
+
+    const overallCompliance = totalDeliverables > 0 ? Math.round((acceptedDeliverables / totalDeliverables) * 100) : 0;
+
+    const upcomingCheckpoints = allCheckpoints
+      .filter(cp => cp.status === "upcoming")
+      .sort((a, b) => (a.scheduledDate || "").localeCompare(b.scheduledDate || ""));
+
+    const recentActivity = allActivity
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .slice(0, 10);
+
+    return {
+      contracts: baselines,
+      overallCompliance,
+      deliverableStats,
+      openDeviations,
+      upcomingCheckpoints,
+      recentActivity,
+    };
+  }
+
+  // ==================== PULSE REPORTS ====================
+
+  createPulseReport(data: { baselineId: number; overallPosture: string; postureTrend?: string | null; narrative: string; riskHighlights?: string | null; milestoneStatus?: string | null; decisionItems?: string | null; metrics?: string | null; weekEnding: string }): PulseReport {
+    const now = new Date().toISOString();
+    return db.insert(pulseReports).values({
+      baselineId: data.baselineId,
+      overallPosture: data.overallPosture,
+      postureTrend: data.postureTrend ?? null,
+      narrative: data.narrative,
+      riskHighlights: data.riskHighlights ?? null,
+      milestoneStatus: data.milestoneStatus ?? null,
+      decisionItems: data.decisionItems ?? null,
+      metrics: data.metrics ?? null,
+      weekEnding: data.weekEnding,
+      createdAt: now,
+    }).returning().get();
+  }
+
+  getPulseReports(baselineId: number): PulseReport[] {
+    return db.select().from(pulseReports)
+      .where(eq(pulseReports.baselineId, baselineId))
+      .orderBy(desc(pulseReports.createdAt))
+      .all();
+  }
+
+  getPulseReport(id: number): PulseReport | undefined {
+    return db.select().from(pulseReports).where(eq(pulseReports.id, id)).get();
+  }
+
+  // ==================== CHECKPOINT ASSESSMENTS ====================
+
+  saveCheckpointAssessment(checkpointId: number, dimensions: Array<{ dimension: string; rating: string; observation?: string | null; evidence?: string | null; recommendation?: string | null }>): CheckpointAssessment[] {
+    const now = new Date().toISOString();
+    // Delete existing assessments for this checkpoint
+    db.delete(checkpointAssessments).where(eq(checkpointAssessments.checkpointId, checkpointId)).run();
+
+    const results: CheckpointAssessment[] = [];
+    for (const dim of dimensions) {
+      const created = db.insert(checkpointAssessments).values({
+        checkpointId,
+        dimension: dim.dimension,
+        rating: dim.rating,
+        observation: dim.observation ?? null,
+        evidence: dim.evidence ?? null,
+        recommendation: dim.recommendation ?? null,
+        createdAt: now,
+      }).returning().get();
+      results.push(created);
+    }
+    return results;
+  }
+
+  getCheckpointAssessment(checkpointId: number): CheckpointAssessment[] {
+    return db.select().from(checkpointAssessments)
+      .where(eq(checkpointAssessments.checkpointId, checkpointId))
+      .all();
+  }
+
+  // ==================== GO-LIVE SCORECARD ====================
+
+  saveGoLiveScorecard(data: { baselineId: number; criteria: string; overallScore?: number | null; overallReadiness?: string | null; assessorNotes?: string | null; assessedAt: string }): GoLiveScorecard {
+    const now = new Date().toISOString();
+    // Upsert: delete existing for this baseline, then insert
+    db.delete(goLiveScorecard).where(eq(goLiveScorecard.baselineId, data.baselineId)).run();
+    return db.insert(goLiveScorecard).values({
+      baselineId: data.baselineId,
+      criteria: data.criteria,
+      overallScore: data.overallScore ?? null,
+      overallReadiness: data.overallReadiness ?? null,
+      assessorNotes: data.assessorNotes ?? null,
+      assessedAt: data.assessedAt,
+      createdAt: now,
+    }).returning().get();
+  }
+
+  getGoLiveScorecard(baselineId: number): GoLiveScorecard | undefined {
+    return db.select().from(goLiveScorecard)
+      .where(eq(goLiveScorecard.baselineId, baselineId))
+      .orderBy(desc(goLiveScorecard.createdAt))
+      .limit(1)
+      .get();
+  }
+
+  // ==================== ESCALATION STATUS ====================
+
+  getEscalationStatus(projectId: number): Deviation[] {
+    const baselines = this.getContractBaselines(projectId);
+    const result: Deviation[] = [];
+    for (const baseline of baselines) {
+      const devs = this.getDeviations(baseline.id);
+      for (const dev of devs) {
+        if (dev.escalationDue && dev.status !== "resolved" && dev.escalationStatus !== "acknowledged") {
+          result.push(dev);
+        }
+      }
+    }
+    // Sort by escalation due (soonest first)
+    result.sort((a, b) => (a.escalationDue || "").localeCompare(b.escalationDue || ""));
+    return result;
+  }
+
+  // ==================== INTEGRATION CONNECTIONS ====================
+
+  createIntegrationConnection(data: { projectId: number; contractId?: number | null; platform: string; name: string; config: string; fieldMapping?: string | null; status?: string }): IntegrationConnection {
+    const now = new Date().toISOString();
+    return db.insert(integrationConnections).values({
+      projectId: data.projectId,
+      contractId: data.contractId ?? null,
+      platform: data.platform,
+      name: data.name,
+      config: data.config,
+      fieldMapping: data.fieldMapping ?? null,
+      status: data.status || "active",
+      createdAt: now,
+    }).returning().get();
+  }
+
+  getIntegrationConnections(projectId: number): IntegrationConnection[] {
+    return db.select().from(integrationConnections)
+      .where(eq(integrationConnections.projectId, projectId))
+      .orderBy(desc(integrationConnections.createdAt))
+      .all();
+  }
+
+  getIntegrationConnection(id: number): IntegrationConnection | undefined {
+    return db.select().from(integrationConnections)
+      .where(eq(integrationConnections.id, id))
+      .get();
+  }
+
+  updateIntegrationConnection(id: number, data: Partial<{ contractId: number | null; platform: string; name: string; config: string; fieldMapping: string | null; status: string; lastSyncAt: string | null; lastSyncStatus: string | null; lastSyncMessage: string | null; syncItemCount: number }>): IntegrationConnection | undefined {
+    return db.update(integrationConnections).set(data).where(eq(integrationConnections.id, id)).returning().get();
+  }
+
+  deleteIntegrationConnection(id: number): void {
+    db.delete(integrationConnections).where(eq(integrationConnections.id, id)).run();
+  }
+
+  // ==================== SYNC LOGS ====================
+
+  addSyncLog(data: { connectionId: number; status: string; itemsSynced?: number; itemsCreated?: number; itemsUpdated?: number; itemsSkipped?: number; errors?: string | null; duration?: number | null }): SyncLog {
+    const now = new Date().toISOString();
+    return db.insert(syncLogs).values({
+      connectionId: data.connectionId,
+      status: data.status,
+      itemsSynced: data.itemsSynced ?? 0,
+      itemsCreated: data.itemsCreated ?? 0,
+      itemsUpdated: data.itemsUpdated ?? 0,
+      itemsSkipped: data.itemsSkipped ?? 0,
+      errors: data.errors ?? null,
+      duration: data.duration ?? null,
+      createdAt: now,
+    }).returning().get();
+  }
+
+  getSyncLogs(connectionId: number, limit: number = 20): SyncLog[] {
+    return db.select().from(syncLogs)
+      .where(eq(syncLogs.connectionId, connectionId))
+      .orderBy(desc(syncLogs.createdAt))
+      .limit(limit)
+      .all();
+  }
+
+  // ==================== DELIVERABLE BY EXTERNAL ID ====================
+
+  findDeliverableByExternalId(baselineId: number, externalId: string): ContractDeliverable | undefined {
+    return db.select().from(contractDeliverables)
+      .where(and(
+        eq(contractDeliverables.baselineId, baselineId),
+        eq(contractDeliverables.externalId, externalId),
+      ))
+      .get();
+  }
+
+  // ==================== ENGAGEMENT MODULES ====================
+
+  updateProjectModules(projectId: number, modules: string[]): Project | undefined {
+    return db.update(projects)
+      .set({ engagementModules: JSON.stringify(modules) })
+      .where(eq(projects.id, projectId))
+      .returning().get();
+  }
+
+  // ==================== HEALTH CHECK ASSESSMENTS ====================
+
+  createHealthCheckAssessment(data: { projectId: number; domain: string; overallRating?: string | null; findings?: string | null; summary?: string | null; assessedBy?: string | null }): HealthCheckAssessment {
+    const now = new Date().toISOString();
+    return db.insert(healthCheckAssessments).values({
+      projectId: data.projectId,
+      domain: data.domain,
+      overallRating: data.overallRating ?? null,
+      findings: data.findings ?? null,
+      summary: data.summary ?? null,
+      assessedBy: data.assessedBy ?? null,
+      createdAt: now,
+    }).returning().get();
+  }
+
+  getHealthCheckAssessments(projectId: number): HealthCheckAssessment[] {
+    return db.select().from(healthCheckAssessments)
+      .where(eq(healthCheckAssessments.projectId, projectId))
+      .orderBy(desc(healthCheckAssessments.createdAt))
+      .all();
+  }
+
+  updateHealthCheckAssessment(id: number, data: Partial<{ domain: string; overallRating: string | null; findings: string | null; summary: string | null; assessedBy: string | null }>): HealthCheckAssessment | undefined {
+    return db.update(healthCheckAssessments).set(data).where(eq(healthCheckAssessments.id, id)).returning().get();
+  }
+
+  deleteHealthCheckAssessment(id: number): void {
+    db.delete(healthCheckAssessments).where(eq(healthCheckAssessments.id, id)).run();
+  }
+
+  // ==================== RAID ITEMS ====================
+
+  createRaidItem(data: { projectId: number; type: string; title: string; description?: string | null; severity?: string | null; status?: string; owner?: string | null; dueDate?: string | null; resolution?: string | null; siReported?: number; siDiscrepancy?: string | null }): RaidItem {
+    const now = new Date().toISOString();
+    return db.insert(raidItems).values({
+      projectId: data.projectId,
+      type: data.type,
+      title: data.title,
+      description: data.description ?? null,
+      severity: data.severity ?? null,
+      status: data.status || "open",
+      owner: data.owner ?? null,
+      dueDate: data.dueDate ?? null,
+      resolution: data.resolution ?? null,
+      siReported: data.siReported ?? 0,
+      siDiscrepancy: data.siDiscrepancy ?? null,
+      createdAt: now,
+    }).returning().get();
+  }
+
+  getRaidItems(projectId: number, filters?: { type?: string; status?: string }): RaidItem[] {
+    const conditions = [eq(raidItems.projectId, projectId)];
+    if (filters?.type) conditions.push(eq(raidItems.type, filters.type));
+    if (filters?.status) conditions.push(eq(raidItems.status, filters.status));
+    return db.select().from(raidItems)
+      .where(and(...conditions))
+      .orderBy(desc(raidItems.createdAt))
+      .all();
+  }
+
+  updateRaidItem(id: number, data: Partial<{ type: string; title: string; description: string | null; severity: string | null; status: string; owner: string | null; dueDate: string | null; resolution: string | null; siReported: number; siDiscrepancy: string | null }>): RaidItem | undefined {
+    return db.update(raidItems).set(data).where(eq(raidItems.id, id)).returning().get();
+  }
+
+  deleteRaidItem(id: number): void {
+    db.delete(raidItems).where(eq(raidItems.id, id)).run();
+  }
+
+  // ==================== BUDGET TRACKING ====================
+
+  createBudgetEntry(data: { projectId: number; category: string; description: string; amount: number; date?: string | null; notes?: string | null }): BudgetTracking {
+    const now = new Date().toISOString();
+    return db.insert(budgetTracking).values({
+      projectId: data.projectId,
+      category: data.category,
+      description: data.description,
+      amount: data.amount,
+      date: data.date ?? null,
+      notes: data.notes ?? null,
+      createdAt: now,
+    }).returning().get();
+  }
+
+  getBudgetEntries(projectId: number): BudgetTracking[] {
+    return db.select().from(budgetTracking)
+      .where(eq(budgetTracking.projectId, projectId))
+      .orderBy(desc(budgetTracking.createdAt))
+      .all();
+  }
+
+  updateBudgetEntry(id: number, data: Partial<{ category: string; description: string; amount: number; date: string | null; notes: string | null }>): BudgetTracking | undefined {
+    return db.update(budgetTracking).set(data).where(eq(budgetTracking.id, id)).returning().get();
+  }
+
+  deleteBudgetEntry(id: number): void {
+    db.delete(budgetTracking).where(eq(budgetTracking.id, id)).run();
+  }
+
+  getBudgetSummary(projectId: number): { originalContract: number; totalChangeOrders: number; totalAdditionalFunding: number; totalActualSpend: number; variance: number } {
+    const entries = this.getBudgetEntries(projectId);
+    let originalContract = 0;
+    let totalChangeOrders = 0;
+    let totalAdditionalFunding = 0;
+    let totalActualSpend = 0;
+    for (const e of entries) {
+      switch (e.category) {
+        case "original_contract": originalContract += e.amount; break;
+        case "change_order": totalChangeOrders += e.amount; break;
+        case "additional_funding": totalAdditionalFunding += e.amount; break;
+        case "actual_spend": totalActualSpend += e.amount; break;
+      }
+    }
+    const totalBudget = originalContract + totalChangeOrders + totalAdditionalFunding;
+    const variance = totalBudget - totalActualSpend;
+    return { originalContract, totalChangeOrders, totalAdditionalFunding, totalActualSpend, variance };
+  }
+
+  // ==================== SCHEDULE TRACKING ====================
+
+  createScheduleEntry(data: { projectId: number; milestone: string; originalDate?: string | null; currentDate?: string | null; actualDate?: string | null; status?: string; varianceDays?: number | null; notes?: string | null }): ScheduleTracking {
+    const now = new Date().toISOString();
+    return db.insert(scheduleTracking).values({
+      projectId: data.projectId,
+      milestone: data.milestone,
+      originalDate: data.originalDate ?? null,
+      currentDate: data.currentDate ?? null,
+      actualDate: data.actualDate ?? null,
+      status: data.status || "on_track",
+      varianceDays: data.varianceDays ?? null,
+      notes: data.notes ?? null,
+      createdAt: now,
+    }).returning().get();
+  }
+
+  getScheduleEntries(projectId: number): ScheduleTracking[] {
+    return db.select().from(scheduleTracking)
+      .where(eq(scheduleTracking.projectId, projectId))
+      .orderBy(scheduleTracking.originalDate)
+      .all();
+  }
+
+  updateScheduleEntry(id: number, data: Partial<{ milestone: string; originalDate: string | null; currentDate: string | null; actualDate: string | null; status: string; varianceDays: number | null; notes: string | null }>): ScheduleTracking | undefined {
+    return db.update(scheduleTracking).set(data).where(eq(scheduleTracking.id, id)).returning().get();
+  }
+
+  deleteScheduleEntry(id: number): void {
+    db.delete(scheduleTracking).where(eq(scheduleTracking.id, id)).run();
   }
 }
 
