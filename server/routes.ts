@@ -15,6 +15,90 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
 
+  // ==================== ENTITY RESEARCH ====================
+
+  app.post("/api/research-entity", async (req, res) => {
+    const { entityName, entityType, state } = req.body;
+    if (!entityName || !entityType) return res.status(400).json({ error: "entityName and entityType are required" });
+
+    try {
+      const { anthropic } = await import("./ai");
+      const response = await anthropic.messages.create({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 2048,
+        messages: [{
+          role: "user",
+          content: `Research the following government entity and provide structured data:
+
+Entity: ${entityName}
+Type: ${entityType}
+${state ? `State: ${state}` : ""}
+
+Provide the following information as JSON. Use your best knowledge. If you're not sure about a specific number, provide a reasonable estimate and mark it with "(est)". If you truly don't know, use null.
+
+{
+  "entityName": "official full name",
+  "entityType": "${entityType}",
+  "state": "state",
+  "population": number or null,
+  "employeeCount": number or null,
+  "annualBudget": "e.g. $1.2B" or null,
+  "departments": [
+    { "name": "Department Name", "headcount": number or null }
+  ],
+  "currentSystems": [
+    { "name": "System Name", "module": "what it's used for", "vendor": "vendor name", "yearsInUse": number or null }
+  ],
+  "keyFacts": "2-3 sentences about the entity relevant to ERP/technology context",
+  "challenges": "common challenges for this type/size of entity"
+}
+
+For departments, include the major departments typical for this entity type. For current systems, include commonly known systems if available, or typical systems for this entity type/size.
+
+Return ONLY the JSON, no other text.`
+        }],
+      });
+
+      const text = response.content[0].type === "text" ? response.content[0].text : "";
+      const jsonStr = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+      const data = JSON.parse(jsonStr);
+      res.json({ success: true, data });
+    } catch (err: any) {
+      console.error("Entity research error:", err);
+      const templates: Record<string, any> = {
+        city: { departments: [
+          { name: "Finance", headcount: null }, { name: "Human Resources", headcount: null },
+          { name: "Public Works", headcount: null }, { name: "Parks & Recreation", headcount: null },
+          { name: "Police", headcount: null }, { name: "Fire", headcount: null },
+          { name: "IT/Technology", headcount: null }, { name: "Planning & Development", headcount: null },
+          { name: "City Manager/Admin", headcount: null },
+        ] },
+        county: { departments: [
+          { name: "Finance/Treasurer", headcount: null }, { name: "Human Resources", headcount: null },
+          { name: "Public Works/Roads", headcount: null }, { name: "Sheriff", headcount: null },
+          { name: "Health & Human Services", headcount: null }, { name: "IT", headcount: null },
+          { name: "Assessor", headcount: null }, { name: "County Clerk", headcount: null },
+        ] },
+        utility: { departments: [
+          { name: "Finance", headcount: null }, { name: "Operations", headcount: null },
+          { name: "Engineering", headcount: null }, { name: "Customer Service", headcount: null },
+          { name: "IT", headcount: null }, { name: "Maintenance", headcount: null },
+        ] },
+      };
+      const template = templates[entityType] || templates.city;
+      res.json({
+        success: true,
+        data: {
+          entityName, entityType, state: state || null,
+          population: null, employeeCount: null, annualBudget: null,
+          departments: template.departments,
+          currentSystems: [],
+          keyFacts: null, challenges: null,
+        },
+      });
+    }
+  });
+
   // ==================== PROJECTS ====================
 
   app.get("/api/projects", (_req, res) => {
