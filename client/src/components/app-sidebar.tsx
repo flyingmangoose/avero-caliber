@@ -1,4 +1,4 @@
-import { LayoutDashboard, FolderOpen, BookTemplate, Sun, Moon, BarChart3, PieChart, MessageSquare, Shield, Rocket, Stethoscope } from "lucide-react";
+import { LayoutDashboard, FolderOpen, BookTemplate, Sun, Moon, BarChart3, PieChart, MessageSquare, Shield, Rocket, Stethoscope, BookOpen } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -22,6 +22,7 @@ const navItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
   { title: "Portfolio", url: "/portfolio", icon: PieChart },
   { title: "Template Library", url: "/templates", icon: BookTemplate },
+  { title: "Knowledge Base", url: "/knowledge-base", icon: BookOpen },
 ];
 
 function AveroLogo() {

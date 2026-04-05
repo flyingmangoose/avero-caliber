@@ -24,10 +24,12 @@ import {
   type RaidItem, raidItems,
   type BudgetTracking, budgetTracking,
   type ScheduleTracking, scheduleTracking,
+  type VendorCapability, vendorCapabilities,
+  type VendorProcessDetail, vendorProcessDetails,
 } from "@shared/schema";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import Database from "better-sqlite3";
-import { eq, and, like, sql, desc, inArray } from "drizzle-orm";
+import { eq, and, or, like, sql, desc, inArray } from "drizzle-orm";
 import { vendorProfiles, defaultModuleWeights, getVendorModuleRating, generateVendorResponse } from "@shared/vendors";
 import { templateRequirements } from "@shared/templates";
 import { sampleRfpScores } from "@shared/portland-scores";
@@ -324,7 +326,39 @@ sqlite.exec(`
     notes TEXT,
     created_at TEXT NOT NULL
   );
+
+  CREATE TABLE IF NOT EXISTS vendor_capabilities (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    vendor_platform TEXT NOT NULL,
+    module TEXT NOT NULL,
+    process_area TEXT NOT NULL,
+    workflow_description TEXT,
+    differentiators TEXT,
+    limitations TEXT,
+    best_fit_for TEXT,
+    integration_notes TEXT,
+    automation_level TEXT,
+    maturity_rating INTEGER,
+    source_documents TEXT,
+    last_updated TEXT,
+    created_at TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS vendor_process_details (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    vendor_platform TEXT NOT NULL,
+    module TEXT NOT NULL,
+    req_reference TEXT,
+    capability TEXT NOT NULL,
+    how_handled TEXT,
+    score TEXT,
+    source_vendor TEXT,
+    created_at TEXT NOT NULL
+  );
 `);
+
+// Safe column additions (ignored if already exists)
+try { sqlite.exec(`ALTER TABLE projects ADD COLUMN engagement_mode TEXT DEFAULT 'consulting'`); } catch {}
 
 // Enable foreign keys
 sqlite.pragma("foreign_keys = ON");
@@ -537,6 +571,22 @@ export interface IStorage {
   getScheduleEntries(projectId: number): ScheduleTracking[];
   updateScheduleEntry(id: number, data: Partial<{ milestone: string; originalDate: string | null; currentDate: string | null; actualDate: string | null; status: string; varianceDays: number | null; notes: string | null }>): ScheduleTracking | undefined;
   deleteScheduleEntry(id: number): void;
+
+  // Vendor Capabilities (Knowledge Base)
+  createVendorCapability(data: { vendorPlatform: string; module: string; processArea: string; workflowDescription?: string | null; differentiators?: string | null; limitations?: string | null; bestFitFor?: string | null; integrationNotes?: string | null; automationLevel?: string | null; maturityRating?: number | null; sourceDocuments?: string | null; lastUpdated?: string | null }): VendorCapability;
+  getVendorCapabilities(filters?: { platform?: string; module?: string; search?: string }): VendorCapability[];
+  getVendorCapability(id: number): VendorCapability | undefined;
+  updateVendorCapability(id: number, data: Partial<{ vendorPlatform: string; module: string; processArea: string; workflowDescription: string | null; differentiators: string | null; limitations: string | null; bestFitFor: string | null; integrationNotes: string | null; automationLevel: string | null; maturityRating: number | null; sourceDocuments: string | null; lastUpdated: string | null }>): VendorCapability | undefined;
+  deleteVendorCapability(id: number): void;
+  compareCapabilities(module: string, platforms: string[]): VendorCapability[];
+  getModuleCoverage(): { vendorPlatform: string; module: string; maturityRating: number | null }[];
+
+  // Vendor Process Details
+  bulkCreateProcessDetails(items: { vendorPlatform: string; module: string; reqReference?: string | null; capability: string; howHandled?: string | null; score?: string | null; sourceVendor?: string | null }[]): void;
+  getProcessDetails(filters?: { platform?: string; module?: string; search?: string }): VendorProcessDetail[];
+
+  // Engagement Mode
+  updateProjectEngagementMode(id: number, mode: string): Project | undefined;
 }
 
 export interface WorkshopSummaryResult {
@@ -1979,6 +2029,128 @@ export class DatabaseStorage implements IStorage {
 
   deleteScheduleEntry(id: number): void {
     db.delete(scheduleTracking).where(eq(scheduleTracking.id, id)).run();
+  }
+
+  // ==================== VENDOR CAPABILITIES (KNOWLEDGE BASE) ====================
+
+  createVendorCapability(data: { vendorPlatform: string; module: string; processArea: string; workflowDescription?: string | null; differentiators?: string | null; limitations?: string | null; bestFitFor?: string | null; integrationNotes?: string | null; automationLevel?: string | null; maturityRating?: number | null; sourceDocuments?: string | null; lastUpdated?: string | null }): VendorCapability {
+    return db.insert(vendorCapabilities).values({
+      vendorPlatform: data.vendorPlatform,
+      module: data.module,
+      processArea: data.processArea,
+      workflowDescription: data.workflowDescription ?? null,
+      differentiators: data.differentiators ?? null,
+      limitations: data.limitations ?? null,
+      bestFitFor: data.bestFitFor ?? null,
+      integrationNotes: data.integrationNotes ?? null,
+      automationLevel: data.automationLevel ?? null,
+      maturityRating: data.maturityRating ?? null,
+      sourceDocuments: data.sourceDocuments ?? null,
+      lastUpdated: data.lastUpdated ?? new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+    }).returning().get();
+  }
+
+  getVendorCapabilities(filters?: { platform?: string; module?: string; search?: string }): VendorCapability[] {
+    const conditions = [];
+    if (filters?.platform) conditions.push(eq(vendorCapabilities.vendorPlatform, filters.platform));
+    if (filters?.module) conditions.push(eq(vendorCapabilities.module, filters.module));
+    if (filters?.search) {
+      const pattern = `%${filters.search}%`;
+      conditions.push(
+        or(
+          like(vendorCapabilities.workflowDescription, pattern),
+          like(vendorCapabilities.differentiators, pattern),
+          like(vendorCapabilities.limitations, pattern),
+          like(vendorCapabilities.processArea, pattern),
+        )!
+      );
+    }
+    if (conditions.length === 0) {
+      return db.select().from(vendorCapabilities).orderBy(vendorCapabilities.module, vendorCapabilities.vendorPlatform).all();
+    }
+    return db.select().from(vendorCapabilities)
+      .where(conditions.length === 1 ? conditions[0] : and(...conditions))
+      .orderBy(vendorCapabilities.module, vendorCapabilities.vendorPlatform)
+      .all();
+  }
+
+  getVendorCapability(id: number): VendorCapability | undefined {
+    return db.select().from(vendorCapabilities).where(eq(vendorCapabilities.id, id)).get();
+  }
+
+  updateVendorCapability(id: number, data: Partial<{ vendorPlatform: string; module: string; processArea: string; workflowDescription: string | null; differentiators: string | null; limitations: string | null; bestFitFor: string | null; integrationNotes: string | null; automationLevel: string | null; maturityRating: number | null; sourceDocuments: string | null; lastUpdated: string | null }>): VendorCapability | undefined {
+    return db.update(vendorCapabilities).set({ ...data, lastUpdated: new Date().toISOString() }).where(eq(vendorCapabilities.id, id)).returning().get();
+  }
+
+  deleteVendorCapability(id: number): void {
+    db.delete(vendorCapabilities).where(eq(vendorCapabilities.id, id)).run();
+  }
+
+  compareCapabilities(module: string, platforms: string[]): VendorCapability[] {
+    return db.select().from(vendorCapabilities)
+      .where(and(eq(vendorCapabilities.module, module), inArray(vendorCapabilities.vendorPlatform, platforms)))
+      .orderBy(vendorCapabilities.vendorPlatform)
+      .all();
+  }
+
+  getModuleCoverage(): { vendorPlatform: string; module: string; maturityRating: number | null }[] {
+    return db.select({
+      vendorPlatform: vendorCapabilities.vendorPlatform,
+      module: vendorCapabilities.module,
+      maturityRating: vendorCapabilities.maturityRating,
+    }).from(vendorCapabilities)
+      .orderBy(vendorCapabilities.module, vendorCapabilities.vendorPlatform)
+      .all();
+  }
+
+  // ==================== VENDOR PROCESS DETAILS ====================
+
+  bulkCreateProcessDetails(items: { vendorPlatform: string; module: string; reqReference?: string | null; capability: string; howHandled?: string | null; score?: string | null; sourceVendor?: string | null }[]): void {
+    const now = new Date().toISOString();
+    for (const item of items) {
+      db.insert(vendorProcessDetails).values({
+        vendorPlatform: item.vendorPlatform,
+        module: item.module,
+        reqReference: item.reqReference ?? null,
+        capability: item.capability,
+        howHandled: item.howHandled ?? null,
+        score: item.score ?? null,
+        sourceVendor: item.sourceVendor ?? null,
+        createdAt: now,
+      }).run();
+    }
+  }
+
+  getProcessDetails(filters?: { platform?: string; module?: string; search?: string }): VendorProcessDetail[] {
+    const conditions = [];
+    if (filters?.platform) conditions.push(eq(vendorProcessDetails.vendorPlatform, filters.platform));
+    if (filters?.module) conditions.push(eq(vendorProcessDetails.module, filters.module));
+    if (filters?.search) {
+      const pattern = `%${filters.search}%`;
+      conditions.push(
+        or(
+          like(vendorProcessDetails.capability, pattern),
+          like(vendorProcessDetails.howHandled, pattern),
+        )!
+      );
+    }
+    if (conditions.length === 0) {
+      return db.select().from(vendorProcessDetails).orderBy(vendorProcessDetails.module).all();
+    }
+    return db.select().from(vendorProcessDetails)
+      .where(conditions.length === 1 ? conditions[0] : and(...conditions))
+      .orderBy(vendorProcessDetails.module)
+      .all();
+  }
+
+  // ==================== ENGAGEMENT MODE ====================
+
+  updateProjectEngagementMode(id: number, mode: string): Project | undefined {
+    return db.update(projects)
+      .set({ engagementMode: mode })
+      .where(eq(projects.id, id))
+      .returning().get();
   }
 }
 

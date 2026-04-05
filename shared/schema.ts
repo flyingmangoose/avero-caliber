@@ -8,6 +8,7 @@ export const projects = sqliteTable("projects", {
   description: text("description").notNull().default(""),
   status: text("status").notNull().default("draft"),
   engagementModules: text("engagement_modules").default('["selection"]'), // JSON array: selection, ivv, health_check
+  engagementMode: text("engagement_mode").default("consulting"), // 'consulting' | 'self_service'
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at").notNull(),
 });
@@ -422,3 +423,42 @@ export type BudgetTracking = typeof budgetTracking.$inferSelect;
 export type InsertBudgetTracking = z.infer<typeof insertBudgetTrackingSchema>;
 export type ScheduleTracking = typeof scheduleTracking.$inferSelect;
 export type InsertScheduleTracking = z.infer<typeof insertScheduleTrackingSchema>;
+
+// ==================== VENDOR KNOWLEDGE BASE ====================
+
+export const vendorCapabilities = sqliteTable("vendor_capabilities", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  vendorPlatform: text("vendor_platform").notNull(), // workday, oracle_cloud, tyler, maximo, nv5, oracle_eam
+  module: text("module").notNull(),                   // e.g., "Accounts Payable", "Payroll"
+  processArea: text("process_area").notNull(),        // e.g., "Invoice Processing"
+  workflowDescription: text("workflow_description"),
+  differentiators: text("differentiators"),            // JSON array of strings
+  limitations: text("limitations"),                    // JSON array of strings
+  bestFitFor: text("best_fit_for"),                   // JSON array
+  integrationNotes: text("integration_notes"),
+  automationLevel: text("automation_level"),           // fully_automated, semi_automated, manual, configurable
+  maturityRating: integer("maturity_rating"),          // 1-5
+  sourceDocuments: text("source_documents"),           // JSON array
+  lastUpdated: text("last_updated"),
+  createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
+});
+
+export const vendorProcessDetails = sqliteTable("vendor_process_details", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  vendorPlatform: text("vendor_platform").notNull(),
+  module: text("module").notNull(),
+  reqReference: text("req_reference"),      // e.g., "AP01", "HR15"
+  capability: text("capability").notNull(), // what the requirement asks for
+  howHandled: text("how_handled"),          // vendor's description of how they handle it
+  score: text("score"),                     // S/F/C/T/N
+  sourceVendor: text("source_vendor"),      // which SI's proposal
+  createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
+});
+
+export const insertVendorCapabilitySchema = createInsertSchema(vendorCapabilities).omit({ id: true, createdAt: true });
+export const insertVendorProcessDetailSchema = createInsertSchema(vendorProcessDetails).omit({ id: true, createdAt: true });
+
+export type VendorCapability = typeof vendorCapabilities.$inferSelect;
+export type InsertVendorCapability = z.infer<typeof insertVendorCapabilitySchema>;
+export type VendorProcessDetail = typeof vendorProcessDetails.$inferSelect;
+export type InsertVendorProcessDetail = z.infer<typeof insertVendorProcessDetailSchema>;

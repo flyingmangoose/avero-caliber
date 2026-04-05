@@ -74,6 +74,7 @@ export default function Dashboard() {
   const [newName, setNewName] = useState("");
   const [newDesc, setNewDesc] = useState("");
   const [newModules, setNewModules] = useState<Record<string, boolean>>({ selection: true, ivv: false, health_check: false });
+  const [newEngagementMode, setNewEngagementMode] = useState("consulting");
 
   const { data: projects, isLoading } = useQuery<ProjectWithStats[]>({
     queryKey: ["/api/projects"],
@@ -87,6 +88,7 @@ export default function Dashboard() {
         description: newDesc,
         status: "draft",
         engagementModules: JSON.stringify(modules),
+        engagementMode: newEngagementMode,
       });
       return res.json();
     },
@@ -96,6 +98,7 @@ export default function Dashboard() {
       setNewName("");
       setNewDesc("");
       setNewModules({ selection: true, ivv: false, health_check: false });
+      setNewEngagementMode("consulting");
       toast({ title: "Project created", description: "Your new project is ready." });
     },
     onError: (err: Error) => {
@@ -180,6 +183,26 @@ export default function Dashboard() {
                   ))}
                 </div>
               </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Engagement Mode</label>
+                <div className="space-y-2">
+                  {([
+                    { value: "consulting", label: "Consulting", desc: "Avero consultant leads the process. AI assists behind the scenes." },
+                    { value: "self_service", label: "Self-Service", desc: "Client interacts with Caliber AI directly for guided evaluation." },
+                  ] as const).map(mode => (
+                    <label key={mode.value} className="flex items-start gap-2.5 cursor-pointer">
+                      <input type="radio" name="engagementMode" className="mt-0.5 accent-[#d4a853]"
+                        checked={newEngagementMode === mode.value}
+                        onChange={() => setNewEngagementMode(mode.value)}
+                        data-testid={`mode-${mode.value}`} />
+                      <div>
+                        <span className="text-sm font-medium">{mode.label}</span>
+                        <p className="text-xs text-muted-foreground">{mode.desc}</p>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
               <Button
                 onClick={() => createMutation.mutate()}
                 disabled={!newName.trim() || createMutation.isPending}
@@ -257,6 +280,11 @@ export default function Dashboard() {
                         {project.name}
                       </h3>
                       {statusBadge(project.status)}
+                      {(project as any).engagementMode === "self_service" ? (
+                        <Badge className="text-[9px] px-1.5 py-0 bg-[#d4a853]/20 text-[#d4a853] border-[#d4a853]/30" data-testid={`badge-mode-${project.id}`}>Self-Service</Badge>
+                      ) : (
+                        <Badge className="text-[9px] px-1.5 py-0 bg-muted text-muted-foreground" data-testid={`badge-mode-${project.id}`}>Consulting</Badge>
+                      )}
                     </div>
                     {project.description && (
                       <p className="text-xs text-muted-foreground truncate mb-3">{project.description}</p>

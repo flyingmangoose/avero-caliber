@@ -16,6 +16,7 @@ import StakeholderFeedback from "@/pages/stakeholder-feedback";
 import CompliancePage from "@/pages/compliance";
 import GoLivePage from "@/pages/go-live";
 import HealthCheckPage from "@/pages/health-check";
+import KnowledgeBasePage from "@/pages/knowledge-base";
 import NotFound from "@/pages/not-found";
 import WorkshopView from "@/pages/workshop";
 import Portfolio from "@/pages/portfolio";
@@ -43,6 +44,7 @@ function AppLayout() {
               <Route path="/projects/:id/health-check" component={HealthCheckPage} />
               <Route path="/projects/:id" component={ProjectView} />
               <Route path="/templates" component={TemplateLibrary} />
+              <Route path="/knowledge-base" component={KnowledgeBasePage} />
               <Route component={NotFound} />
             </Switch>
           </main>

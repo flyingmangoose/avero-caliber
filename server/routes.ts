@@ -2269,6 +2269,192 @@ Write in professional consulting tone covering: overall posture assessment, key 
     res.json(updated);
   });
 
+  // ==================== VENDOR KNOWLEDGE BASE ====================
+
+  app.get("/api/knowledge-base/capabilities", (req, res) => {
+    const filters: { platform?: string; module?: string; search?: string } = {};
+    if (req.query.platform) filters.platform = req.query.platform as string;
+    if (req.query.module) filters.module = req.query.module as string;
+    if (req.query.search) filters.search = req.query.search as string;
+    const capabilities = storage.getVendorCapabilities(filters);
+    res.json(capabilities);
+  });
+
+  app.get("/api/knowledge-base/capabilities/:id", (req, res) => {
+    const id = parseInt(req.params.id);
+    const cap = storage.getVendorCapability(id);
+    if (!cap) return res.status(404).json({ error: "Capability not found" });
+    res.json(cap);
+  });
+
+  app.post("/api/knowledge-base/capabilities", (req, res) => {
+    const { vendorPlatform, module, processArea } = req.body;
+    if (!vendorPlatform || !module || !processArea) {
+      return res.status(400).json({ error: "vendorPlatform, module, and processArea are required" });
+    }
+    const cap = storage.createVendorCapability(req.body);
+    res.status(201).json(cap);
+  });
+
+  app.patch("/api/knowledge-base/capabilities/:id", (req, res) => {
+    const id = parseInt(req.params.id);
+    const updated = storage.updateVendorCapability(id, req.body);
+    if (!updated) return res.status(404).json({ error: "Capability not found" });
+    res.json(updated);
+  });
+
+  app.delete("/api/knowledge-base/capabilities/:id", (req, res) => {
+    const id = parseInt(req.params.id);
+    storage.deleteVendorCapability(id);
+    res.json({ success: true });
+  });
+
+  app.get("/api/knowledge-base/compare", (req, res) => {
+    const module = req.query.module as string;
+    const platforms = (req.query.platforms as string || "").split(",").filter(Boolean);
+    if (!module || platforms.length === 0) {
+      return res.status(400).json({ error: "module and platforms query params required" });
+    }
+    const results = storage.compareCapabilities(module, platforms);
+    res.json(results);
+  });
+
+  app.get("/api/knowledge-base/coverage", (_req, res) => {
+    const coverage = storage.getModuleCoverage();
+    res.json(coverage);
+  });
+
+  app.get("/api/knowledge-base/process-details", (req, res) => {
+    const filters: { platform?: string; module?: string; search?: string } = {};
+    if (req.query.platform) filters.platform = req.query.platform as string;
+    if (req.query.module) filters.module = req.query.module as string;
+    if (req.query.search) filters.search = req.query.search as string;
+    const details = storage.getProcessDetails(filters);
+    res.json(details);
+  });
+
+  app.post("/api/knowledge-base/seed", (_req, res) => {
+    try {
+      const dataPath = path.resolve("/home/user/workspace/port_of_portland_vendor_data.json");
+      if (!fs.existsSync(dataPath)) {
+        return res.status(404).json({ error: "Vendor data file not found at " + dataPath });
+      }
+      const raw = JSON.parse(fs.readFileSync(dataPath, "utf-8"));
+      const { vendorScores, requirements: reqMap } = raw;
+
+      // Build reqNumber -> requirement lookup
+      const reqByNumber: Record<string, any> = {};
+      for (const req of Object.values(reqMap) as any[]) {
+        reqByNumber[req.reqNumber] = req;
+      }
+
+      // Vendor-to-platform mapping
+      const VENDOR_PLATFORM_MAP: Record<string, Record<string, string>> = {
+        "Deloitte (Workday)": { ERP: "workday", EAM: "workday", HCM: "workday", default: "workday" },
+        "Cognizant (Workday+Maximo)": { ERP: "workday", EAM: "maximo", HCM: "workday", default: "workday" },
+        "Oracle": { ERP: "oracle_cloud", EAM: "oracle_eam", HCM: "oracle_cloud", default: "oracle_cloud" },
+        "IBM (Oracle+Maximo)": { ERP: "oracle_cloud", EAM: "maximo", HCM: "oracle_cloud", default: "oracle_cloud" },
+        "Strada (Workday+NV5)": { ERP: "workday", EAM: "nv5", HCM: "workday", default: "workday" },
+      };
+
+      let totalProcessDetails = 0;
+      let totalCapabilities = 0;
+
+      for (const [vendorName, scores] of Object.entries(vendorScores)) {
+        const platformMap = VENDOR_PLATFORM_MAP[vendorName];
+        if (!platformMap) continue;
+
+        // Group by platform+module
+        const grouped: Record<string, { platform: string; module: string; items: { reqRef: string; desc: string; score: string; comments: string }[] }> = {};
+
+        for (const [reqRef, entry] of Object.entries(scores as Record<string, any>)) {
+          const req = reqByNumber[reqRef];
+          if (!req) continue;
+          const system = (entry.system || "").toUpperCase() || "ERP";
+          const platform = platformMap[system] || platformMap.default || "unknown";
+          const module = req.functionalArea || "General";
+          const key = `${platform}::${module}`;
+
+          if (!grouped[key]) grouped[key] = { platform, module, items: [] };
+          grouped[key].items.push({
+            reqRef,
+            desc: req.description || "",
+            score: entry.score || "",
+            comments: entry.comments || "",
+          });
+        }
+
+        // For each platform+module group
+        for (const { platform, module, items } of Object.values(grouped)) {
+          // Create process detail rows
+          const processDetailRows = items.map(item => ({
+            vendorPlatform: platform,
+            module,
+            reqReference: item.reqRef,
+            capability: item.desc,
+            howHandled: item.comments || null,
+            score: item.score || null,
+            sourceVendor: vendorName,
+          }));
+          storage.bulkCreateProcessDetails(processDetailRows);
+          totalProcessDetails += processDetailRows.length;
+
+          // Build capability summary (no AI)
+          const sScored = items.filter(i => i.score === "S").sort((a, b) => (b.comments?.length || 0) - (a.comments?.length || 0));
+          const nfScored = items.filter(i => i.score === "N" || i.score === "F");
+          const total = items.length;
+          const sCount = sScored.length;
+
+          // workflowDescription: top 5 longest S-scored comments
+          const workflowDescription = sScored.slice(0, 5).map(i => i.comments).filter(Boolean).join("\n\n");
+
+          // differentiators: first sentences from top 5 S-scored
+          const differentiators = sScored.slice(0, 5).map(i => {
+            const firstSentence = (i.comments || "").split(/\.\s/)[0];
+            return firstSentence ? firstSentence + "." : i.desc;
+          });
+
+          // limitations: descriptions of N/F scored items
+          const limitations = nfScored.map(i => `${i.reqRef}: ${i.desc}`);
+
+          // maturityRating: round(sCount / total * 5)
+          const maturityRating = total > 0 ? Math.round((sCount / total) * 5) : 0;
+
+          storage.createVendorCapability({
+            vendorPlatform: platform,
+            module,
+            processArea: module,
+            workflowDescription: workflowDescription || null,
+            differentiators: differentiators.length > 0 ? JSON.stringify(differentiators) : null,
+            limitations: limitations.length > 0 ? JSON.stringify(limitations) : null,
+            automationLevel: "semi_automated",
+            maturityRating: Math.max(1, Math.min(5, maturityRating)),
+            sourceDocuments: JSON.stringify([`${vendorName} RFP Response`]),
+          });
+          totalCapabilities++;
+        }
+      }
+
+      res.json({ success: true, message: `Seeded ${totalCapabilities} capabilities and ${totalProcessDetails} process details` });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || "Failed to seed knowledge base" });
+    }
+  });
+
+  app.patch("/api/projects/:id/engagement-mode", (req, res) => {
+    const projectId = parseInt(req.params.id);
+    const project = storage.getProject(projectId);
+    if (!project) return res.status(404).json({ error: "Project not found" });
+
+    const { mode } = req.body;
+    if (!mode || !["consulting", "self_service"].includes(mode)) {
+      return res.status(400).json({ error: "mode must be 'consulting' or 'self_service'" });
+    }
+
+    const updated = storage.updateProjectEngagementMode(projectId, mode);
+    res.json(updated);
+  });
+
   // ==================== SEED DATA ====================
 
   app.post("/api/projects/:id/seed-ivv-data", (req, res) => {
