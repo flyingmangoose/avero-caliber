@@ -15,84 +15,130 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
 
-  // ==================== ENTITY RESEARCH ====================
+  // ==================== DOMAIN RESEARCH ====================
 
-  app.post("/api/research-entity", async (req, res) => {
-    const { entityName, entityType, state } = req.body;
-    if (!entityName || !entityType) return res.status(400).json({ error: "entityName and entityType are required" });
+  function stripHtml(html: string): string {
+    return html
+      .replace(/<script[\s\S]*?<\/script>/gi, "")
+      .replace(/<style[\s\S]*?<\/style>/gi, "")
+      .replace(/<[^>]*>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  async function fetchPageText(url: string): Promise<string> {
+    try {
+      const res = await fetch(url, {
+        headers: { "User-Agent": "Mozilla/5.0 (compatible; CaliberBot/1.0)" },
+        signal: AbortSignal.timeout(10000),
+        redirect: "follow",
+      });
+      if (!res.ok) return "";
+      const html = await res.text();
+      return stripHtml(html);
+    } catch {
+      return "";
+    }
+  }
+
+  app.post("/api/research-domain", async (req, res) => {
+    const { domain: rawDomain } = req.body;
+    if (!rawDomain) return res.status(400).json({ error: "domain is required" });
+
+    const domain = rawDomain.replace(/^https?:\/\//, "").replace(/\/+$/, "");
+
+    let websiteText = "";
+    try {
+      // Fetch homepage
+      const homeText = await fetchPageText(`https://${domain}`);
+      websiteText = homeText;
+
+      // Try additional pages in parallel
+      const extraUrls = [
+        `https://${domain}/about`, `https://${domain}/about-us`, `https://${domain}/government`,
+        `https://${domain}/budget`, `https://${domain}/finance`, `https://${domain}/departments`,
+      ];
+      const extraResults = await Promise.allSettled(extraUrls.map(u => fetchPageText(u)));
+      for (const r of extraResults) {
+        if (r.status === "fulfilled" && r.value.length > 100) {
+          websiteText += "\n\n" + r.value;
+        }
+      }
+    } catch (err) {
+      console.error("Website fetch error:", err);
+    }
 
     try {
       const { anthropic } = await import("./ai");
-      const response = await anthropic.messages.create({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 2048,
-        messages: [{
-          role: "user",
-          content: `Research the following government entity and provide structured data:
 
-Entity: ${entityName}
-Type: ${entityType}
-${state ? `State: ${state}` : ""}
+      const prompt = websiteText.length > 200
+        ? `You are analyzing a government entity's website to extract organizational information.
 
-Provide the following information as JSON. Use your best knowledge. If you're not sure about a specific number, provide a reasonable estimate and mark it with "(est)". If you truly don't know, use null.
+WEBSITE CONTENT FROM: ${domain}
+${websiteText.substring(0, 30000)}
 
+Extract the following as JSON:
 {
-  "entityName": "official full name",
-  "entityType": "${entityType}",
-  "state": "state",
+  "entityName": "official full name of the entity",
+  "entityType": "city/county/utility/transit/port/state_agency/special_district",
+  "state": "state abbreviation",
   "population": number or null,
   "employeeCount": number or null,
-  "annualBudget": "e.g. $1.2B" or null,
-  "departments": [
-    { "name": "Department Name", "headcount": number or null }
-  ],
-  "currentSystems": [
-    { "name": "System Name", "module": "what it's used for", "vendor": "vendor name", "yearsInUse": number or null }
-  ],
-  "keyFacts": "2-3 sentences about the entity relevant to ERP/technology context",
-  "challenges": "common challenges for this type/size of entity"
+  "annualBudget": "dollar amount" or null,
+  "departments": [{ "name": "dept name", "headcount": null }],
+  "currentSystems": [{ "name": "system", "module": "purpose", "vendor": "vendor", "yearsInUse": null }],
+  "leadership": [{ "name": "person", "title": "their title" }],
+  "keyFacts": "2-3 relevant sentences",
+  "challenges": "common challenges for this entity type"
 }
 
-For departments, include the major departments typical for this entity type. For current systems, include commonly known systems if available, or typical systems for this entity type/size.
+Extract what you can find. Use null for anything not on the website. For departments, list all you can find. For current systems, only include if specifically mentioned on the website.
+Return ONLY JSON.`
+        : `The domain "${domain}" appears to be a government entity website but I could not retrieve its content. Based on the domain name alone, research this entity.
 
-Return ONLY the JSON, no other text.`
-        }],
+Provide structured data as JSON:
+{
+  "entityName": "official full name based on the domain",
+  "entityType": "city/county/utility/transit/port/state_agency/special_district",
+  "state": "state abbreviation",
+  "population": number or null,
+  "employeeCount": number or null,
+  "annualBudget": "dollar amount" or null,
+  "departments": [{ "name": "dept name", "headcount": null }],
+  "currentSystems": [],
+  "leadership": [],
+  "keyFacts": "2-3 relevant sentences about this entity",
+  "challenges": "common challenges for this entity type"
+}
+
+Use your best knowledge. Provide reasonable estimates where possible. Use null for unknowns.
+Return ONLY JSON.`;
+
+      const response = await anthropic.messages.create({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 4096,
+        messages: [{ role: "user", content: prompt }],
       });
 
       const text = response.content[0].type === "text" ? response.content[0].text : "";
       const jsonStr = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
       const data = JSON.parse(jsonStr);
-      res.json({ success: true, data });
+      res.json({ success: true, data, source: websiteText.length > 200 ? "website" : "knowledge" });
     } catch (err: any) {
-      console.error("Entity research error:", err);
-      const templates: Record<string, any> = {
-        city: { departments: [
-          { name: "Finance", headcount: null }, { name: "Human Resources", headcount: null },
-          { name: "Public Works", headcount: null }, { name: "Parks & Recreation", headcount: null },
-          { name: "Police", headcount: null }, { name: "Fire", headcount: null },
-          { name: "IT/Technology", headcount: null }, { name: "Planning & Development", headcount: null },
-          { name: "City Manager/Admin", headcount: null },
-        ] },
-        county: { departments: [
-          { name: "Finance/Treasurer", headcount: null }, { name: "Human Resources", headcount: null },
-          { name: "Public Works/Roads", headcount: null }, { name: "Sheriff", headcount: null },
-          { name: "Health & Human Services", headcount: null }, { name: "IT", headcount: null },
-          { name: "Assessor", headcount: null }, { name: "County Clerk", headcount: null },
-        ] },
-        utility: { departments: [
-          { name: "Finance", headcount: null }, { name: "Operations", headcount: null },
-          { name: "Engineering", headcount: null }, { name: "Customer Service", headcount: null },
-          { name: "IT", headcount: null }, { name: "Maintenance", headcount: null },
-        ] },
-      };
-      const template = templates[entityType] || templates.city;
+      console.error("Domain research error:", err);
+      // Fallback: basic info from domain name
       res.json({
         success: true,
+        source: "fallback",
         data: {
-          entityName, entityType, state: state || null,
+          entityName: domain, entityType: "city", state: null,
           population: null, employeeCount: null, annualBudget: null,
-          departments: template.departments,
-          currentSystems: [],
+          departments: [
+            { name: "Finance", headcount: null }, { name: "Human Resources", headcount: null },
+            { name: "Public Works", headcount: null }, { name: "IT/Technology", headcount: null },
+            { name: "Police", headcount: null }, { name: "Fire", headcount: null },
+          ],
+          currentSystems: [], leadership: [],
           keyFacts: null, challenges: null,
         },
       });

@@ -41,6 +41,7 @@ import {
   DollarSign,
   Target,
   ClipboardList,
+  Globe,
 } from "lucide-react";
 
 const API_BASE = "__PORT_5000__".startsWith("__") ? "" : "__PORT_5000__";
@@ -250,13 +251,14 @@ function CreateProjectFlow({ onClose, onCreated }: { onClose: () => void; onCrea
   const [step, setStep] = useState<1 | 2>(1);
 
   // Step 1 fields
-  const [entityName, setEntityName] = useState("");
-  const [entityType, setEntityType] = useState("city");
-  const [state, setState] = useState("");
+  const [domain, setDomain] = useState("");
   const [engagementMode, setEngagementMode] = useState("consulting");
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
 
-  // Step 2 fields — populated by research/extract or manual
+  // Step 2 fields — populated by enrichment or manual
+  const [entityName, setEntityName] = useState("");
+  const [entityType, setEntityType] = useState("city");
+  const [state, setState] = useState("");
   const [profile, setProfile] = useState<any>(null);
   const [docData, setDocData] = useState<any>(null);
   const [population, setPopulation] = useState("");
@@ -267,66 +269,69 @@ function CreateProjectFlow({ onClose, onCreated }: { onClose: () => void; onCrea
   const [modules, setModules] = useState<Record<string, boolean>>({ selection: true, ivv: false, health_check: false });
   const [description, setDescription] = useState("");
 
-  // Helper: apply extracted/researched data to form, merging with user input (user input wins)
+  // Apply extracted/researched data, document data wins over domain data
   const applyData = (d: any, isDocument: boolean) => {
-    if (!entityName && d.entityName) setEntityName(d.entityName);
-    if (!state && d.state) setState(d.state);
+    if (isDocument || !entityName) { if (d.entityName) setEntityName(d.entityName); }
+    if (isDocument || !state) { if (d.state) setState(d.state); }
     if (d.entityType) setEntityType(d.entityType);
-    if (!population && d.population) setPopulation(d.population.toString());
-    if (!employeeCount && d.employeeCount) setEmployeeCount(d.employeeCount.toString());
-    if (!annualBudget && d.annualBudget) setAnnualBudget(d.annualBudget);
-    if (d.departments?.length && departments.length === 0) {
+    if ((isDocument || !population) && d.population) setPopulation(d.population.toString());
+    if ((isDocument || !employeeCount) && d.employeeCount) setEmployeeCount(d.employeeCount.toString());
+    if ((isDocument || !annualBudget) && d.annualBudget) setAnnualBudget(d.annualBudget);
+    if (d.departments?.length && (isDocument || departments.length === 0)) {
       setDepartments(d.departments.map((dep: any) => ({ name: dep.name, headcount: dep.headcount?.toString() || "" })));
     }
-    if (d.currentSystems?.length && systems.length === 0) {
+    if (d.currentSystems?.length && (isDocument || systems.length === 0)) {
       setSystems(d.currentSystems.map((s: any) => ({ name: s.name || "", module: s.module || "", vendor: s.vendor || "", yearsInUse: s.yearsInUse?.toString() || "" })));
     }
-    if (!description) {
-      setDescription(isDocument && d.projectDescription ? d.projectDescription : d.keyFacts || "");
+    if (isDocument || !description) {
+      const desc = isDocument && d.projectDescription ? d.projectDescription : d.keyFacts || "";
+      if (desc) setDescription(desc);
     }
     setProfile((prev: any) => ({
       ...prev,
-      keyFacts: d.keyFacts || prev?.keyFacts || null,
-      challenges: d.challenges || prev?.challenges || null,
+      keyFacts: (isDocument ? d.keyFacts : d.keyFacts || prev?.keyFacts) || null,
+      challenges: (isDocument ? d.challenges : d.challenges || prev?.challenges) || null,
+      leadership: d.leadership || prev?.leadership || null,
     }));
     if (isDocument) setDocData(d);
   };
 
-  const extractMutation = useMutation({
+  const enrichMutation = useMutation({
     mutationFn: async () => {
-      if (!uploadedFile) throw new Error("No file selected");
-      const formData = new FormData();
-      formData.append("file", uploadedFile);
-      const res = await fetch(`${API_BASE}/api/extract-document`, { method: "POST", body: formData });
-      if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.error || "Extraction failed"); }
-      return res.json();
-    },
-    onSuccess: async (result: any) => {
-      const d = result.data;
-      applyData(d, true);
-      // Also call research for gaps
-      const eName = d.entityName || entityName;
-      const eType = d.entityType || entityType;
-      const eState = d.state || state;
-      if (eName) {
-        try {
-          const res = await apiRequest("POST", "/api/research-entity", { entityName: eName, entityType: eType, state: eState || undefined });
-          const r = await res.json();
-          if (r.data) applyData(r.data, false);
-        } catch {} // research is supplemental, don't fail
-      }
-      setStep(2);
-    },
-    onError: (e: any) => toast({ title: "Extraction failed", description: e.message, variant: "destructive" }),
-  });
+      const hasDomain = domain.trim().length > 0;
+      const hasFile = !!uploadedFile;
+      if (!hasDomain && !hasFile) throw new Error("Enter a domain or upload a document");
 
-  const researchMutation = useMutation({
-    mutationFn: () => apiRequest("POST", "/api/research-entity", { entityName, entityType, state: state || undefined }).then(r => r.json()),
-    onSuccess: (result: any) => {
-      applyData(result.data, false);
+      const promises: Promise<{ type: string; data: any }>[] = [];
+
+      if (hasDomain) {
+        const cleanDomain = domain.trim().replace(/^https?:\/\//, "").replace(/\/+$/, "");
+        promises.push(
+          apiRequest("POST", "/api/research-domain", { domain: cleanDomain })
+            .then(r => r.json()).then(r => ({ type: "domain", data: r.data }))
+        );
+      }
+      if (hasFile) {
+        const formData = new FormData();
+        formData.append("file", uploadedFile!);
+        promises.push(
+          fetch(`${API_BASE}/api/extract-document`, { method: "POST", body: formData })
+            .then(r => { if (!r.ok) throw new Error("Extraction failed"); return r.json(); })
+            .then(r => ({ type: "document", data: r.data }))
+        );
+      }
+
+      return Promise.all(promises);
+    },
+    onSuccess: (results: { type: string; data: any }[]) => {
+      // Apply domain data first, then document data on top (document wins conflicts)
+      const domainResult = results.find(r => r.type === "domain");
+      const docResult = results.find(r => r.type === "document");
+      if (domainResult) applyData(domainResult.data, false);
+      if (docResult) applyData(docResult.data, true);
       setStep(2);
     },
-    onError: (e: any) => toast({ title: "Research failed", description: e.message, variant: "destructive" }),
+    onError: (e: any) => toast({ title: "Enrichment failed", description: e.message, variant: "destructive" }),
   });
 
   const createMutation = useMutation({
@@ -369,19 +374,15 @@ function CreateProjectFlow({ onClose, onCreated }: { onClose: () => void; onCrea
   const updateSystem = (i: number, field: string, value: string) =>
     setSystems(p => p.map((s, idx) => idx === i ? { ...s, [field]: value } : s));
 
-  const isExtracting = extractMutation.isPending;
-  const isResearching = researchMutation.isPending;
-  const isBusy = isExtracting || isResearching;
-
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     if (f) setUploadedFile(f);
   };
 
-  const handleProceed = () => {
-    if (uploadedFile) extractMutation.mutate();
-    else if (entityName.trim()) researchMutation.mutate();
-  };
+  const isBusy = enrichMutation.isPending;
+  const loadingLabel = domain.trim() && uploadedFile
+    ? `Researching ${domain.trim()} & extracting ${uploadedFile.name}...`
+    : uploadedFile ? `Extracting from ${uploadedFile.name}...` : `Researching ${domain.trim()}...`;
 
   if (step === 1) {
     return (
@@ -393,15 +394,26 @@ function CreateProjectFlow({ onClose, onCreated }: { onClose: () => void; onCrea
         </DialogHeader>
         <ScrollArea className="flex-1 -mx-6 px-6">
           <div className="space-y-4 pt-2 pb-2">
-            {/* Document upload zone */}
+            {/* Domain input — primary field */}
+            <div>
+              <label className="text-sm font-medium mb-1.5 block">Client Website / Domain</label>
+              <div className="relative">
+                <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
+                <Input placeholder="e.g., portlandoregon.gov" value={domain} className="text-base h-11 pl-9"
+                  onChange={e => setDomain(e.target.value)} data-testid="input-domain" autoFocus />
+              </div>
+            </div>
+
+            {/* Document upload — optional */}
             <div>
               <label className="text-sm font-medium mb-1.5 block flex items-center gap-1.5">
                 <FileText className="w-4 h-4 text-muted-foreground" />Upload Project Documents
+                <span className="text-[10px] font-normal text-muted-foreground">(optional)</span>
               </label>
-              <label className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-5 cursor-pointer transition-colors hover:border-[#d4a853]/50 hover:bg-[#d4a853]/5"
+              <label className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-4 cursor-pointer transition-colors hover:border-[#d4a853]/50 hover:bg-[#d4a853]/5"
                 data-testid="dropzone-upload">
                 <input type="file" className="hidden" accept=".pdf,.docx" onChange={handleFileChange} data-testid="input-file-upload" />
-                <Upload className="w-8 h-8 text-muted-foreground/40 mb-2" />
+                <Upload className="w-6 h-6 text-muted-foreground/40 mb-1" />
                 <p className="text-xs font-medium text-muted-foreground">Drop RFP, SOW, or project docs here or click to browse</p>
                 <p className="text-[10px] text-muted-foreground/60 mt-0.5">PDF, DOCX supported. Max 50MB.</p>
               </label>
@@ -417,34 +429,7 @@ function CreateProjectFlow({ onClose, onCreated }: { onClose: () => void; onCrea
               )}
             </div>
 
-            {/* Divider */}
-            <div className="flex items-center gap-3">
-              <div className="flex-1 border-t border-border/50" />
-              <span className="text-[10px] text-muted-foreground uppercase tracking-wider">or enter details manually</span>
-              <div className="flex-1 border-t border-border/50" />
-            </div>
-
-            {/* Manual fields */}
-            <div>
-              <label className="text-sm font-medium mb-1.5 block">Client / Entity Name</label>
-              <Input placeholder="e.g., City of Portland, Multnomah County" value={entityName} className="text-base h-11"
-                onChange={e => setEntityName(e.target.value)} data-testid="input-entity-name" />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-sm font-medium mb-1.5 block">Entity Type</label>
-                <Select value={entityType} onValueChange={setEntityType}>
-                  <SelectTrigger className="h-9" data-testid="select-entity-type"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {ENTITY_TYPES.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="text-sm font-medium mb-1.5 block">State</label>
-                <Input placeholder="e.g., Oregon" value={state} onChange={e => setState(e.target.value)} data-testid="input-state" />
-              </div>
-            </div>
+            {/* Engagement Mode */}
             <div>
               <label className="text-sm font-medium mb-2 block">Engagement Mode</label>
               <div className="flex gap-4">
@@ -469,19 +454,17 @@ function CreateProjectFlow({ onClose, onCreated }: { onClose: () => void; onCrea
         </ScrollArea>
         <div className="pt-3 border-t border-border/50 shrink-0 space-y-2">
           <Button className="w-full bg-[#d4a853] hover:bg-[#c49843] text-white gap-2 h-10"
-            disabled={(!entityName.trim() && !uploadedFile) || isBusy}
-            onClick={handleProceed} data-testid="btn-research">
+            disabled={(!domain.trim() && !uploadedFile) || isBusy}
+            onClick={() => enrichMutation.mutate()} data-testid="btn-enrich">
             {isBusy ? (
-              <><Loader2 className="w-4 h-4 animate-spin" />{isExtracting ? `Extracting from ${uploadedFile?.name}...` : `Researching ${entityName}...`}</>
-            ) : uploadedFile ? (
-              <><FileText className="w-4 h-4" />Extract & Continue</>
+              <><Loader2 className="w-4 h-4 animate-spin" />{loadingLabel}</>
             ) : (
-              <><Sparkles className="w-4 h-4" />Research & Continue</>
+              <><Sparkles className="w-4 h-4" />Enrich & Continue</>
             )}
           </Button>
           <button className="w-full text-xs text-muted-foreground hover:text-foreground transition-colors text-center py-1"
             onClick={skipToManual} data-testid="btn-skip-research">
-            Skip research, create manually
+            Or enter details manually
           </button>
         </div>
       </>
@@ -494,6 +477,7 @@ function CreateProjectFlow({ onClose, onCreated }: { onClose: () => void; onCrea
   const scope = docData?.projectScope;
   const keyReqs = docData?.keyRequirements;
   const evalCriteria = docData?.evaluationCriteria;
+  const leadership = profile?.leadership;
   const hasDocContext = scope?.length || timeline || budgetInfo || keyReqs?.length || evalCriteria?.length;
 
   return (
@@ -503,11 +487,19 @@ function CreateProjectFlow({ onClose, onCreated }: { onClose: () => void; onCrea
           <button onClick={() => setStep(1)} className="text-muted-foreground hover:text-foreground" data-testid="btn-back-step1">
             <ArrowLeft className="w-4 h-4" />
           </button>
-          Confirm Profile — {entityName}
+          Confirm Profile{entityName ? ` — ${entityName}` : ""}
         </DialogTitle>
       </DialogHeader>
       <ScrollArea className="flex-1 -mx-6 px-6">
         <div className="space-y-5 pb-4">
+          {/* Domain reference */}
+          {domain.trim() && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Globe className="w-3.5 h-3.5" />
+              <span>{domain.trim().replace(/^https?:\/\//, "").replace(/\/+$/, "")}</span>
+            </div>
+          )}
+
           {/* Document context cards */}
           {hasDocContext && (
             <div className="grid grid-cols-2 gap-2">
@@ -570,18 +562,28 @@ function CreateProjectFlow({ onClose, onCreated }: { onClose: () => void; onCrea
           )}
 
           {/* AI context cards */}
-          {(profile?.keyFacts || profile?.challenges) && (
+          {(profile?.keyFacts || profile?.challenges || leadership?.length > 0) && (
             <div className="grid grid-cols-2 gap-2">
-              {profile.keyFacts && (
+              {profile?.keyFacts && (
                 <div className="border rounded-lg p-3 bg-blue-50/50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
                   <p className="text-[10px] font-semibold text-blue-600 dark:text-blue-400 flex items-center gap-1 mb-1"><Info className="w-3 h-3" />Key Facts</p>
                   <p className="text-xs text-foreground">{profile.keyFacts}</p>
                 </div>
               )}
-              {profile.challenges && (
+              {profile?.challenges && (
                 <div className="border rounded-lg p-3 bg-amber-50/50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800">
                   <p className="text-[10px] font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-1 mb-1"><AlertTriangle className="w-3 h-3" />Common Challenges</p>
                   <p className="text-xs text-foreground">{profile.challenges}</p>
+                </div>
+              )}
+              {leadership?.length > 0 && (
+                <div className="border rounded-lg p-3 bg-gray-50/50 dark:bg-gray-900/50 border-gray-200 dark:border-gray-800">
+                  <p className="text-[10px] font-semibold text-foreground flex items-center gap-1 mb-1"><Building2 className="w-3 h-3 text-muted-foreground" />Leadership</p>
+                  <div className="space-y-0.5 text-[10px]">
+                    {leadership.slice(0, 5).map((l: any, i: number) => (
+                      <p key={i}><span className="font-medium">{l.name}</span> <span className="text-muted-foreground">— {l.title}</span></p>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
