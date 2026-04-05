@@ -2269,6 +2269,318 @@ Write in professional consulting tone covering: overall posture assessment, key 
     res.json(updated);
   });
 
+  // ==================== DISCOVERY WIZARD ====================
+
+  // Org Profile
+  app.post("/api/projects/:id/org-profile", (req, res) => {
+    const projectId = parseInt(req.params.id);
+    const project = storage.getProject(projectId);
+    if (!project) return res.status(404).json({ error: "Project not found" });
+
+    const { entityType, entityName, state, population, employeeCount, annualBudget, currentSystems, departments, painSummary } = req.body;
+    const profile = storage.upsertOrgProfile(projectId, {
+      entityType: entityType ?? null,
+      entityName: entityName ?? null,
+      state: state ?? null,
+      population: population ?? null,
+      employeeCount: employeeCount ?? null,
+      annualBudget: annualBudget ?? null,
+      currentSystems: currentSystems ? (typeof currentSystems === "string" ? currentSystems : JSON.stringify(currentSystems)) : null,
+      departments: departments ? (typeof departments === "string" ? departments : JSON.stringify(departments)) : null,
+      painSummary: painSummary ?? null,
+    });
+    res.json(profile);
+  });
+
+  app.get("/api/projects/:id/org-profile", (req, res) => {
+    const projectId = parseInt(req.params.id);
+    const profile = storage.getOrgProfile(projectId);
+    res.json(profile || null);
+  });
+
+  // Discovery Interviews
+  app.post("/api/projects/:id/discovery/interviews", (req, res) => {
+    const projectId = parseInt(req.params.id);
+    const project = storage.getProject(projectId);
+    if (!project) return res.status(404).json({ error: "Project not found" });
+
+    const { functionalArea, interviewee, role } = req.body;
+    if (!functionalArea) return res.status(400).json({ error: "functionalArea is required" });
+
+    const interview = storage.createDiscoveryInterview({
+      projectId, functionalArea, interviewee: interviewee ?? null, role: role ?? null,
+    });
+    res.status(201).json(interview);
+  });
+
+  app.get("/api/projects/:id/discovery/interviews", (req, res) => {
+    const projectId = parseInt(req.params.id);
+    const interviews = storage.getDiscoveryInterviews(projectId);
+    res.json(interviews);
+  });
+
+  app.get("/api/discovery/interviews/:interviewId", (req, res) => {
+    const id = parseInt(req.params.interviewId);
+    const interview = storage.getDiscoveryInterview(id);
+    if (!interview) return res.status(404).json({ error: "Interview not found" });
+    res.json(interview);
+  });
+
+  // SSE streaming interview message
+  app.post("/api/discovery/interviews/:interviewId/message", async (req, res) => {
+    const id = parseInt(req.params.interviewId);
+    const interview = storage.getDiscoveryInterview(id);
+    if (!interview) return res.status(404).json({ error: "Interview not found" });
+
+    const { message } = req.body;
+    if (!message) return res.status(400).json({ error: "message is required" });
+
+    // Parse existing messages
+    let existingMessages: { role: string; content: string; timestamp: string }[] = [];
+    try { existingMessages = interview.messages ? JSON.parse(interview.messages) : []; } catch {}
+
+    // Add user message
+    existingMessages.push({ role: "user", content: message, timestamp: new Date().toISOString() });
+
+    // Build AI context
+    const { buildDiscoveryInterviewPrompt, anthropic } = await import("./ai");
+    const orgProfileData = storage.getOrgProfile(interview.projectId);
+    const systemPrompt = buildDiscoveryInterviewPrompt(
+      interview.functionalArea,
+      orgProfileData,
+      existingMessages,
+    );
+
+    // Build messages for Claude (without timestamps)
+    const claudeMessages = existingMessages.map(m => ({
+      role: m.role as "user" | "assistant",
+      content: m.content,
+    }));
+
+    // Update status to in_progress
+    if (interview.status === "not_started") {
+      storage.updateDiscoveryInterview(id, { status: "in_progress" });
+    }
+
+    // Set SSE headers
+    res.writeHead(200, {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      "Connection": "keep-alive",
+    });
+
+    try {
+      const stream = anthropic.messages.stream({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 2048,
+        system: systemPrompt,
+        messages: claudeMessages,
+      });
+
+      let fullResponse = "";
+
+      stream.on("text", (text) => {
+        fullResponse += text;
+        res.write(`data: ${JSON.stringify({ type: "text", text })}\n\n`);
+      });
+
+      stream.on("end", () => {
+        // Save assistant response
+        existingMessages.push({ role: "assistant", content: fullResponse, timestamp: new Date().toISOString() });
+        storage.updateDiscoveryInterview(id, { messages: JSON.stringify(existingMessages) });
+        res.write(`data: ${JSON.stringify({ type: "done" })}\n\n`);
+        res.end();
+      });
+
+      stream.on("error", (error) => {
+        console.error("Interview stream error:", error);
+        // Still save the user message even on error
+        storage.updateDiscoveryInterview(id, { messages: JSON.stringify(existingMessages) });
+        res.write(`data: ${JSON.stringify({ type: "error", error: "Stream error occurred" })}\n\n`);
+        res.end();
+      });
+    } catch (error: any) {
+      console.error("Interview error:", error);
+      storage.updateDiscoveryInterview(id, { messages: JSON.stringify(existingMessages) });
+      res.write(`data: ${JSON.stringify({ type: "error", error: error.message || "Failed to start interview" })}\n\n`);
+      res.end();
+    }
+  });
+
+  // Complete interview — extract findings
+  app.post("/api/discovery/interviews/:interviewId/complete", async (req, res) => {
+    const id = parseInt(req.params.interviewId);
+    const interview = storage.getDiscoveryInterview(id);
+    if (!interview) return res.status(404).json({ error: "Interview not found" });
+
+    let messages: { role: string; content: string }[] = [];
+    try { messages = interview.messages ? JSON.parse(interview.messages) : []; } catch {}
+
+    if (messages.length === 0) {
+      return res.status(400).json({ error: "No messages in this interview to analyze" });
+    }
+
+    try {
+      const { extractDiscoveryFindings } = await import("./ai");
+      const findings = await extractDiscoveryFindings(interview.functionalArea, messages);
+
+      // Save findings to interview
+      storage.updateDiscoveryInterview(id, {
+        status: "completed",
+        findings: JSON.stringify(findings),
+        painPoints: JSON.stringify(findings.painPoints || []),
+        processSteps: JSON.stringify(findings.processSteps || []),
+      });
+
+      // Create discoveryPainPoint records
+      if (findings.painPoints && Array.isArray(findings.painPoints)) {
+        for (const pp of findings.painPoints) {
+          storage.createPainPoint({
+            projectId: interview.projectId,
+            sourceInterviewId: id,
+            functionalArea: interview.functionalArea,
+            description: pp.description || pp.finding || JSON.stringify(pp),
+            severity: pp.severity || null,
+            frequency: pp.frequency || null,
+            impact: pp.impact || null,
+            currentWorkaround: pp.currentWorkaround || null,
+          });
+        }
+      }
+
+      res.json({ success: true, findings });
+    } catch (error: any) {
+      console.error("Findings extraction error:", error);
+      // Mark as complete even if extraction fails
+      storage.updateDiscoveryInterview(id, { status: "completed" });
+      res.status(500).json({ error: error.message || "Failed to extract findings" });
+    }
+  });
+
+  app.delete("/api/discovery/interviews/:interviewId", (req, res) => {
+    const id = parseInt(req.params.interviewId);
+    storage.deleteDiscoveryInterview(id);
+    res.json({ success: true });
+  });
+
+  // Pain Points
+  app.get("/api/projects/:id/discovery/pain-points", (req, res) => {
+    const projectId = parseInt(req.params.id);
+    const painPoints = storage.getPainPoints(projectId);
+    res.json(painPoints);
+  });
+
+  app.patch("/api/discovery/pain-points/:id", (req, res) => {
+    const id = parseInt(req.params.id);
+    const updated = storage.updatePainPoint(id, req.body);
+    if (!updated) return res.status(404).json({ error: "Pain point not found" });
+    res.json(updated);
+  });
+
+  app.post("/api/projects/:id/discovery/pain-points/prioritize", (req, res) => {
+    const { updates } = req.body;
+    if (!updates || !Array.isArray(updates)) {
+      return res.status(400).json({ error: "updates array is required with [{id, priority}]" });
+    }
+    storage.bulkUpdatePainPointPriorities(updates);
+    res.json({ success: true });
+  });
+
+  // Generate Requirements
+  app.post("/api/projects/:id/discovery/generate-requirements", async (req, res) => {
+    const projectId = parseInt(req.params.id);
+    const project = storage.getProject(projectId);
+    if (!project) return res.status(404).json({ error: "Project not found" });
+
+    try {
+      const { generateRequirementsFromDiscovery } = await import("./ai");
+      const generatedReqs = await generateRequirementsFromDiscovery(projectId);
+
+      // Create actual requirement records
+      const created = [];
+      const moduleCounters: Record<string, number> = {};
+
+      for (const req2 of generatedReqs) {
+        const mod = req2.module || "General";
+        if (!moduleCounters[mod]) {
+          // Count existing requirements in this module to set req numbers
+          const existing = storage.getRequirements(projectId, { functionalArea: mod });
+          moduleCounters[mod] = existing.length;
+        }
+        moduleCounters[mod]++;
+        const prefix = mod.substring(0, 3).toUpperCase();
+        const reqNumber = `${prefix}${String(moduleCounters[mod]).padStart(2, "0")}`;
+
+        const record = storage.createRequirement({
+          projectId,
+          reqNumber,
+          category: "Discovery",
+          functionalArea: mod,
+          subCategory: "Generated",
+          description: req2.description,
+          criticality: req2.criticality || "Desired",
+          comments: req2.justification ? `Justification: ${req2.justification}${req2.painPointRef ? `\nLinked pain point: ${req2.painPointRef}` : ""}` : "",
+        });
+        created.push({ ...record, justification: req2.justification, painPointRef: req2.painPointRef });
+      }
+
+      res.json({ success: true, requirements: created, count: created.length });
+    } catch (error: any) {
+      console.error("Requirements generation error:", error);
+      res.status(500).json({ error: error.message || "Failed to generate requirements" });
+    }
+  });
+
+  // Discovery Summary
+  app.get("/api/projects/:id/discovery/summary", (req, res) => {
+    const projectId = parseInt(req.params.id);
+    const project = storage.getProject(projectId);
+    if (!project) return res.status(404).json({ error: "Project not found" });
+
+    const orgProfileData = storage.getOrgProfile(projectId);
+    const interviews = storage.getDiscoveryInterviews(projectId);
+    const painPoints = storage.getPainPoints(projectId);
+    const reqs = storage.getRequirements(projectId, { functionalArea: undefined });
+    const discoveryReqs = reqs.filter(r => r.category === "Discovery");
+
+    const completedInterviews = interviews.filter(i => i.status === "completed");
+    const interviewSummaries = completedInterviews.map(i => {
+      let ppCount = 0;
+      try { ppCount = i.painPoints ? JSON.parse(i.painPoints).length : 0; } catch {}
+      let psCount = 0;
+      try { psCount = i.processSteps ? JSON.parse(i.processSteps).length : 0; } catch {}
+      return {
+        id: i.id,
+        functionalArea: i.functionalArea,
+        interviewee: i.interviewee,
+        status: i.status,
+        painPointCount: ppCount,
+        processStepCount: psCount,
+      };
+    });
+
+    res.json({
+      orgProfile: orgProfileData || null,
+      interviews: {
+        total: interviews.length,
+        completed: completedInterviews.length,
+        inProgress: interviews.filter(i => i.status === "in_progress").length,
+        summaries: interviewSummaries,
+      },
+      painPoints: {
+        total: painPoints.length,
+        bySeverity: {
+          critical: painPoints.filter(p => p.severity === "critical").length,
+          high: painPoints.filter(p => p.severity === "high").length,
+          medium: painPoints.filter(p => p.severity === "medium").length,
+          low: painPoints.filter(p => p.severity === "low").length,
+        },
+        prioritized: painPoints.filter(p => p.stakeholderPriority != null).length,
+      },
+      generatedRequirements: discoveryReqs.length,
+    });
+  });
+
   // ==================== VENDOR KNOWLEDGE BASE ====================
 
   app.get("/api/knowledge-base/capabilities", (req, res) => {

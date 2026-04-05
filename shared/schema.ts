@@ -462,3 +462,60 @@ export type VendorCapability = typeof vendorCapabilities.$inferSelect;
 export type InsertVendorCapability = z.infer<typeof insertVendorCapabilitySchema>;
 export type VendorProcessDetail = typeof vendorProcessDetails.$inferSelect;
 export type InsertVendorProcessDetail = z.infer<typeof insertVendorProcessDetailSchema>;
+
+// ==================== DISCOVERY WIZARD ====================
+
+export const orgProfile = sqliteTable("org_profile", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  projectId: integer("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  entityType: text("entity_type"),           // city, county, utility, transit, port, state_agency, special_district
+  entityName: text("entity_name"),
+  state: text("state"),
+  population: integer("population"),
+  employeeCount: integer("employee_count"),
+  annualBudget: text("annual_budget"),
+  currentSystems: text("current_systems"),   // JSON: [{ name, module, yearsInUse, vendor }]
+  departments: text("departments"),          // JSON: [{ name, headcount, keyProcesses }]
+  painSummary: text("pain_summary"),
+  createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
+});
+
+export const discoveryInterviews = sqliteTable("discovery_interviews", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  projectId: integer("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  functionalArea: text("functional_area").notNull(),
+  status: text("status").default("not_started"), // not_started, in_progress, completed
+  interviewee: text("interviewee"),
+  role: text("role"),
+  messages: text("messages"),                // JSON: [{role, content, timestamp}]
+  findings: text("findings"),                // JSON: AI-extracted structured findings
+  painPoints: text("pain_points"),           // JSON: extracted pain points
+  processSteps: text("process_steps"),       // JSON: extracted process steps
+  createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
+});
+
+export const discoveryPainPoints = sqliteTable("discovery_pain_points", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  projectId: integer("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  sourceInterviewId: integer("source_interview_id"),
+  functionalArea: text("functional_area").notNull(),
+  description: text("description").notNull(),
+  severity: text("severity"),                // critical, high, medium, low
+  frequency: text("frequency"),              // daily, weekly, monthly, quarterly, annual
+  impact: text("impact"),
+  currentWorkaround: text("current_workaround"),
+  stakeholderPriority: integer("stakeholder_priority"),
+  linkedRequirements: text("linked_requirements"), // JSON array
+  createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
+});
+
+export const insertOrgProfileSchema = createInsertSchema(orgProfile).omit({ id: true, createdAt: true });
+export const insertDiscoveryInterviewSchema = createInsertSchema(discoveryInterviews).omit({ id: true, createdAt: true });
+export const insertDiscoveryPainPointSchema = createInsertSchema(discoveryPainPoints).omit({ id: true, createdAt: true });
+
+export type OrgProfile = typeof orgProfile.$inferSelect;
+export type InsertOrgProfile = z.infer<typeof insertOrgProfileSchema>;
+export type DiscoveryInterview = typeof discoveryInterviews.$inferSelect;
+export type InsertDiscoveryInterview = z.infer<typeof insertDiscoveryInterviewSchema>;
+export type DiscoveryPainPoint = typeof discoveryPainPoints.$inferSelect;
+export type InsertDiscoveryPainPoint = z.infer<typeof insertDiscoveryPainPointSchema>;

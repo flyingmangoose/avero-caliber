@@ -26,6 +26,9 @@ import {
   type ScheduleTracking, scheduleTracking,
   type VendorCapability, vendorCapabilities,
   type VendorProcessDetail, vendorProcessDetails,
+  type OrgProfile, orgProfile,
+  type DiscoveryInterview, discoveryInterviews,
+  type DiscoveryPainPoint, discoveryPainPoints,
 } from "@shared/schema";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import Database from "better-sqlite3";
@@ -355,6 +358,50 @@ sqlite.exec(`
     source_vendor TEXT,
     created_at TEXT NOT NULL
   );
+
+  CREATE TABLE IF NOT EXISTS org_profile (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    entity_type TEXT,
+    entity_name TEXT,
+    state TEXT,
+    population INTEGER,
+    employee_count INTEGER,
+    annual_budget TEXT,
+    current_systems TEXT,
+    departments TEXT,
+    pain_summary TEXT,
+    created_at TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS discovery_interviews (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    functional_area TEXT NOT NULL,
+    status TEXT DEFAULT 'not_started',
+    interviewee TEXT,
+    role TEXT,
+    messages TEXT,
+    findings TEXT,
+    pain_points TEXT,
+    process_steps TEXT,
+    created_at TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS discovery_pain_points (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    source_interview_id INTEGER,
+    functional_area TEXT NOT NULL,
+    description TEXT NOT NULL,
+    severity TEXT,
+    frequency TEXT,
+    impact TEXT,
+    current_workaround TEXT,
+    stakeholder_priority INTEGER,
+    linked_requirements TEXT,
+    created_at TEXT NOT NULL
+  );
 `);
 
 // Safe column additions (ignored if already exists)
@@ -587,6 +634,23 @@ export interface IStorage {
 
   // Engagement Mode
   updateProjectEngagementMode(id: number, mode: string): Project | undefined;
+
+  // Org Profile
+  upsertOrgProfile(projectId: number, data: { entityType?: string | null; entityName?: string | null; state?: string | null; population?: number | null; employeeCount?: number | null; annualBudget?: string | null; currentSystems?: string | null; departments?: string | null; painSummary?: string | null }): OrgProfile;
+  getOrgProfile(projectId: number): OrgProfile | undefined;
+
+  // Discovery Interviews
+  createDiscoveryInterview(data: { projectId: number; functionalArea: string; interviewee?: string | null; role?: string | null }): DiscoveryInterview;
+  getDiscoveryInterviews(projectId: number): DiscoveryInterview[];
+  getDiscoveryInterview(id: number): DiscoveryInterview | undefined;
+  updateDiscoveryInterview(id: number, data: Partial<{ status: string; interviewee: string | null; role: string | null; messages: string | null; findings: string | null; painPoints: string | null; processSteps: string | null }>): DiscoveryInterview | undefined;
+  deleteDiscoveryInterview(id: number): void;
+
+  // Discovery Pain Points
+  createPainPoint(data: { projectId: number; sourceInterviewId?: number | null; functionalArea: string; description: string; severity?: string | null; frequency?: string | null; impact?: string | null; currentWorkaround?: string | null; stakeholderPriority?: number | null; linkedRequirements?: string | null }): DiscoveryPainPoint;
+  getPainPoints(projectId: number): DiscoveryPainPoint[];
+  updatePainPoint(id: number, data: Partial<{ severity: string | null; frequency: string | null; impact: string | null; currentWorkaround: string | null; stakeholderPriority: number | null; linkedRequirements: string | null }>): DiscoveryPainPoint | undefined;
+  bulkUpdatePainPointPriorities(updates: { id: number; priority: number }[]): void;
 }
 
 export interface WorkshopSummaryResult {
@@ -2151,6 +2215,100 @@ export class DatabaseStorage implements IStorage {
       .set({ engagementMode: mode })
       .where(eq(projects.id, id))
       .returning().get();
+  }
+
+  // ==================== ORG PROFILE ====================
+
+  upsertOrgProfile(projectId: number, data: { entityType?: string | null; entityName?: string | null; state?: string | null; population?: number | null; employeeCount?: number | null; annualBudget?: string | null; currentSystems?: string | null; departments?: string | null; painSummary?: string | null }): OrgProfile {
+    const existing = db.select().from(orgProfile).where(eq(orgProfile.projectId, projectId)).get();
+    if (existing) {
+      return db.update(orgProfile).set(data).where(eq(orgProfile.id, existing.id)).returning().get()!;
+    }
+    return db.insert(orgProfile).values({
+      projectId,
+      entityType: data.entityType ?? null,
+      entityName: data.entityName ?? null,
+      state: data.state ?? null,
+      population: data.population ?? null,
+      employeeCount: data.employeeCount ?? null,
+      annualBudget: data.annualBudget ?? null,
+      currentSystems: data.currentSystems ?? null,
+      departments: data.departments ?? null,
+      painSummary: data.painSummary ?? null,
+      createdAt: new Date().toISOString(),
+    }).returning().get();
+  }
+
+  getOrgProfile(projectId: number): OrgProfile | undefined {
+    return db.select().from(orgProfile).where(eq(orgProfile.projectId, projectId)).get();
+  }
+
+  // ==================== DISCOVERY INTERVIEWS ====================
+
+  createDiscoveryInterview(data: { projectId: number; functionalArea: string; interviewee?: string | null; role?: string | null }): DiscoveryInterview {
+    return db.insert(discoveryInterviews).values({
+      projectId: data.projectId,
+      functionalArea: data.functionalArea,
+      status: "not_started",
+      interviewee: data.interviewee ?? null,
+      role: data.role ?? null,
+      messages: "[]",
+      createdAt: new Date().toISOString(),
+    }).returning().get();
+  }
+
+  getDiscoveryInterviews(projectId: number): DiscoveryInterview[] {
+    return db.select().from(discoveryInterviews)
+      .where(eq(discoveryInterviews.projectId, projectId))
+      .orderBy(discoveryInterviews.createdAt)
+      .all();
+  }
+
+  getDiscoveryInterview(id: number): DiscoveryInterview | undefined {
+    return db.select().from(discoveryInterviews).where(eq(discoveryInterviews.id, id)).get();
+  }
+
+  updateDiscoveryInterview(id: number, data: Partial<{ status: string; interviewee: string | null; role: string | null; messages: string | null; findings: string | null; painPoints: string | null; processSteps: string | null }>): DiscoveryInterview | undefined {
+    return db.update(discoveryInterviews).set(data).where(eq(discoveryInterviews.id, id)).returning().get();
+  }
+
+  deleteDiscoveryInterview(id: number): void {
+    db.delete(discoveryInterviews).where(eq(discoveryInterviews.id, id)).run();
+  }
+
+  // ==================== DISCOVERY PAIN POINTS ====================
+
+  createPainPoint(data: { projectId: number; sourceInterviewId?: number | null; functionalArea: string; description: string; severity?: string | null; frequency?: string | null; impact?: string | null; currentWorkaround?: string | null; stakeholderPriority?: number | null; linkedRequirements?: string | null }): DiscoveryPainPoint {
+    return db.insert(discoveryPainPoints).values({
+      projectId: data.projectId,
+      sourceInterviewId: data.sourceInterviewId ?? null,
+      functionalArea: data.functionalArea,
+      description: data.description,
+      severity: data.severity ?? null,
+      frequency: data.frequency ?? null,
+      impact: data.impact ?? null,
+      currentWorkaround: data.currentWorkaround ?? null,
+      stakeholderPriority: data.stakeholderPriority ?? null,
+      linkedRequirements: data.linkedRequirements ?? null,
+      createdAt: new Date().toISOString(),
+    }).returning().get();
+  }
+
+  getPainPoints(projectId: number): DiscoveryPainPoint[] {
+    return db.select().from(discoveryPainPoints)
+      .where(eq(discoveryPainPoints.projectId, projectId))
+      .orderBy(desc(discoveryPainPoints.stakeholderPriority))
+      .all();
+  }
+
+  updatePainPoint(id: number, data: Partial<{ severity: string | null; frequency: string | null; impact: string | null; currentWorkaround: string | null; stakeholderPriority: number | null; linkedRequirements: string | null }>): DiscoveryPainPoint | undefined {
+    return db.update(discoveryPainPoints).set(data).where(eq(discoveryPainPoints.id, id)).returning().get();
+  }
+
+  bulkUpdatePainPointPriorities(updates: { id: number; priority: number }[]): void {
+    for (const u of updates) {
+      db.update(discoveryPainPoints).set({ stakeholderPriority: u.priority }).where(eq(discoveryPainPoints.id, u.id)).run();
+    }
   }
 }
 
