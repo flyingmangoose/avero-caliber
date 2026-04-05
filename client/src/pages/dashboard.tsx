@@ -34,7 +34,16 @@ import {
   ArrowLeft,
   Building2,
   Info,
+  Upload,
+  CheckCircle2,
+  X,
+  Calendar,
+  DollarSign,
+  Target,
+  ClipboardList,
 } from "lucide-react";
+
+const API_BASE = "__PORT_5000__".startsWith("__") ? "" : "__PORT_5000__";
 
 interface ProjectWithStats extends Project {
   stats: {
@@ -245,9 +254,11 @@ function CreateProjectFlow({ onClose, onCreated }: { onClose: () => void; onCrea
   const [entityType, setEntityType] = useState("city");
   const [state, setState] = useState("");
   const [engagementMode, setEngagementMode] = useState("consulting");
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
 
-  // Step 2 fields — populated by research or manual
+  // Step 2 fields — populated by research/extract or manual
   const [profile, setProfile] = useState<any>(null);
+  const [docData, setDocData] = useState<any>(null);
   const [population, setPopulation] = useState("");
   const [employeeCount, setEmployeeCount] = useState("");
   const [annualBudget, setAnnualBudget] = useState("");
@@ -256,19 +267,63 @@ function CreateProjectFlow({ onClose, onCreated }: { onClose: () => void; onCrea
   const [modules, setModules] = useState<Record<string, boolean>>({ selection: true, ivv: false, health_check: false });
   const [description, setDescription] = useState("");
 
+  // Helper: apply extracted/researched data to form, merging with user input (user input wins)
+  const applyData = (d: any, isDocument: boolean) => {
+    if (!entityName && d.entityName) setEntityName(d.entityName);
+    if (!state && d.state) setState(d.state);
+    if (d.entityType) setEntityType(d.entityType);
+    if (!population && d.population) setPopulation(d.population.toString());
+    if (!employeeCount && d.employeeCount) setEmployeeCount(d.employeeCount.toString());
+    if (!annualBudget && d.annualBudget) setAnnualBudget(d.annualBudget);
+    if (d.departments?.length && departments.length === 0) {
+      setDepartments(d.departments.map((dep: any) => ({ name: dep.name, headcount: dep.headcount?.toString() || "" })));
+    }
+    if (d.currentSystems?.length && systems.length === 0) {
+      setSystems(d.currentSystems.map((s: any) => ({ name: s.name || "", module: s.module || "", vendor: s.vendor || "", yearsInUse: s.yearsInUse?.toString() || "" })));
+    }
+    if (!description) {
+      setDescription(isDocument && d.projectDescription ? d.projectDescription : d.keyFacts || "");
+    }
+    setProfile((prev: any) => ({
+      ...prev,
+      keyFacts: d.keyFacts || prev?.keyFacts || null,
+      challenges: d.challenges || prev?.challenges || null,
+    }));
+    if (isDocument) setDocData(d);
+  };
+
+  const extractMutation = useMutation({
+    mutationFn: async () => {
+      if (!uploadedFile) throw new Error("No file selected");
+      const formData = new FormData();
+      formData.append("file", uploadedFile);
+      const res = await fetch(`${API_BASE}/api/extract-document`, { method: "POST", body: formData });
+      if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.error || "Extraction failed"); }
+      return res.json();
+    },
+    onSuccess: async (result: any) => {
+      const d = result.data;
+      applyData(d, true);
+      // Also call research for gaps
+      const eName = d.entityName || entityName;
+      const eType = d.entityType || entityType;
+      const eState = d.state || state;
+      if (eName) {
+        try {
+          const res = await apiRequest("POST", "/api/research-entity", { entityName: eName, entityType: eType, state: eState || undefined });
+          const r = await res.json();
+          if (r.data) applyData(r.data, false);
+        } catch {} // research is supplemental, don't fail
+      }
+      setStep(2);
+    },
+    onError: (e: any) => toast({ title: "Extraction failed", description: e.message, variant: "destructive" }),
+  });
+
   const researchMutation = useMutation({
     mutationFn: () => apiRequest("POST", "/api/research-entity", { entityName, entityType, state: state || undefined }).then(r => r.json()),
     onSuccess: (result: any) => {
-      const d = result.data;
-      setProfile(d);
-      setPopulation(d.population?.toString() || "");
-      setEmployeeCount(d.employeeCount?.toString() || "");
-      setAnnualBudget(d.annualBudget || "");
-      setDepartments((d.departments || []).map((dep: any) => ({ name: dep.name, headcount: dep.headcount?.toString() || "" })));
-      setSystems((d.currentSystems || []).map((s: any) => ({ name: s.name || "", module: s.module || "", vendor: s.vendor || "", yearsInUse: s.yearsInUse?.toString() || "" })));
-      setDescription(d.keyFacts ? `${d.keyFacts}` : "");
-      if (d.entityName) setEntityName(d.entityName);
-      if (d.state) setState(d.state);
+      applyData(result.data, false);
       setStep(2);
     },
     onError: (e: any) => toast({ title: "Research failed", description: e.message, variant: "destructive" }),
@@ -285,20 +340,15 @@ function CreateProjectFlow({ onClose, onCreated }: { onClose: () => void; onCrea
         engagementMode,
       });
       const project = await projRes.json();
-
-      // Save org profile
       await apiRequest("POST", `/api/projects/${project.id}/org-profile`, {
-        entityType,
-        entityName,
-        state,
+        entityType, entityName, state,
         population: population ? parseInt(population) : null,
         employeeCount: employeeCount ? parseInt(employeeCount) : null,
         annualBudget,
-        painSummary: profile?.challenges || "",
+        painSummary: profile?.challenges || docData?.challenges || "",
         currentSystems: JSON.stringify(systems),
         departments: JSON.stringify(departments),
       });
-
       return project;
     },
     onSuccess: (project: any) => {
@@ -308,22 +358,30 @@ function CreateProjectFlow({ onClose, onCreated }: { onClose: () => void; onCrea
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
-  const skipToManual = () => {
-    setProfile(null);
-    setDepartments([]);
-    setSystems([]);
-    setStep(2);
-  };
+  const skipToManual = () => { setProfile(null); setDocData(null); setDepartments([]); setSystems([]); setStep(2); };
 
   const addDept = () => setDepartments(p => [...p, { name: "", headcount: "" }]);
   const removeDept = (i: number) => setDepartments(p => p.filter((_, idx) => idx !== i));
   const updateDept = (i: number, field: string, value: string) =>
     setDepartments(p => p.map((d, idx) => idx === i ? { ...d, [field]: value } : d));
-
   const addSystem = () => setSystems(p => [...p, { name: "", module: "", vendor: "", yearsInUse: "" }]);
   const removeSystem = (i: number) => setSystems(p => p.filter((_, idx) => idx !== i));
   const updateSystem = (i: number, field: string, value: string) =>
     setSystems(p => p.map((s, idx) => idx === i ? { ...s, [field]: value } : s));
+
+  const isExtracting = extractMutation.isPending;
+  const isResearching = researchMutation.isPending;
+  const isBusy = isExtracting || isResearching;
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (f) setUploadedFile(f);
+  };
+
+  const handleProceed = () => {
+    if (uploadedFile) extractMutation.mutate();
+    else if (entityName.trim()) researchMutation.mutate();
+  };
 
   if (step === 1) {
     return (
@@ -333,52 +391,90 @@ function CreateProjectFlow({ onClose, onCreated }: { onClose: () => void; onCrea
             <Building2 className="w-5 h-5 text-[#d4a853]" />New Engagement
           </DialogTitle>
         </DialogHeader>
-        <div className="space-y-4 pt-2">
-          <div>
-            <label className="text-sm font-medium mb-1.5 block">Client / Entity Name</label>
-            <Input placeholder="e.g., City of Portland, Multnomah County" value={entityName} className="text-base h-11"
-              onChange={e => setEntityName(e.target.value)} data-testid="input-entity-name" autoFocus />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
+        <ScrollArea className="flex-1 -mx-6 px-6">
+          <div className="space-y-4 pt-2 pb-2">
+            {/* Document upload zone */}
             <div>
-              <label className="text-sm font-medium mb-1.5 block">Entity Type</label>
-              <Select value={entityType} onValueChange={setEntityType}>
-                <SelectTrigger className="h-9" data-testid="select-entity-type"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {ENTITY_TYPES.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <label className="text-sm font-medium mb-1.5 block flex items-center gap-1.5">
+                <FileText className="w-4 h-4 text-muted-foreground" />Upload Project Documents
+              </label>
+              <label className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-5 cursor-pointer transition-colors hover:border-[#d4a853]/50 hover:bg-[#d4a853]/5"
+                data-testid="dropzone-upload">
+                <input type="file" className="hidden" accept=".pdf,.docx" onChange={handleFileChange} data-testid="input-file-upload" />
+                <Upload className="w-8 h-8 text-muted-foreground/40 mb-2" />
+                <p className="text-xs font-medium text-muted-foreground">Drop RFP, SOW, or project docs here or click to browse</p>
+                <p className="text-[10px] text-muted-foreground/60 mt-0.5">PDF, DOCX supported. Max 50MB.</p>
+              </label>
+              {uploadedFile && (
+                <div className="flex items-center gap-2 mt-2 px-3 py-1.5 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 rounded-md">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <span className="text-xs text-emerald-700 dark:text-emerald-400 flex-1 truncate">{uploadedFile.name}</span>
+                  <span className="text-[10px] text-emerald-600/60">{(uploadedFile.size / 1024).toFixed(0)} KB</span>
+                  <button className="text-muted-foreground hover:text-red-500 p-0.5" onClick={() => setUploadedFile(null)} data-testid="btn-remove-file">
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Divider */}
+            <div className="flex items-center gap-3">
+              <div className="flex-1 border-t border-border/50" />
+              <span className="text-[10px] text-muted-foreground uppercase tracking-wider">or enter details manually</span>
+              <div className="flex-1 border-t border-border/50" />
+            </div>
+
+            {/* Manual fields */}
+            <div>
+              <label className="text-sm font-medium mb-1.5 block">Client / Entity Name</label>
+              <Input placeholder="e.g., City of Portland, Multnomah County" value={entityName} className="text-base h-11"
+                onChange={e => setEntityName(e.target.value)} data-testid="input-entity-name" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-sm font-medium mb-1.5 block">Entity Type</label>
+                <Select value={entityType} onValueChange={setEntityType}>
+                  <SelectTrigger className="h-9" data-testid="select-entity-type"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {ENTITY_TYPES.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1.5 block">State</label>
+                <Input placeholder="e.g., Oregon" value={state} onChange={e => setState(e.target.value)} data-testid="input-state" />
+              </div>
             </div>
             <div>
-              <label className="text-sm font-medium mb-1.5 block">State</label>
-              <Input placeholder="e.g., Oregon" value={state} onChange={e => setState(e.target.value)} data-testid="input-state" />
+              <label className="text-sm font-medium mb-2 block">Engagement Mode</label>
+              <div className="flex gap-4">
+                {([
+                  { value: "consulting", label: "Consulting", desc: "Consultant-led process" },
+                  { value: "self_service", label: "Self-Service", desc: "Client uses AI directly" },
+                ] as const).map(mode => (
+                  <label key={mode.value} className="flex items-start gap-2 cursor-pointer flex-1 border rounded-lg p-3 transition-colors hover:bg-muted/50"
+                    style={engagementMode === mode.value ? { borderColor: "#d4a853", backgroundColor: "rgba(212,168,83,0.05)" } : {}}>
+                    <input type="radio" name="engagementMode" className="mt-0.5 accent-[#d4a853]"
+                      checked={engagementMode === mode.value} onChange={() => setEngagementMode(mode.value)}
+                      data-testid={`mode-${mode.value}`} />
+                    <div>
+                      <span className="text-sm font-medium">{mode.label}</span>
+                      <p className="text-[10px] text-muted-foreground">{mode.desc}</p>
+                    </div>
+                  </label>
+                ))}
+              </div>
             </div>
           </div>
-          <div>
-            <label className="text-sm font-medium mb-2 block">Engagement Mode</label>
-            <div className="flex gap-4">
-              {([
-                { value: "consulting", label: "Consulting", desc: "Consultant-led process" },
-                { value: "self_service", label: "Self-Service", desc: "Client uses AI directly" },
-              ] as const).map(mode => (
-                <label key={mode.value} className="flex items-start gap-2 cursor-pointer flex-1 border rounded-lg p-3 transition-colors hover:bg-muted/50"
-                  style={engagementMode === mode.value ? { borderColor: "#d4a853", backgroundColor: "rgba(212,168,83,0.05)" } : {}}>
-                  <input type="radio" name="engagementMode" className="mt-0.5 accent-[#d4a853]"
-                    checked={engagementMode === mode.value} onChange={() => setEngagementMode(mode.value)}
-                    data-testid={`mode-${mode.value}`} />
-                  <div>
-                    <span className="text-sm font-medium">{mode.label}</span>
-                    <p className="text-[10px] text-muted-foreground">{mode.desc}</p>
-                  </div>
-                </label>
-              ))}
-            </div>
-          </div>
+        </ScrollArea>
+        <div className="pt-3 border-t border-border/50 shrink-0 space-y-2">
           <Button className="w-full bg-[#d4a853] hover:bg-[#c49843] text-white gap-2 h-10"
-            disabled={!entityName.trim() || researchMutation.isPending}
-            onClick={() => researchMutation.mutate()} data-testid="btn-research">
-            {researchMutation.isPending ? (
-              <><Loader2 className="w-4 h-4 animate-spin" />Researching {entityName}...</>
+            disabled={(!entityName.trim() && !uploadedFile) || isBusy}
+            onClick={handleProceed} data-testid="btn-research">
+            {isBusy ? (
+              <><Loader2 className="w-4 h-4 animate-spin" />{isExtracting ? `Extracting from ${uploadedFile?.name}...` : `Researching ${entityName}...`}</>
+            ) : uploadedFile ? (
+              <><FileText className="w-4 h-4" />Extract & Continue</>
             ) : (
               <><Sparkles className="w-4 h-4" />Research & Continue</>
             )}
@@ -392,6 +488,14 @@ function CreateProjectFlow({ onClose, onCreated }: { onClose: () => void; onCrea
     );
   }
 
+  // Document-specific context
+  const timeline = docData?.timeline;
+  const budgetInfo = docData?.budget;
+  const scope = docData?.projectScope;
+  const keyReqs = docData?.keyRequirements;
+  const evalCriteria = docData?.evaluationCriteria;
+  const hasDocContext = scope?.length || timeline || budgetInfo || keyReqs?.length || evalCriteria?.length;
+
   return (
     <>
       <DialogHeader>
@@ -404,9 +508,70 @@ function CreateProjectFlow({ onClose, onCreated }: { onClose: () => void; onCrea
       </DialogHeader>
       <ScrollArea className="flex-1 -mx-6 px-6">
         <div className="space-y-5 pb-4">
-          {/* Context cards from AI */}
+          {/* Document context cards */}
+          {hasDocContext && (
+            <div className="grid grid-cols-2 gap-2">
+              {scope?.length > 0 && (
+                <div className="border rounded-lg p-3 bg-purple-50/50 dark:bg-purple-950/20 border-purple-200 dark:border-purple-800" data-testid="card-scope">
+                  <p className="text-[10px] font-semibold text-purple-600 dark:text-purple-400 flex items-center gap-1 mb-1.5"><Target className="w-3 h-3" />Project Scope</p>
+                  <div className="flex flex-wrap gap-1">
+                    {scope.map((s: string, i: number) => <Badge key={i} variant="outline" className="text-[9px] border-purple-300 dark:border-purple-700">{s}</Badge>)}
+                  </div>
+                </div>
+              )}
+              {timeline && Object.values(timeline).some(Boolean) && (
+                <div className="border rounded-lg p-3 bg-blue-50/50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800" data-testid="card-timeline">
+                  <p className="text-[10px] font-semibold text-blue-600 dark:text-blue-400 flex items-center gap-1 mb-1.5"><Calendar className="w-3 h-3" />Timeline</p>
+                  <div className="space-y-0.5 text-[10px]">
+                    {timeline.rfpIssueDate && <p><span className="text-muted-foreground">RFP Issued:</span> {timeline.rfpIssueDate}</p>}
+                    {timeline.proposalDueDate && <p><span className="text-muted-foreground">Proposals Due:</span> {timeline.proposalDueDate}</p>}
+                    {timeline.expectedStartDate && <p><span className="text-muted-foreground">Expected Start:</span> {timeline.expectedStartDate}</p>}
+                    {timeline.expectedGoLive && <p><span className="text-muted-foreground">Go-Live:</span> {timeline.expectedGoLive}</p>}
+                    {timeline.contractTerm && <p><span className="text-muted-foreground">Term:</span> {timeline.contractTerm}</p>}
+                  </div>
+                </div>
+              )}
+              {budgetInfo && Object.values(budgetInfo).some(Boolean) && (
+                <div className="border rounded-lg p-3 bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800" data-testid="card-budget">
+                  <p className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 mb-1.5"><DollarSign className="w-3 h-3" />Budget</p>
+                  <div className="space-y-0.5 text-[10px]">
+                    {budgetInfo.estimatedTotal && <p><span className="text-muted-foreground">Total:</span> {budgetInfo.estimatedTotal}</p>}
+                    {budgetInfo.implementationBudget && <p><span className="text-muted-foreground">Implementation:</span> {budgetInfo.implementationBudget}</p>}
+                    {budgetInfo.annualOperating && <p><span className="text-muted-foreground">Annual Operating:</span> {budgetInfo.annualOperating}</p>}
+                  </div>
+                </div>
+              )}
+              {evalCriteria?.length > 0 && (
+                <div className="border rounded-lg p-3 bg-amber-50/50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800" data-testid="card-eval-criteria">
+                  <p className="text-[10px] font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-1 mb-1.5"><BarChart3 className="w-3 h-3" />Evaluation Criteria</p>
+                  <div className="space-y-0.5 text-[10px]">
+                    {evalCriteria.map((c: any, i: number) => (
+                      <div key={i} className="flex justify-between">
+                        <span>{c.criterion}</span>
+                        {c.weight && <span className="text-muted-foreground">{c.weight}</span>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Key requirements from document */}
+          {keyReqs?.length > 0 && (
+            <div className="border rounded-lg p-3 bg-gray-50/50 dark:bg-gray-900/50 border-gray-200 dark:border-gray-800" data-testid="card-key-requirements">
+              <p className="text-[10px] font-semibold text-foreground flex items-center gap-1 mb-1.5"><ClipboardList className="w-3 h-3 text-[#d4a853]" />Key Requirements from Document ({keyReqs.length})</p>
+              <div className="space-y-1 max-h-[120px] overflow-y-auto">
+                {keyReqs.map((r: string, i: number) => (
+                  <p key={i} className="text-[10px] text-foreground pl-3 border-l-2 border-[#d4a853]/40">{r}</p>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* AI context cards */}
           {(profile?.keyFacts || profile?.challenges) && (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-2">
               {profile.keyFacts && (
                 <div className="border rounded-lg p-3 bg-blue-50/50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
                   <p className="text-[10px] font-semibold text-blue-600 dark:text-blue-400 flex items-center gap-1 mb-1"><Info className="w-3 h-3" />Key Facts</p>
@@ -476,9 +641,7 @@ function CreateProjectFlow({ onClose, onCreated }: { onClose: () => void; onCrea
                 <div key={i} className="grid grid-cols-[1fr_80px_24px] gap-1.5 items-center">
                   <Input className="h-7 text-xs" placeholder="Department" value={d.name} onChange={e => updateDept(i, "name", e.target.value)} data-testid={`dept-name-${i}`} />
                   <Input className="h-7 text-xs" placeholder="HC" type="number" value={d.headcount} onChange={e => updateDept(i, "headcount", e.target.value)} data-testid={`dept-hc-${i}`} />
-                  <button className="text-muted-foreground hover:text-red-500 p-0.5" onClick={() => removeDept(i)} data-testid={`dept-remove-${i}`}>
-                    <Trash2 className="w-3 h-3" />
-                  </button>
+                  <button className="text-muted-foreground hover:text-red-500 p-0.5" onClick={() => removeDept(i)} data-testid={`dept-remove-${i}`}><Trash2 className="w-3 h-3" /></button>
                 </div>
               ))}
               {departments.length === 0 && <p className="text-[10px] text-muted-foreground">No departments. Click Add to start.</p>}
@@ -500,9 +663,7 @@ function CreateProjectFlow({ onClose, onCreated }: { onClose: () => void; onCrea
                   <Input className="h-7 text-xs" placeholder="Module" value={s.module} onChange={e => updateSystem(i, "module", e.target.value)} data-testid={`sys-module-${i}`} />
                   <Input className="h-7 text-xs" placeholder="Vendor" value={s.vendor} onChange={e => updateSystem(i, "vendor", e.target.value)} data-testid={`sys-vendor-${i}`} />
                   <Input className="h-7 text-xs" placeholder="Yrs" value={s.yearsInUse} onChange={e => updateSystem(i, "yearsInUse", e.target.value)} data-testid={`sys-years-${i}`} />
-                  <button className="text-muted-foreground hover:text-red-500 p-0.5" onClick={() => removeSystem(i)} data-testid={`sys-remove-${i}`}>
-                    <Trash2 className="w-3 h-3" />
-                  </button>
+                  <button className="text-muted-foreground hover:text-red-500 p-0.5" onClick={() => removeSystem(i)} data-testid={`sys-remove-${i}`}><Trash2 className="w-3 h-3" /></button>
                 </div>
               ))}
               {systems.length === 0 && <p className="text-[10px] text-muted-foreground">No systems known. Click Add to start.</p>}

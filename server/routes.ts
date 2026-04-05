@@ -99,6 +99,97 @@ Return ONLY the JSON, no other text.`
     }
   });
 
+  // Document extraction
+  const docUpload = multer({ dest: os.tmpdir(), limits: { fileSize: 50 * 1024 * 1024 } });
+
+  app.post("/api/extract-document", docUpload.single("file"), async (req, res) => {
+    if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+
+    try {
+      let docText = "";
+      const fileBuffer = fs.readFileSync(req.file.path);
+
+      if (req.file.originalname.endsWith(".pdf") || req.file.mimetype === "application/pdf") {
+        const pdfParse = require("pdf-parse");
+        const pdfData = await pdfParse(fileBuffer);
+        docText = pdfData.text || "";
+      } else {
+        // DOCX or other — extract raw text
+        docText = fileBuffer.toString("utf-8").replace(/[^\x20-\x7E\n\r\t]/g, " ").replace(/\s+/g, " ");
+      }
+
+      // Cleanup temp file
+      try { fs.unlinkSync(req.file.path); } catch {}
+
+      if (!docText || docText.trim().length < 50) {
+        return res.status(400).json({ error: "Could not extract meaningful text from the document." });
+      }
+
+      const { anthropic } = await import("./ai");
+      const response = await anthropic.messages.create({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 4096,
+        messages: [{
+          role: "user",
+          content: `You are analyzing a government RFP/SOW/procurement document for an ERP/EAM implementation project. Extract all relevant information.
+
+DOCUMENT TEXT:
+${docText.substring(0, 50000)}
+
+Extract the following as JSON:
+
+{
+  "entityName": "the government entity issuing this document",
+  "entityType": "city/county/utility/transit/port/state_agency/special_district",
+  "state": "state abbreviation",
+  "population": number or null,
+  "employeeCount": number or null,
+  "annualBudget": "dollar amount string" or null,
+  "projectDescription": "2-3 sentence description of what they're looking for",
+  "projectScope": ["list of functional areas/modules mentioned"],
+  "timeline": {
+    "rfpIssueDate": "date" or null,
+    "proposalDueDate": "date" or null,
+    "expectedStartDate": "date" or null,
+    "expectedGoLive": "date" or null,
+    "contractTerm": "e.g., 5 years" or null
+  },
+  "budget": {
+    "estimatedTotal": "dollar amount" or null,
+    "implementationBudget": "dollar amount" or null,
+    "annualOperating": "dollar amount" or null
+  },
+  "departments": [
+    { "name": "department name", "headcount": number or null }
+  ],
+  "currentSystems": [
+    { "name": "system name", "module": "what it's used for", "vendor": "vendor", "yearsInUse": number or null }
+  ],
+  "keyRequirements": [
+    "brief description of a key requirement mentioned"
+  ],
+  "evaluationCriteria": [
+    { "criterion": "name", "weight": "percentage or points" }
+  ],
+  "challenges": "key challenges or pain points mentioned in the document"
+}
+
+Extract as much as you can find. For items not mentioned in the document, use null. Do NOT make up information that isn't in the document.
+Return ONLY the JSON.`
+        }],
+      });
+
+      const text = response.content[0].type === "text" ? response.content[0].text : "";
+      const jsonStr = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+      const data = JSON.parse(jsonStr);
+      res.json({ success: true, data });
+    } catch (err: any) {
+      console.error("Document extraction error:", err);
+      try { if (req.file?.path) fs.unlinkSync(req.file.path); } catch {}
+      res.status(500).json({ error: err.message || "Failed to extract document information" });
+    }
+  });
+
   // ==================== PROJECTS ====================
 
   app.get("/api/projects", (_req, res) => {
