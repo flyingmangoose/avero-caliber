@@ -18,6 +18,7 @@ import GoLivePage from "@/pages/go-live";
 import HealthCheckPage from "@/pages/health-check";
 import KnowledgeBasePage from "@/pages/knowledge-base";
 import DiscoveryPage from "@/pages/discovery";
+import FutureStatePage from "@/pages/future-state";
 import NotFound from "@/pages/not-found";
 import WorkshopView from "@/pages/workshop";
 import Portfolio from "@/pages/portfolio";
@@ -44,6 +45,7 @@ function AppLayout() {
               <Route path="/projects/:id/go-live" component={GoLivePage} />
               <Route path="/projects/:id/health-check" component={HealthCheckPage} />
               <Route path="/projects/:id/discovery" component={DiscoveryPage} />
+              <Route path="/projects/:id/future-state" component={FutureStatePage} />
               <Route path="/projects/:id" component={ProjectView} />
               <Route path="/templates" component={TemplateLibrary} />
               <Route path="/knowledge-base" component={KnowledgeBasePage} />

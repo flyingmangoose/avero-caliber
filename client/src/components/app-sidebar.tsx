@@ -1,4 +1,4 @@
-import { LayoutDashboard, FolderOpen, BookTemplate, Sun, Moon, BarChart3, PieChart, MessageSquare, Shield, Rocket, Stethoscope, BookOpen, Compass } from "lucide-react";
+import { LayoutDashboard, FolderOpen, BookTemplate, Sun, Moon, BarChart3, PieChart, MessageSquare, Shield, Rocket, Stethoscope, BookOpen, Compass, ArrowRightLeft } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -103,6 +103,16 @@ export function AppSidebar() {
                     <Link href={`/projects/${projectId}/discovery`} data-testid="nav-discovery">
                       <Compass className="w-4 h-4" />
                       <span>Discovery</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+
+                {/* Future State */}
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={location === `/projects/${projectId}/future-state`}>
+                    <Link href={`/projects/${projectId}/future-state`} data-testid="nav-future-state">
+                      <ArrowRightLeft className="w-4 h-4" />
+                      <span>Future State</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

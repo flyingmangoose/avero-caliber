@@ -29,6 +29,7 @@ import {
   type OrgProfile, orgProfile,
   type DiscoveryInterview, discoveryInterviews,
   type DiscoveryPainPoint, discoveryPainPoints,
+  type ProcessTransformation, processTransformations,
 } from "@shared/schema";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import Database from "better-sqlite3";
@@ -402,6 +403,30 @@ sqlite.exec(`
     linked_requirements TEXT,
     created_at TEXT NOT NULL
   );
+
+  CREATE TABLE IF NOT EXISTS process_transformations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL,
+    functional_area TEXT NOT NULL,
+    vendor_platform TEXT NOT NULL,
+    current_step_count INTEGER,
+    current_manual_steps INTEGER,
+    current_systems INTEGER,
+    current_processing_time TEXT,
+    current_pain_points INTEGER,
+    current_description TEXT,
+    current_steps TEXT,
+    future_step_count INTEGER,
+    future_manual_steps INTEGER,
+    future_systems INTEGER,
+    future_processing_time TEXT,
+    future_description TEXT,
+    future_steps TEXT,
+    improvements TEXT,
+    eliminated_steps TEXT,
+    new_capabilities TEXT,
+    created_at TEXT NOT NULL
+  );
 `);
 
 // Safe column additions (ignored if already exists)
@@ -651,6 +676,12 @@ export interface IStorage {
   getPainPoints(projectId: number): DiscoveryPainPoint[];
   updatePainPoint(id: number, data: Partial<{ severity: string | null; frequency: string | null; impact: string | null; currentWorkaround: string | null; stakeholderPriority: number | null; linkedRequirements: string | null }>): DiscoveryPainPoint | undefined;
   bulkUpdatePainPointPriorities(updates: { id: number; priority: number }[]): void;
+
+  // Process Transformations
+  createProcessTransformation(data: any): ProcessTransformation;
+  getProcessTransformations(projectId: number, vendorPlatform?: string): ProcessTransformation[];
+  getProcessTransformation(id: number): ProcessTransformation | undefined;
+  deleteProcessTransformations(projectId: number, vendorPlatform?: string, functionalArea?: string): void;
 }
 
 export interface WorkshopSummaryResult {
@@ -2309,6 +2340,53 @@ export class DatabaseStorage implements IStorage {
     for (const u of updates) {
       db.update(discoveryPainPoints).set({ stakeholderPriority: u.priority }).where(eq(discoveryPainPoints.id, u.id)).run();
     }
+  }
+
+  // Process Transformations
+  createProcessTransformation(data: any): ProcessTransformation {
+    return db.insert(processTransformations).values({
+      projectId: data.projectId,
+      functionalArea: data.functionalArea,
+      vendorPlatform: data.vendorPlatform,
+      currentStepCount: data.currentStepCount,
+      currentManualSteps: data.currentManualSteps,
+      currentSystems: data.currentSystems,
+      currentProcessingTime: data.currentProcessingTime,
+      currentPainPoints: data.currentPainPoints,
+      currentDescription: data.currentDescription,
+      currentSteps: typeof data.currentSteps === "string" ? data.currentSteps : JSON.stringify(data.currentSteps),
+      futureStepCount: data.futureStepCount,
+      futureManualSteps: data.futureManualSteps,
+      futureSystems: data.futureSystems,
+      futureProcessingTime: data.futureProcessingTime,
+      futureDescription: data.futureDescription,
+      futureSteps: typeof data.futureSteps === "string" ? data.futureSteps : JSON.stringify(data.futureSteps),
+      improvements: typeof data.improvements === "string" ? data.improvements : JSON.stringify(data.improvements),
+      eliminatedSteps: typeof data.eliminatedSteps === "string" ? data.eliminatedSteps : JSON.stringify(data.eliminatedSteps),
+      newCapabilities: typeof data.newCapabilities === "string" ? data.newCapabilities : JSON.stringify(data.newCapabilities),
+    }).returning().get();
+  }
+
+  getProcessTransformations(projectId: number, vendorPlatform?: string): ProcessTransformation[] {
+    if (vendorPlatform) {
+      return db.select().from(processTransformations)
+        .where(and(eq(processTransformations.projectId, projectId), eq(processTransformations.vendorPlatform, vendorPlatform)))
+        .all();
+    }
+    return db.select().from(processTransformations)
+      .where(eq(processTransformations.projectId, projectId))
+      .all();
+  }
+
+  getProcessTransformation(id: number): ProcessTransformation | undefined {
+    return db.select().from(processTransformations).where(eq(processTransformations.id, id)).get();
+  }
+
+  deleteProcessTransformations(projectId: number, vendorPlatform?: string, functionalArea?: string): void {
+    const conditions = [eq(processTransformations.projectId, projectId)];
+    if (vendorPlatform) conditions.push(eq(processTransformations.vendorPlatform, vendorPlatform));
+    if (functionalArea) conditions.push(eq(processTransformations.functionalArea, functionalArea));
+    db.delete(processTransformations).where(and(...conditions)).run();
   }
 }
 

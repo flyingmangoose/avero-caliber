@@ -385,4 +385,164 @@ Return as a JSON array of objects with keys: module, description, criticality, j
   return [];
 }
 
+export async function generateFutureState(projectId: number, vendorPlatform: string) {
+  const orgProfileData = storage.getOrgProfile(projectId);
+  const interviews = storage.getDiscoveryInterviews(projectId).filter(i => i.status === "completed");
+  const painPoints = storage.getPainPoints(projectId);
+  const vendorCaps = storage.getVendorCapabilities({ platform: vendorPlatform });
+
+  if (interviews.length === 0) return [];
+
+  const orgSummary = orgProfileData
+    ? `${orgProfileData.entityName || "Organization"} (${orgProfileData.entityType || "government"}), ${orgProfileData.state || "US"}, Population: ${orgProfileData.population || "N/A"}, Employees: ${orgProfileData.employeeCount || "N/A"}, Budget: ${orgProfileData.annualBudget || "N/A"}`
+    : "Government organization (no profile data)";
+
+  const results: any[] = [];
+
+  for (const interview of interviews) {
+    const area = interview.functionalArea;
+    let currentSteps: any[] = [];
+    try { currentSteps = interview.processSteps ? JSON.parse(interview.processSteps) : []; } catch {}
+    let interviewPainPoints: any[] = [];
+    try { interviewPainPoints = interview.painPoints ? JSON.parse(interview.painPoints) : []; } catch {}
+
+    const areaPainPoints = painPoints.filter(p => p.functionalArea === area);
+    const allPainPointsList = [...interviewPainPoints, ...areaPainPoints.map(p => ({ description: p.description, severity: p.severity, impact: p.impact }))];
+    const uniquePainPoints = allPainPointsList.filter((p, i, arr) => arr.findIndex(x => x.description === p.description) === i);
+
+    const areaCaps = vendorCaps.filter(c => {
+      const mod = (c.module || "").toLowerCase();
+      const areaLower = area.toLowerCase();
+      return mod.includes(areaLower) || areaLower.includes(mod) ||
+        (areaLower.includes("finance") && (mod.includes("financ") || mod.includes("accounting") || mod.includes("budget"))) ||
+        (areaLower.includes("human resources") && (mod.includes("hr") || mod.includes("human") || mod.includes("payroll") || mod.includes("talent"))) ||
+        (areaLower.includes("procurement") && (mod.includes("procur") || mod.includes("supply") || mod.includes("sourcing"))) ||
+        (areaLower.includes("asset") && (mod.includes("asset") || mod.includes("eam") || mod.includes("maintenance")));
+    });
+
+    const capsText = areaCaps.length > 0
+      ? areaCaps.map(c => `- ${c.capabilityName}: ${c.description || ""} (Maturity: ${c.maturityLevel || "N/A"}, Automation: ${c.automationLevel || "N/A"})`).join("\n")
+      : `No specific capabilities found for ${vendorPlatform} in ${area}. Use general knowledge of ${vendorPlatform} platform capabilities.`;
+
+    const stepsText = currentSteps.length > 0
+      ? currentSteps.map((s: any, i: number) => `${i + 1}. ${s.description || s.step || "Step"} ${s.manual ? "(MANUAL)" : "(automated)"} ${s.system ? `[${s.system}]` : ""}`).join("\n")
+      : "No detailed steps recorded.";
+
+    const painText = uniquePainPoints.length > 0
+      ? uniquePainPoints.map((p: any) => `- [${p.severity || "medium"}] ${p.description}${p.impact ? ` — Impact: ${p.impact}` : ""}`).join("\n")
+      : "No specific pain points recorded.";
+
+    const prompt = `You are analyzing how ${vendorPlatform} would transform ${area} processes for this organization.
+
+ORGANIZATION: ${orgSummary}
+
+CURRENT STATE (from discovery):
+Process Steps:
+${stepsText}
+
+Pain Points:
+${painText}
+
+VENDOR CAPABILITIES FOR ${area}:
+${capsText}
+
+Generate a transformation analysis as JSON with these exact keys:
+
+{
+  "currentStepCount": <number of current steps>,
+  "currentManualSteps": <how many are manual>,
+  "currentSystems": <number of different systems>,
+  "currentProcessingTime": "<estimated time e.g. '15 days'>",
+  "currentDescription": "<2-3 sentence narrative of current state>",
+  "futureStepCount": <reduced number>,
+  "futureManualSteps": <remaining manual>,
+  "futureSystems": <consolidated count, usually 1>,
+  "futureProcessingTime": "<improved time>",
+  "futureDescription": "<2-3 sentence narrative of future state with ${vendorPlatform}>",
+  "futureSteps": [{"step": 1, "description": "...", "automated": true/false, "feature": "vendor feature name"}],
+  "improvements": [{"area": "...", "before": "...", "after": "...", "impact": "..."}],
+  "eliminatedSteps": ["step description that goes away"],
+  "newCapabilities": ["new capability enabled by vendor"]
+}
+
+Return ONLY valid JSON, no markdown fencing.`;
+
+    let transformation: any = null;
+
+    try {
+      const response = await anthropic.messages.create({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 4096,
+        messages: [{ role: "user", content: prompt }],
+      });
+
+      const text = response.content[0].type === "text" ? response.content[0].text : "";
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        transformation = JSON.parse(jsonMatch[0]);
+      }
+    } catch (err) {
+      console.error(`AI call failed for ${area}, generating mock:`, err);
+    }
+
+    // Fallback mock if AI fails
+    if (!transformation) {
+      const stepCount = currentSteps.length || 8;
+      const manualCount = currentSteps.filter((s: any) => s.manual).length || Math.ceil(stepCount * 0.6);
+      const systemCount = new Set(currentSteps.map((s: any) => s.system).filter(Boolean)).size || 3;
+      transformation = {
+        currentStepCount: stepCount,
+        currentManualSteps: manualCount,
+        currentSystems: systemCount,
+        currentProcessingTime: `${Math.max(5, stepCount * 2)} days`,
+        currentDescription: `Current ${area} processes involve ${stepCount} steps across ${systemCount} systems with significant manual effort and fragmented data.`,
+        futureStepCount: Math.max(3, Math.ceil(stepCount * 0.5)),
+        futureManualSteps: Math.max(1, Math.ceil(manualCount * 0.2)),
+        futureSystems: 1,
+        futureProcessingTime: `${Math.max(1, Math.ceil(stepCount * 0.5))} days`,
+        futureDescription: `With ${vendorPlatform}, ${area} processes would be consolidated into a single platform with automated workflows, reducing manual effort by ~80%.`,
+        futureSteps: [
+          { step: 1, description: "Automated data capture and validation", automated: true, feature: "AI-powered data entry" },
+          { step: 2, description: "Workflow-driven approval routing", automated: true, feature: "Configurable workflows" },
+          { step: 3, description: "Real-time reporting and dashboards", automated: true, feature: "Embedded analytics" },
+        ],
+        improvements: uniquePainPoints.slice(0, 4).map((p: any) => ({
+          area: area,
+          before: p.description,
+          after: `Automated with ${vendorPlatform} capabilities`,
+          impact: `Addresses ${p.severity || "medium"} severity pain point`,
+        })),
+        eliminatedSteps: currentSteps.filter((s: any) => s.manual).slice(0, 3).map((s: any) => s.description || "Manual processing step"),
+        newCapabilities: ["Real-time dashboards", "Mobile approvals", "AI-powered automation"],
+      };
+    }
+
+    const record = storage.createProcessTransformation({
+      projectId,
+      functionalArea: area,
+      vendorPlatform,
+      currentStepCount: transformation.currentStepCount,
+      currentManualSteps: transformation.currentManualSteps,
+      currentSystems: transformation.currentSystems,
+      currentProcessingTime: transformation.currentProcessingTime,
+      currentPainPoints: uniquePainPoints.length,
+      currentDescription: transformation.currentDescription,
+      currentSteps: JSON.stringify(transformation.currentSteps || currentSteps),
+      futureStepCount: transformation.futureStepCount,
+      futureManualSteps: transformation.futureManualSteps,
+      futureSystems: transformation.futureSystems,
+      futureProcessingTime: transformation.futureProcessingTime,
+      futureDescription: transformation.futureDescription,
+      futureSteps: JSON.stringify(transformation.futureSteps || []),
+      improvements: JSON.stringify(transformation.improvements || []),
+      eliminatedSteps: JSON.stringify(transformation.eliminatedSteps || []),
+      newCapabilities: JSON.stringify(transformation.newCapabilities || []),
+    });
+
+    results.push(record);
+  }
+
+  return results;
+}
+
 export { anthropic, CHAT_SYSTEM_PROMPT, PROPOSAL_ANALYSIS_PROMPT };

@@ -513,9 +513,44 @@ export const insertOrgProfileSchema = createInsertSchema(orgProfile).omit({ id: 
 export const insertDiscoveryInterviewSchema = createInsertSchema(discoveryInterviews).omit({ id: true, createdAt: true });
 export const insertDiscoveryPainPointSchema = createInsertSchema(discoveryPainPoints).omit({ id: true, createdAt: true });
 
+export const processTransformations = sqliteTable("process_transformations", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  projectId: integer("project_id").notNull(),
+  functionalArea: text("functional_area").notNull(),
+  vendorPlatform: text("vendor_platform").notNull(),
+
+  // Current State
+  currentStepCount: integer("current_step_count"),
+  currentManualSteps: integer("current_manual_steps"),
+  currentSystems: integer("current_systems"),
+  currentProcessingTime: text("current_processing_time"),
+  currentPainPoints: integer("current_pain_points"),
+  currentDescription: text("current_description"),
+  currentSteps: text("current_steps"),           // JSON: [{step, description, manual, system}]
+
+  // Future State
+  futureStepCount: integer("future_step_count"),
+  futureManualSteps: integer("future_manual_steps"),
+  futureSystems: integer("future_systems"),
+  futureProcessingTime: text("future_processing_time"),
+  futureDescription: text("future_description"),
+  futureSteps: text("future_steps"),             // JSON: [{step, description, automated, feature}]
+
+  // Improvements
+  improvements: text("improvements"),            // JSON: [{area, before, after, impact}]
+  eliminatedSteps: text("eliminated_steps"),     // JSON: array of step descriptions
+  newCapabilities: text("new_capabilities"),     // JSON: array of new capabilities
+
+  createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
+});
+
+export const insertProcessTransformationSchema = createInsertSchema(processTransformations).omit({ id: true, createdAt: true });
+
 export type OrgProfile = typeof orgProfile.$inferSelect;
 export type InsertOrgProfile = z.infer<typeof insertOrgProfileSchema>;
 export type DiscoveryInterview = typeof discoveryInterviews.$inferSelect;
 export type InsertDiscoveryInterview = z.infer<typeof insertDiscoveryInterviewSchema>;
 export type DiscoveryPainPoint = typeof discoveryPainPoints.$inferSelect;
 export type InsertDiscoveryPainPoint = z.infer<typeof insertDiscoveryPainPointSchema>;
+export type ProcessTransformation = typeof processTransformations.$inferSelect;
+export type InsertProcessTransformation = z.infer<typeof insertProcessTransformationSchema>;

@@ -3242,5 +3242,42 @@ Write in professional consulting tone covering: overall posture assessment, key 
     res.json({ success: true });
   });
 
+  // ==================== FUTURE STATE ANALYSIS ====================
+
+  app.post("/api/projects/:id/future-state/generate", async (req, res) => {
+    const projectId = parseInt(req.params.id);
+    const { vendorPlatform } = req.body;
+    if (!vendorPlatform) return res.status(400).json({ error: "vendorPlatform is required" });
+
+    const project = storage.getProject(projectId);
+    if (!project) return res.status(404).json({ error: "Project not found" });
+
+    try {
+      // Delete existing transformations for this project+platform
+      storage.deleteProcessTransformations(projectId, vendorPlatform);
+
+      const { generateFutureState } = await import("./ai");
+      const transformations = await generateFutureState(projectId, vendorPlatform);
+      res.json({ success: true, transformations, count: transformations.length });
+    } catch (error: any) {
+      console.error("Future state generation error:", error);
+      res.status(500).json({ error: error.message || "Failed to generate future state analysis" });
+    }
+  });
+
+  app.get("/api/projects/:id/future-state", (req, res) => {
+    const projectId = parseInt(req.params.id);
+    const platform = req.query.platform as string | undefined;
+    const transformations = storage.getProcessTransformations(projectId, platform);
+    res.json(transformations);
+  });
+
+  app.delete("/api/projects/:id/future-state", (req, res) => {
+    const projectId = parseInt(req.params.id);
+    const platform = req.query.platform as string | undefined;
+    storage.deleteProcessTransformations(projectId, platform);
+    res.json({ success: true });
+  });
+
   return httpServer;
 }
