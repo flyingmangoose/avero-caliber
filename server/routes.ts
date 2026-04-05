@@ -2822,7 +2822,7 @@ Write in professional consulting tone covering: overall posture assessment, key 
 
   app.post("/api/knowledge-base/seed", (_req, res) => {
     try {
-      const dataPath = path.resolve("/home/user/workspace/port_of_portland_vendor_data.json");
+      const dataPath = path.resolve("port_of_portland_vendor_data.json");
       if (!fs.existsSync(dataPath)) {
         return res.status(404).json({ error: "Vendor data file not found at " + dataPath });
       }
