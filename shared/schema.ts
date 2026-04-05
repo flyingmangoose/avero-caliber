@@ -477,6 +477,9 @@ export const orgProfile = sqliteTable("org_profile", {
   currentSystems: text("current_systems"),   // JSON: [{ name, module, yearsInUse, vendor }]
   departments: text("departments"),          // JSON: [{ name, headcount, keyProcesses }]
   painSummary: text("pain_summary"),
+  domain: text("domain"),                    // client's website domain
+  leadership: text("leadership"),            // JSON: [{name, title}]
+  documents: text("documents"),              // JSON: [{filename, uploadedAt, extractedFields}]
   createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
 });
 

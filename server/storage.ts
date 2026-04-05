@@ -372,6 +372,9 @@ sqlite.exec(`
     current_systems TEXT,
     departments TEXT,
     pain_summary TEXT,
+    domain TEXT,
+    leadership TEXT,
+    documents TEXT,
     created_at TEXT NOT NULL
   );
 
@@ -661,7 +664,7 @@ export interface IStorage {
   updateProjectEngagementMode(id: number, mode: string): Project | undefined;
 
   // Org Profile
-  upsertOrgProfile(projectId: number, data: { entityType?: string | null; entityName?: string | null; state?: string | null; population?: number | null; employeeCount?: number | null; annualBudget?: string | null; currentSystems?: string | null; departments?: string | null; painSummary?: string | null }): OrgProfile;
+  upsertOrgProfile(projectId: number, data: { entityType?: string | null; entityName?: string | null; state?: string | null; population?: number | null; employeeCount?: number | null; annualBudget?: string | null; currentSystems?: string | null; departments?: string | null; painSummary?: string | null; domain?: string | null; leadership?: string | null; documents?: string | null }): OrgProfile;
   getOrgProfile(projectId: number): OrgProfile | undefined;
 
   // Discovery Interviews
@@ -2250,7 +2253,7 @@ export class DatabaseStorage implements IStorage {
 
   // ==================== ORG PROFILE ====================
 
-  upsertOrgProfile(projectId: number, data: { entityType?: string | null; entityName?: string | null; state?: string | null; population?: number | null; employeeCount?: number | null; annualBudget?: string | null; currentSystems?: string | null; departments?: string | null; painSummary?: string | null }): OrgProfile {
+  upsertOrgProfile(projectId: number, data: { entityType?: string | null; entityName?: string | null; state?: string | null; population?: number | null; employeeCount?: number | null; annualBudget?: string | null; currentSystems?: string | null; departments?: string | null; painSummary?: string | null; domain?: string | null; leadership?: string | null; documents?: string | null }): OrgProfile {
     const existing = db.select().from(orgProfile).where(eq(orgProfile.projectId, projectId)).get();
     if (existing) {
       return db.update(orgProfile).set(data).where(eq(orgProfile.id, existing.id)).returning().get()!;
@@ -2266,6 +2269,9 @@ export class DatabaseStorage implements IStorage {
       currentSystems: data.currentSystems ?? null,
       departments: data.departments ?? null,
       painSummary: data.painSummary ?? null,
+      domain: data.domain ?? null,
+      leadership: data.leadership ?? null,
+      documents: data.documents ?? null,
       createdAt: new Date().toISOString(),
     }).returning().get();
   }

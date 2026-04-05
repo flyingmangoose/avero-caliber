@@ -2498,7 +2498,7 @@ Write in professional consulting tone covering: overall posture assessment, key 
     const project = storage.getProject(projectId);
     if (!project) return res.status(404).json({ error: "Project not found" });
 
-    const { entityType, entityName, state, population, employeeCount, annualBudget, currentSystems, departments, painSummary } = req.body;
+    const { entityType, entityName, state, population, employeeCount, annualBudget, currentSystems, departments, painSummary, domain, leadership, documents } = req.body;
     const profile = storage.upsertOrgProfile(projectId, {
       entityType: entityType ?? null,
       entityName: entityName ?? null,
@@ -2509,6 +2509,9 @@ Write in professional consulting tone covering: overall posture assessment, key 
       currentSystems: currentSystems ? (typeof currentSystems === "string" ? currentSystems : JSON.stringify(currentSystems)) : null,
       departments: departments ? (typeof departments === "string" ? departments : JSON.stringify(departments)) : null,
       painSummary: painSummary ?? null,
+      domain: domain ?? null,
+      leadership: leadership ? (typeof leadership === "string" ? leadership : JSON.stringify(leadership)) : null,
+      documents: documents ? (typeof documents === "string" ? documents : JSON.stringify(documents)) : null,
     });
     res.json(profile);
   });
