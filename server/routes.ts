@@ -71,48 +71,46 @@ export async function registerRoutes(
     try {
       const { anthropic } = await import("./ai");
 
-      const prompt = websiteText.length > 200
-        ? `You are analyzing a government entity's website to extract organizational information.
+      const websiteSection = websiteText.length > 200
+        ? `\n\nWEBSITE CONTENT FROM ${domain}:\n${websiteText.substring(0, 30000)}`
+        : "";
 
-WEBSITE CONTENT FROM: ${domain}
-${websiteText.substring(0, 30000)}
+      const prompt = `You are a senior government technology consultant researching a client organization.
 
-Extract the following as JSON:
+Domain: ${domain}
+${websiteSection}
+
+Provide a comprehensive profile of this government entity. Use the website content above where available, but ALSO use your general knowledge to fill in any gaps. Government entities are public — their population, budget, employee count, and department structure are public information.
+
+Return JSON with ALL fields populated — do not leave fields as null if you can provide a reasonable value or estimate. Mark estimates with "(est)" in string fields.
+
 {
-  "entityName": "official full name of the entity",
+  "entityName": "official full name",
   "entityType": "city/county/utility/transit/port/state_agency/special_district",
   "state": "state abbreviation",
-  "population": number or null,
-  "employeeCount": number or null,
-  "annualBudget": "dollar amount" or null,
-  "departments": [{ "name": "dept name", "headcount": null }],
-  "currentSystems": [{ "name": "system", "module": "purpose", "vendor": "vendor", "yearsInUse": null }],
-  "leadership": [{ "name": "person", "title": "their title" }],
-  "keyFacts": "2-3 relevant sentences",
-  "challenges": "common challenges for this entity type"
+  "population": number (served population),
+  "employeeCount": number (approximate, mark description if estimated),
+  "annualBudget": "dollar amount string, e.g. $6.2B",
+  "departments": [
+    { "name": "Department Name", "headcount": number or null }
+  ],
+  "currentSystems": [
+    { "name": "system name", "module": "what it handles", "vendor": "vendor name", "yearsInUse": number or null }
+  ],
+  "leadership": [
+    { "name": "person name", "title": "their title" }
+  ],
+  "keyFacts": "2-3 sentences about the entity relevant to ERP/technology context",
+  "challenges": "common technology and operational challenges for this entity type and size"
 }
 
-Extract what you can find. Use null for anything not on the website. For departments, list all you can find. For current systems, only include if specifically mentioned on the website.
-Return ONLY JSON.`
-        : `The domain "${domain}" appears to be a government entity website but I could not retrieve its content. Based on the domain name alone, research this entity.
+IMPORTANT:
+- For departments: List ALL major departments. For cities include: Finance, HR, IT, Public Works, Parks & Recreation, Police, Fire, Planning/Development, City Attorney, Library, Water/Sewer, Transportation, etc.
+- For population/employees/budget: These are public record. Provide your best knowledge. Use approximate numbers rather than null.
+- For current systems: Include any ERP/financial/HR systems if known from public information (budget documents, RFPs, job postings often mention these). If unknown, provide an empty array.
+- For leadership: Include mayor/manager/administrator, CFO/finance director, CIO/IT director if known.
 
-Provide structured data as JSON:
-{
-  "entityName": "official full name based on the domain",
-  "entityType": "city/county/utility/transit/port/state_agency/special_district",
-  "state": "state abbreviation",
-  "population": number or null,
-  "employeeCount": number or null,
-  "annualBudget": "dollar amount" or null,
-  "departments": [{ "name": "dept name", "headcount": null }],
-  "currentSystems": [],
-  "leadership": [],
-  "keyFacts": "2-3 relevant sentences about this entity",
-  "challenges": "common challenges for this entity type"
-}
-
-Use your best knowledge. Provide reasonable estimates where possible. Use null for unknowns.
-Return ONLY JSON.`;
+Return ONLY the JSON object.`;
 
       const response = await anthropic.messages.create({
         model: "claude-sonnet-4-20250514",
