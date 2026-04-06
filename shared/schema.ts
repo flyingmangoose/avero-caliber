@@ -557,3 +557,81 @@ export type DiscoveryPainPoint = typeof discoveryPainPoints.$inferSelect;
 export type InsertDiscoveryPainPoint = z.infer<typeof insertDiscoveryPainPointSchema>;
 export type ProcessTransformation = typeof processTransformations.$inferSelect;
 export type InsertProcessTransformation = z.infer<typeof insertProcessTransformationSchema>;
+
+// ==================== VENDOR MONITORING PIPELINE ====================
+
+// Sources to monitor for each vendor platform (release notes URLs, press pages, etc.)
+export const monitoringSources = sqliteTable("monitoring_sources", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  vendorPlatform: text("vendor_platform").notNull(), // workday, oracle_cloud, tyler, maximo, nv5, oracle_eam
+  sourceType: text("source_type").notNull(), // release_notes, press_release, product_page, changelog, blog, documentation
+  name: text("name").notNull(),
+  url: text("url").notNull(),
+  checkFrequency: text("check_frequency").notNull().default("weekly"), // daily, weekly, monthly
+  isActive: integer("is_active").notNull().default(1),
+  lastCheckedAt: text("last_checked_at"),
+  lastContentHash: text("last_content_hash"), // hash of content at last check for diff detection
+  createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
+});
+
+// Log of each monitoring scan run
+export const monitoringRuns = sqliteTable("monitoring_runs", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  sourceId: integer("source_id").notNull().references(() => monitoringSources.id, { onDelete: "cascade" }),
+  status: text("status").notNull(), // success, failed, no_change, changes_detected
+  contentHash: text("content_hash"),
+  rawContentPreview: text("raw_content_preview"), // first 500 chars for debugging
+  changesDetected: integer("changes_detected").notNull().default(0),
+  errorMessage: text("error_message"),
+  durationMs: integer("duration_ms"),
+  createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
+});
+
+// Detected changes with AI analysis
+export const vendorChanges = sqliteTable("vendor_changes", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  runId: integer("run_id").notNull().references(() => monitoringRuns.id, { onDelete: "cascade" }),
+  vendorPlatform: text("vendor_platform").notNull(),
+  changeType: text("change_type").notNull(), // new_feature, deprecation, pricing_change, acquisition, partnership, certification, bug_fix, roadmap_update
+  severity: text("severity").notNull().default("info"), // critical, high, medium, low, info
+  title: text("title").notNull(),
+  summary: text("summary").notNull(),
+  details: text("details"), // longer AI analysis
+  affectedModules: text("affected_modules"), // JSON array of module names
+  affectedCapabilities: text("affected_capabilities"), // JSON array of capability IDs
+  sourceUrl: text("source_url"),
+  rawExcerpt: text("raw_excerpt"), // relevant text snippet from source
+  isReviewed: integer("is_reviewed").notNull().default(0),
+  reviewedBy: text("reviewed_by"),
+  reviewNotes: text("review_notes"),
+  isApplied: integer("is_applied").notNull().default(0), // whether KB was updated based on this
+  createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
+});
+
+// Alerts generated from changes
+export const monitoringAlerts = sqliteTable("monitoring_alerts", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  changeId: integer("change_id").notNull().references(() => vendorChanges.id, { onDelete: "cascade" }),
+  alertType: text("alert_type").notNull(), // capability_impact, pricing_alert, competitive_shift, deprecation_warning
+  priority: text("priority").notNull().default("medium"), // urgent, high, medium, low
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  affectedProjects: text("affected_projects"), // JSON array of project IDs where this vendor is being evaluated
+  isDismissed: integer("is_dismissed").notNull().default(0),
+  dismissedBy: text("dismissed_by"),
+  createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
+});
+
+export const insertMonitoringSourceSchema = createInsertSchema(monitoringSources).omit({ id: true, createdAt: true });
+export const insertMonitoringRunSchema = createInsertSchema(monitoringRuns).omit({ id: true, createdAt: true });
+export const insertVendorChangeSchema = createInsertSchema(vendorChanges).omit({ id: true, createdAt: true });
+export const insertMonitoringAlertSchema = createInsertSchema(monitoringAlerts).omit({ id: true, createdAt: true });
+
+export type MonitoringSource = typeof monitoringSources.$inferSelect;
+export type InsertMonitoringSource = z.infer<typeof insertMonitoringSourceSchema>;
+export type MonitoringRun = typeof monitoringRuns.$inferSelect;
+export type InsertMonitoringRun = z.infer<typeof insertMonitoringRunSchema>;
+export type VendorChange = typeof vendorChanges.$inferSelect;
+export type InsertVendorChange = z.infer<typeof insertVendorChangeSchema>;
+export type MonitoringAlert = typeof monitoringAlerts.$inferSelect;
+export type InsertMonitoringAlert = z.infer<typeof insertMonitoringAlertSchema>;

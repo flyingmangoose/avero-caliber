@@ -30,6 +30,10 @@ import {
   type DiscoveryInterview, discoveryInterviews,
   type DiscoveryPainPoint, discoveryPainPoints,
   type ProcessTransformation, processTransformations,
+  type MonitoringSource, monitoringSources,
+  type MonitoringRun, monitoringRuns,
+  type VendorChange, vendorChanges,
+  type MonitoringAlert, monitoringAlerts,
 } from "@shared/schema";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import Database from "better-sqlite3";
@@ -685,6 +689,22 @@ export interface IStorage {
   getProcessTransformations(projectId: number, vendorPlatform?: string): ProcessTransformation[];
   getProcessTransformation(id: number): ProcessTransformation | undefined;
   deleteProcessTransformations(projectId: number, vendorPlatform?: string, functionalArea?: string): void;
+
+  // Monitoring Pipeline
+  createMonitoringSource(data: any): MonitoringSource;
+  getMonitoringSources(vendorPlatform?: string): MonitoringSource[];
+  getMonitoringSource(id: number): MonitoringSource | undefined;
+  updateMonitoringSource(id: number, data: any): MonitoringSource | undefined;
+  deleteMonitoringSource(id: number): void;
+  createMonitoringRun(data: any): MonitoringRun;
+  getMonitoringRuns(sourceId?: number, limit?: number): MonitoringRun[];
+  createVendorChange(data: any): VendorChange;
+  getVendorChanges(filters?: { vendorPlatform?: string; changeType?: string; isReviewed?: number; limit?: number }): VendorChange[];
+  updateVendorChange(id: number, data: any): VendorChange | undefined;
+  createMonitoringAlert(data: any): MonitoringAlert;
+  getMonitoringAlerts(filters?: { priority?: string; isDismissed?: number }): MonitoringAlert[];
+  updateMonitoringAlert(id: number, data: any): MonitoringAlert | undefined;
+  getMonitoringStats(): { totalSources: number; activeSources: number; totalChanges: number; unreviewedChanges: number; activeAlerts: number; lastScanAt: string | null };
 }
 
 export interface WorkshopSummaryResult {
@@ -2393,6 +2413,143 @@ export class DatabaseStorage implements IStorage {
     if (vendorPlatform) conditions.push(eq(processTransformations.vendorPlatform, vendorPlatform));
     if (functionalArea) conditions.push(eq(processTransformations.functionalArea, functionalArea));
     db.delete(processTransformations).where(and(...conditions)).run();
+  }
+
+  // ==================== MONITORING PIPELINE ====================
+
+  createMonitoringSource(data: any): MonitoringSource {
+    return db.insert(monitoringSources).values({
+      vendorPlatform: data.vendorPlatform,
+      sourceType: data.sourceType,
+      name: data.name,
+      url: data.url,
+      checkFrequency: data.checkFrequency || "weekly",
+      isActive: data.isActive ?? 1,
+    }).returning().get();
+  }
+
+  getMonitoringSources(vendorPlatform?: string): MonitoringSource[] {
+    if (vendorPlatform) {
+      return db.select().from(monitoringSources)
+        .where(eq(monitoringSources.vendorPlatform, vendorPlatform))
+        .orderBy(monitoringSources.vendorPlatform, monitoringSources.name)
+        .all();
+    }
+    return db.select().from(monitoringSources)
+      .orderBy(monitoringSources.vendorPlatform, monitoringSources.name)
+      .all();
+  }
+
+  getMonitoringSource(id: number): MonitoringSource | undefined {
+    return db.select().from(monitoringSources).where(eq(monitoringSources.id, id)).get();
+  }
+
+  updateMonitoringSource(id: number, data: any): MonitoringSource | undefined {
+    return db.update(monitoringSources).set(data).where(eq(monitoringSources.id, id)).returning().get();
+  }
+
+  deleteMonitoringSource(id: number): void {
+    db.delete(monitoringSources).where(eq(monitoringSources.id, id)).run();
+  }
+
+  createMonitoringRun(data: any): MonitoringRun {
+    return db.insert(monitoringRuns).values({
+      sourceId: data.sourceId,
+      status: data.status,
+      contentHash: data.contentHash ?? null,
+      rawContentPreview: data.rawContentPreview ?? null,
+      changesDetected: data.changesDetected ?? 0,
+      errorMessage: data.errorMessage ?? null,
+      durationMs: data.durationMs ?? null,
+    }).returning().get();
+  }
+
+  getMonitoringRuns(sourceId?: number, limit?: number): MonitoringRun[] {
+    const lim = limit || 50;
+    if (sourceId) {
+      return db.select().from(monitoringRuns)
+        .where(eq(monitoringRuns.sourceId, sourceId))
+        .orderBy(desc(monitoringRuns.createdAt))
+        .limit(lim)
+        .all();
+    }
+    return db.select().from(monitoringRuns)
+      .orderBy(desc(monitoringRuns.createdAt))
+      .limit(lim)
+      .all();
+  }
+
+  createVendorChange(data: any): VendorChange {
+    return db.insert(vendorChanges).values({
+      runId: data.runId,
+      vendorPlatform: data.vendorPlatform,
+      changeType: data.changeType,
+      severity: data.severity || "info",
+      title: data.title,
+      summary: data.summary,
+      details: data.details ?? null,
+      affectedModules: typeof data.affectedModules === "string" ? data.affectedModules : JSON.stringify(data.affectedModules || []),
+      affectedCapabilities: typeof data.affectedCapabilities === "string" ? data.affectedCapabilities : JSON.stringify(data.affectedCapabilities || []),
+      sourceUrl: data.sourceUrl ?? null,
+      rawExcerpt: data.rawExcerpt ?? null,
+    }).returning().get();
+  }
+
+  getVendorChanges(filters?: { vendorPlatform?: string; changeType?: string; isReviewed?: number; limit?: number }): VendorChange[] {
+    const conditions: any[] = [];
+    if (filters?.vendorPlatform) conditions.push(eq(vendorChanges.vendorPlatform, filters.vendorPlatform));
+    if (filters?.changeType) conditions.push(eq(vendorChanges.changeType, filters.changeType));
+    if (filters?.isReviewed !== undefined) conditions.push(eq(vendorChanges.isReviewed, filters.isReviewed));
+    const query = conditions.length > 0
+      ? db.select().from(vendorChanges).where(and(...conditions))
+      : db.select().from(vendorChanges);
+    return query.orderBy(desc(vendorChanges.createdAt)).limit(filters?.limit || 100).all();
+  }
+
+  updateVendorChange(id: number, data: any): VendorChange | undefined {
+    return db.update(vendorChanges).set(data).where(eq(vendorChanges.id, id)).returning().get();
+  }
+
+  createMonitoringAlert(data: any): MonitoringAlert {
+    return db.insert(monitoringAlerts).values({
+      changeId: data.changeId,
+      alertType: data.alertType,
+      priority: data.priority || "medium",
+      title: data.title,
+      message: data.message,
+      affectedProjects: typeof data.affectedProjects === "string" ? data.affectedProjects : JSON.stringify(data.affectedProjects || []),
+    }).returning().get();
+  }
+
+  getMonitoringAlerts(filters?: { priority?: string; isDismissed?: number }): MonitoringAlert[] {
+    const conditions: any[] = [];
+    if (filters?.priority) conditions.push(eq(monitoringAlerts.priority, filters.priority));
+    if (filters?.isDismissed !== undefined) conditions.push(eq(monitoringAlerts.isDismissed, filters.isDismissed));
+    const query = conditions.length > 0
+      ? db.select().from(monitoringAlerts).where(and(...conditions))
+      : db.select().from(monitoringAlerts);
+    return query.orderBy(desc(monitoringAlerts.createdAt)).all();
+  }
+
+  updateMonitoringAlert(id: number, data: any): MonitoringAlert | undefined {
+    return db.update(monitoringAlerts).set(data).where(eq(monitoringAlerts.id, id)).returning().get();
+  }
+
+  getMonitoringStats(): { totalSources: number; activeSources: number; totalChanges: number; unreviewedChanges: number; activeAlerts: number; lastScanAt: string | null } {
+    const allSources = db.select().from(monitoringSources).all();
+    const activeSources = allSources.filter(s => s.isActive === 1);
+    const allChanges = db.select().from(vendorChanges).all();
+    const unreviewedChanges = allChanges.filter(c => c.isReviewed === 0);
+    const activeAlerts = db.select().from(monitoringAlerts).where(eq(monitoringAlerts.isDismissed, 0)).all();
+    const lastRun = db.select().from(monitoringRuns).orderBy(desc(monitoringRuns.createdAt)).limit(1).get();
+    return {
+      totalSources: allSources.length,
+      activeSources: activeSources.length,
+      totalChanges: allChanges.length,
+      unreviewedChanges: unreviewedChanges.length,
+      activeAlerts: activeAlerts.length,
+      lastScanAt: lastRun?.createdAt || null,
+    };
   }
 }
 

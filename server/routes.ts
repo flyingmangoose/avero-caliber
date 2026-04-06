@@ -3501,5 +3501,315 @@ Write in professional consulting tone covering: overall posture assessment, key 
     res.json({ success: true });
   });
 
+  // ==================== VENDOR MONITORING PIPELINE ====================
+
+  // Sources CRUD
+  app.get("/api/monitoring/sources", (req, res) => {
+    const vendorPlatform = req.query.vendorPlatform as string | undefined;
+    res.json(storage.getMonitoringSources(vendorPlatform));
+  });
+
+  app.post("/api/monitoring/sources", (req, res) => {
+    const source = storage.createMonitoringSource(req.body);
+    res.json(source);
+  });
+
+  app.patch("/api/monitoring/sources/:id", (req, res) => {
+    const updated = storage.updateMonitoringSource(parseInt(req.params.id), req.body);
+    if (!updated) return res.status(404).json({ error: "Source not found" });
+    res.json(updated);
+  });
+
+  app.delete("/api/monitoring/sources/:id", (req, res) => {
+    storage.deleteMonitoringSource(parseInt(req.params.id));
+    res.json({ success: true });
+  });
+
+  // Seed default sources for all platforms
+  app.post("/api/monitoring/seed-sources", (_req, res) => {
+    const defaultSources = [
+      // Workday
+      { vendorPlatform: "workday", sourceType: "release_notes", name: "Workday Release Notes", url: "https://community.workday.com/release-notes" },
+      { vendorPlatform: "workday", sourceType: "blog", name: "Workday Blog", url: "https://blog.workday.com" },
+      { vendorPlatform: "workday", sourceType: "press_release", name: "Workday Newsroom", url: "https://newsroom.workday.com" },
+      // Oracle Cloud
+      { vendorPlatform: "oracle_cloud", sourceType: "release_notes", name: "Oracle Cloud Updates", url: "https://docs.oracle.com/en/cloud/saas/index.html" },
+      { vendorPlatform: "oracle_cloud", sourceType: "blog", name: "Oracle Cloud Blog", url: "https://blogs.oracle.com/cloud-infrastructure" },
+      { vendorPlatform: "oracle_cloud", sourceType: "press_release", name: "Oracle Newsroom", url: "https://www.oracle.com/news" },
+      // Tyler Technologies
+      { vendorPlatform: "tyler", sourceType: "press_release", name: "Tyler News", url: "https://www.tylertech.com/about/news-press" },
+      { vendorPlatform: "tyler", sourceType: "product_page", name: "Tyler ERP Products", url: "https://www.tylertech.com/products/erp-pro" },
+      // Maximo
+      { vendorPlatform: "maximo", sourceType: "release_notes", name: "Maximo Application Suite", url: "https://www.ibm.com/docs/en/mas-cd/maximo-manage" },
+      { vendorPlatform: "maximo", sourceType: "blog", name: "IBM Sustainability Blog", url: "https://www.ibm.com/blog/category/asset-management" },
+      // NV5
+      { vendorPlatform: "nv5", sourceType: "press_release", name: "NV5 News", url: "https://www.nv5.com/news" },
+      { vendorPlatform: "nv5", sourceType: "product_page", name: "NV5 Technology", url: "https://www.nv5.com/technology" },
+      // Oracle EAM
+      { vendorPlatform: "oracle_eam", sourceType: "documentation", name: "Oracle EAM Docs", url: "https://docs.oracle.com/en/cloud/saas/enterprise-asset-management" },
+      { vendorPlatform: "oracle_eam", sourceType: "release_notes", name: "Oracle SCM Updates", url: "https://docs.oracle.com/en/cloud/saas/supply-chain-and-manufacturing" },
+    ];
+    const existing = storage.getMonitoringSources();
+    let created = 0;
+    for (const src of defaultSources) {
+      const exists = existing.find(e => e.url === src.url && e.vendorPlatform === src.vendorPlatform);
+      if (!exists) {
+        storage.createMonitoringSource(src);
+        created++;
+      }
+    }
+    res.json({ success: true, created, total: storage.getMonitoringSources().length });
+  });
+
+  // Runs
+  app.get("/api/monitoring/runs", (req, res) => {
+    const sourceId = req.query.sourceId ? parseInt(req.query.sourceId as string) : undefined;
+    const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
+    res.json(storage.getMonitoringRuns(sourceId, limit));
+  });
+
+  // Changes
+  app.get("/api/monitoring/changes", (req, res) => {
+    const filters: any = {};
+    if (req.query.vendorPlatform) filters.vendorPlatform = req.query.vendorPlatform;
+    if (req.query.changeType) filters.changeType = req.query.changeType;
+    if (req.query.isReviewed !== undefined) filters.isReviewed = parseInt(req.query.isReviewed as string);
+    if (req.query.limit) filters.limit = parseInt(req.query.limit as string);
+    res.json(storage.getVendorChanges(filters));
+  });
+
+  app.patch("/api/monitoring/changes/:id", (req, res) => {
+    const updated = storage.updateVendorChange(parseInt(req.params.id), req.body);
+    if (!updated) return res.status(404).json({ error: "Change not found" });
+    res.json(updated);
+  });
+
+  // Alerts
+  app.get("/api/monitoring/alerts", (req, res) => {
+    const filters: any = {};
+    if (req.query.priority) filters.priority = req.query.priority;
+    if (req.query.isDismissed !== undefined) filters.isDismissed = parseInt(req.query.isDismissed as string);
+    res.json(storage.getMonitoringAlerts(filters));
+  });
+
+  app.patch("/api/monitoring/alerts/:id", (req, res) => {
+    const updated = storage.updateMonitoringAlert(parseInt(req.params.id), req.body);
+    if (!updated) return res.status(404).json({ error: "Alert not found" });
+    res.json(updated);
+  });
+
+  // Stats
+  app.get("/api/monitoring/stats", (_req, res) => {
+    res.json(storage.getMonitoringStats());
+  });
+
+  // Scan a single source (manual trigger)
+  app.post("/api/monitoring/scan/:sourceId", async (req, res) => {
+    const sourceId = parseInt(req.params.sourceId);
+    const source = storage.getMonitoringSource(sourceId);
+    if (!source) return res.status(404).json({ error: "Source not found" });
+
+    const startTime = Date.now();
+    try {
+      // Fetch the URL content
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000);
+      const response = await fetch(source.url, {
+        signal: controller.signal,
+        headers: { "User-Agent": "AveroCaliberMonitor/1.0" },
+      });
+      clearTimeout(timeout);
+
+      if (!response.ok) {
+        const run = storage.createMonitoringRun({
+          sourceId: source.id,
+          status: "failed",
+          errorMessage: `HTTP ${response.status}: ${response.statusText}`,
+          durationMs: Date.now() - startTime,
+        });
+        storage.updateMonitoringSource(source.id, { lastCheckedAt: new Date().toISOString() });
+        return res.json({ run, changes: [] });
+      }
+
+      const text = await response.text();
+      // Simple hash for change detection
+      const crypto = await import("crypto");
+      const contentHash = crypto.createHash("md5").update(text.substring(0, 10000)).digest("hex");
+      const preview = text.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").substring(0, 500);
+
+      // Check if content changed
+      if (contentHash === source.lastContentHash) {
+        const run = storage.createMonitoringRun({
+          sourceId: source.id,
+          status: "no_change",
+          contentHash,
+          rawContentPreview: preview,
+          durationMs: Date.now() - startTime,
+        });
+        storage.updateMonitoringSource(source.id, { lastCheckedAt: new Date().toISOString() });
+        return res.json({ run, changes: [] });
+      }
+
+      // Content changed — use AI to analyze
+      const { analyzeVendorChanges } = await import("./ai");
+      const cleanText = text.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").substring(0, 8000);
+      const aiChanges = await analyzeVendorChanges(source.vendorPlatform, source.sourceType, source.name, cleanText, source.lastContentHash ? "Content has changed since last scan" : "First scan of this source");
+
+      const run = storage.createMonitoringRun({
+        sourceId: source.id,
+        status: "changes_detected",
+        contentHash,
+        rawContentPreview: preview,
+        changesDetected: aiChanges.length,
+        durationMs: Date.now() - startTime,
+      });
+
+      // Save changes and generate alerts
+      const savedChanges = [];
+      for (const change of aiChanges) {
+        const saved = storage.createVendorChange({
+          runId: run.id,
+          vendorPlatform: source.vendorPlatform,
+          changeType: change.changeType,
+          severity: change.severity,
+          title: change.title,
+          summary: change.summary,
+          details: change.details,
+          affectedModules: change.affectedModules,
+          sourceUrl: source.url,
+          rawExcerpt: change.rawExcerpt,
+        });
+        savedChanges.push(saved);
+
+        // Auto-generate alert for high/critical changes
+        if (change.severity === "critical" || change.severity === "high") {
+          storage.createMonitoringAlert({
+            changeId: saved.id,
+            alertType: change.changeType === "deprecation" ? "deprecation_warning"
+              : change.changeType === "pricing_change" ? "pricing_alert"
+              : "capability_impact",
+            priority: change.severity === "critical" ? "urgent" : "high",
+            title: saved.title,
+            message: saved.summary,
+          });
+        }
+      }
+
+      // Update source with new hash
+      storage.updateMonitoringSource(source.id, {
+        lastCheckedAt: new Date().toISOString(),
+        lastContentHash: contentHash,
+      });
+
+      res.json({ run, changes: savedChanges });
+    } catch (error: any) {
+      const run = storage.createMonitoringRun({
+        sourceId: source.id,
+        status: "failed",
+        errorMessage: error.message || "Unknown error",
+        durationMs: Date.now() - startTime,
+      });
+      storage.updateMonitoringSource(source.id, { lastCheckedAt: new Date().toISOString() });
+      res.json({ run, changes: [] });
+    }
+  });
+
+  // Scan all active sources
+  app.post("/api/monitoring/scan-all", async (_req, res) => {
+    const sources = storage.getMonitoringSources().filter(s => s.isActive === 1);
+    const results = [];
+    for (const source of sources) {
+      try {
+        const startTime = Date.now();
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 15000);
+        const response = await fetch(source.url, {
+          signal: controller.signal,
+          headers: { "User-Agent": "AveroCaliberMonitor/1.0" },
+        });
+        clearTimeout(timeout);
+
+        if (!response.ok) {
+          const run = storage.createMonitoringRun({
+            sourceId: source.id,
+            status: "failed",
+            errorMessage: `HTTP ${response.status}`,
+            durationMs: Date.now() - startTime,
+          });
+          storage.updateMonitoringSource(source.id, { lastCheckedAt: new Date().toISOString() });
+          results.push({ sourceId: source.id, name: source.name, status: "failed" });
+          continue;
+        }
+
+        const text = await response.text();
+        const crypto = await import("crypto");
+        const contentHash = crypto.createHash("md5").update(text.substring(0, 10000)).digest("hex");
+        const preview = text.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").substring(0, 500);
+
+        if (contentHash === source.lastContentHash) {
+          storage.createMonitoringRun({
+            sourceId: source.id,
+            status: "no_change",
+            contentHash,
+            rawContentPreview: preview,
+            durationMs: Date.now() - startTime,
+          });
+          storage.updateMonitoringSource(source.id, { lastCheckedAt: new Date().toISOString() });
+          results.push({ sourceId: source.id, name: source.name, status: "no_change" });
+        } else {
+          const { analyzeVendorChanges } = await import("./ai");
+          const cleanText = text.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").substring(0, 8000);
+          const aiChanges = await analyzeVendorChanges(source.vendorPlatform, source.sourceType, source.name, cleanText, source.lastContentHash ? "Content has changed since last scan" : "First scan of this source");
+
+          const run = storage.createMonitoringRun({
+            sourceId: source.id,
+            status: aiChanges.length > 0 ? "changes_detected" : "no_change",
+            contentHash,
+            rawContentPreview: preview,
+            changesDetected: aiChanges.length,
+            durationMs: Date.now() - startTime,
+          });
+
+          for (const change of aiChanges) {
+            const saved = storage.createVendorChange({
+              runId: run.id,
+              vendorPlatform: source.vendorPlatform,
+              changeType: change.changeType,
+              severity: change.severity,
+              title: change.title,
+              summary: change.summary,
+              details: change.details,
+              affectedModules: change.affectedModules,
+              sourceUrl: source.url,
+              rawExcerpt: change.rawExcerpt,
+            });
+            if (change.severity === "critical" || change.severity === "high") {
+              storage.createMonitoringAlert({
+                changeId: saved.id,
+                alertType: change.changeType === "deprecation" ? "deprecation_warning" : "capability_impact",
+                priority: change.severity === "critical" ? "urgent" : "high",
+                title: saved.title,
+                message: saved.summary,
+              });
+            }
+          }
+
+          storage.updateMonitoringSource(source.id, { lastCheckedAt: new Date().toISOString(), lastContentHash: contentHash });
+          results.push({ sourceId: source.id, name: source.name, status: "changes_detected", count: aiChanges.length });
+        }
+      } catch (error: any) {
+        storage.createMonitoringRun({
+          sourceId: source.id,
+          status: "failed",
+          errorMessage: error.message,
+          durationMs: 0,
+        });
+        storage.updateMonitoringSource(source.id, { lastCheckedAt: new Date().toISOString() });
+        results.push({ sourceId: source.id, name: source.name, status: "failed", error: error.message });
+      }
+    }
+    res.json({ results, scanned: sources.length });
+  });
+
   return httpServer;
 }

@@ -23,6 +23,7 @@ import ClientProfilePage from "@/pages/client-profile";
 import NotFound from "@/pages/not-found";
 import WorkshopView from "@/pages/workshop";
 import Portfolio from "@/pages/portfolio";
+import VendorMonitoringPage from "@/pages/vendor-monitoring";
 
 const sidebarStyle = {
   "--sidebar-width": "18rem",
@@ -51,6 +52,7 @@ function AppLayout() {
               <Route path="/projects/:id" component={ProjectView} />
               <Route path="/templates" component={TemplateLibrary} />
               <Route path="/knowledge-base" component={KnowledgeBasePage} />
+              <Route path="/vendor-monitoring" component={VendorMonitoringPage} />
               <Route component={NotFound} />
             </Switch>
           </main>

@@ -545,4 +545,89 @@ Return ONLY valid JSON, no markdown fencing.`;
   return results;
 }
 
+// ==================== VENDOR MONITORING AI ====================
+
+const VENDOR_CHANGE_ANALYSIS_PROMPT = `You are an expert analyst monitoring enterprise software vendor activity. You are analyzing content from a vendor's website/blog/release notes to identify meaningful changes that could affect organizations evaluating or using this software.
+
+VENDOR: {vendorPlatform}
+SOURCE TYPE: {sourceType}
+SOURCE NAME: {sourceName}
+CONTEXT: {context}
+
+Analyze the following content and extract any significant changes, updates, or announcements. For each change found, classify it:
+
+Change Types:
+- new_feature: New capability, module, or significant enhancement
+- deprecation: Feature removal, end-of-life, sunset announcement
+- pricing_change: Licensing model change, price increase/decrease
+- acquisition: Company acquired or was acquired
+- partnership: New strategic partnership or integration
+- certification: New compliance cert, security cert, or gov approval
+- bug_fix: Major bug fix or security patch
+- roadmap_update: Future plans, version announcements, strategic shifts
+
+Severity levels:
+- critical: Breaking change, major deprecation, significant pricing change
+- high: New major feature, important partnership, security issue
+- medium: Notable enhancement, minor pricing adjustment
+- low: Minor update, small feature addition
+- info: General news, blog content, minor announcement
+
+Return a JSON array of changes (empty array if no notable changes):
+[
+  {
+    "changeType": "new_feature",
+    "severity": "high",
+    "title": "Short descriptive title",
+    "summary": "2-3 sentence summary of the change and its implications",
+    "details": "Longer analysis of business impact",
+    "affectedModules": ["Finance", "Procurement"],
+    "rawExcerpt": "Relevant quote from the source"
+  }
+]
+
+Be selective — only flag genuinely meaningful changes. Ignore boilerplate, marketing fluff, and minor UI tweaks. Focus on changes that would matter to a government organization evaluating this vendor.`;
+
+export async function analyzeVendorChanges(
+  vendorPlatform: string,
+  sourceType: string,
+  sourceName: string,
+  content: string,
+  context: string
+): Promise<Array<{
+  changeType: string;
+  severity: string;
+  title: string;
+  summary: string;
+  details?: string;
+  affectedModules?: string[];
+  rawExcerpt?: string;
+}>> {
+  const prompt = VENDOR_CHANGE_ANALYSIS_PROMPT
+    .replace("{vendorPlatform}", vendorPlatform)
+    .replace("{sourceType}", sourceType)
+    .replace("{sourceName}", sourceName)
+    .replace("{context}", context);
+
+  try {
+    const response = await anthropic.messages.create({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 4096,
+      messages: [
+        { role: "user", content: `${prompt}\n\nCONTENT TO ANALYZE:\n${content}` }
+      ],
+    });
+
+    const text = response.content[0].type === "text" ? response.content[0].text : "";
+    // Extract JSON from response
+    const jsonMatch = text.match(/\[\s*\{[\s\S]*\}\s*\]/);
+    if (!jsonMatch) return [];
+    const parsed = JSON.parse(jsonMatch[0]);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error: any) {
+    console.error("Vendor change analysis error:", error.message);
+    return [];
+  }
+}
+
 export { anthropic, CHAT_SYSTEM_PROMPT, PROPOSAL_ANALYSIS_PROMPT };
