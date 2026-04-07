@@ -1,7 +1,39 @@
-import Anthropic from "@anthropic-ai/sdk";
+import OpenAI from "openai";
 import { storage } from "./storage";
 
-const anthropic = new Anthropic();
+// Use xAI Grok API (OpenAI-compatible)
+const xai = new OpenAI({
+  apiKey: process.env.XAI_API_KEY || process.env.ANTHROPIC_API_KEY || "",
+  baseURL: process.env.XAI_API_KEY ? "https://api.x.ai/v1" : undefined,
+});
+
+const MODEL = process.env.XAI_API_KEY ? "grok-3-mini" : "gpt-4o";
+
+// Helper to call the LLM (replaces anthropic.messages.create)
+async function llmCall(prompt: string, systemPrompt?: string, maxTokens = 4096): Promise<string> {
+  const messages: any[] = [];
+  if (systemPrompt) messages.push({ role: "system", content: systemPrompt });
+  messages.push({ role: "user", content: prompt });
+  const response = await xai.chat.completions.create({
+    model: MODEL,
+    max_tokens: maxTokens,
+    messages,
+  });
+  return response.choices[0]?.message?.content || "";
+}
+
+// Streaming helper for SSE responses
+async function llmStream(prompt: string, systemPrompt?: string, maxTokens = 4096) {
+  const messages: any[] = [];
+  if (systemPrompt) messages.push({ role: "system", content: systemPrompt });
+  messages.push({ role: "user", content: prompt });
+  return xai.chat.completions.create({
+    model: MODEL,
+    max_tokens: maxTokens,
+    messages,
+    stream: true,
+  });
+}
 
 const CHAT_SYSTEM_PROMPT = `You are an AI evaluation analyst embedded in Avero Caliber, a vendor evaluation platform for government ERP/EAM implementations. You have complete access to this project's data.
 
@@ -220,10 +252,7 @@ export async function generateInterviewGuide(
     orgContext = parts.join("\n");
   }
 
-  const response = await anthropic.messages.create({
-    model: "claude-sonnet-4-20250514",
-    max_tokens: 4096,
-    messages: [{ role: "user", content: `You are a senior ERP/EAM implementation consultant preparing a discovery interview guide for the ${functionalArea} department.
+  const text = await llmCall(`You are a senior ERP/EAM implementation consultant preparing a discovery interview guide for the ${functionalArea} department.
 
 ORGANIZATION CONTEXT:
 ${orgContext}
@@ -256,10 +285,8 @@ Return JSON:
   ]
 }
 
-Make questions specific to ${functionalArea} in a government context. Use conversational language a consultant would actually say.` }],
-  });
+Make questions specific to ${functionalArea} in a government context. Use conversational language a consultant would actually say.`);
 
-  const text = response.content[0].type === "text" ? response.content[0].text : "";
   const jsonMatch = text.match(/\{[\s\S]*"questions"[\s\S]*\}/);
   if (!jsonMatch) return { questions: [] };
   try {
@@ -277,10 +304,7 @@ export async function processTranscript(
 ): Promise<{ answers: Array<{ questionId: string; extractedAnswer: string; keyPoints: string[]; painPoints: string[]; followUpNeeded: boolean }>; additionalFindings: string[] }> {
   const questionList = questions.map(q => `${q.id}: ${q.question}`).join("\n");
 
-  const response = await anthropic.messages.create({
-    model: "claude-sonnet-4-20250514",
-    max_tokens: 4096,
-    messages: [{ role: "user", content: `You are analyzing a meeting transcript from a ${functionalArea} discovery interview. Extract structured answers mapped to the interview questions.
+  const text = await llmCall(`You are analyzing a meeting transcript from a ${functionalArea} discovery interview. Extract structured answers mapped to the interview questions.
 
 INTERVIEW QUESTIONS:
 ${questionList}
@@ -308,10 +332,7 @@ Return JSON:
     }
   ],
   "additionalFindings": ["finding not tied to a specific question"]
-}` }],
-  });
-
-  const text = response.content[0].type === "text" ? response.content[0].text : "";
+}`);
   const jsonMatch = text.match(/\{[\s\S]*"answers"[\s\S]*\}/);
   if (!jsonMatch) return { answers: [], additionalFindings: [] };
   try {
@@ -375,10 +396,7 @@ export async function extractDiscoveryFindings(
 ): Promise<{ processSteps: any[]; painPoints: any[]; keyMetrics: any[]; integrationDeps: string[]; desiredOutcomes: string[] }> {
   const transcriptText = transcript.map(m => `${m.role === "assistant" ? "Consultant" : "Interviewee"}: ${m.content}`).join("\n\n");
 
-  const response = await anthropic.messages.create({
-    model: "claude-sonnet-4-20250514",
-    max_tokens: 4096,
-    messages: [{ role: "user", content: `Based on this discovery interview transcript for ${functionalArea}, extract structured findings:
+  const text = await llmCall(`Based on this discovery interview transcript for ${functionalArea}, extract structured findings:
 
 1. PROCESS STEPS: List each step in their current process
    - step (number), description, system (which system), manual (yes/no), painPoint (associated pain point if any)
@@ -396,11 +414,10 @@ export async function extractDiscoveryFindings(
 Return as JSON with keys: processSteps, painPoints, keyMetrics, integrationDeps, desiredOutcomes
 
 TRANSCRIPT:
-${transcriptText}` }],
-  });
+${transcriptText}`);
 
   try {
-    const text = response.content[0].type === "text" ? response.content[0].text : "";
+    // text set by llmCall above
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       return JSON.parse(jsonMatch[0]);
@@ -468,10 +485,7 @@ export async function generateRequirementsFromDiscovery(projectId: number): Prom
     .map(p => `- [${p.severity || "unknown"}] (priority: ${p.stakeholderPriority || "unranked"}) ${p.functionalArea}: ${p.description}`)
     .join("\n");
 
-  const response = await anthropic.messages.create({
-    model: "claude-sonnet-4-20250514",
-    max_tokens: 8192,
-    messages: [{ role: "user", content: `You are generating ERP/EAM requirements based on a comprehensive discovery process.
+  const text = await llmCall(`You are generating ERP/EAM requirements based on a comprehensive discovery process.
 
 ORGANIZATION PROFILE:
 ${orgSummary}
@@ -499,11 +513,10 @@ For each requirement, provide:
 - justification: 1-2 sentences explaining WHY this is needed, referencing discovery findings
 - painPointRef: description of the linked pain point
 
-Return as a JSON array of objects with keys: module, description, criticality, justification, painPointRef` }],
-  });
+Return as a JSON array of objects with keys: module, description, criticality, justification, painPointRef`, undefined, 8192);
 
   try {
-    const text = response.content[0].type === "text" ? response.content[0].text : "";
+    // text set by llmCall above
     const jsonMatch = text.match(/\[[\s\S]*\]/);
     if (jsonMatch) {
       return JSON.parse(jsonMatch[0]);
@@ -597,13 +610,9 @@ Return ONLY valid JSON, no markdown fencing.`;
     let transformation: any = null;
 
     try {
-      const response = await anthropic.messages.create({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 4096,
-        messages: [{ role: "user", content: prompt }],
-      });
+      const text = await llmCall(prompt );
 
-      const text = response.content[0].type === "text" ? response.content[0].text : "";
+      // text set by llmCall above
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         transformation = JSON.parse(jsonMatch[0]);
@@ -737,15 +746,7 @@ export async function analyzeVendorChanges(
     .replace("{context}", context);
 
   try {
-    const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 4096,
-      messages: [
-        { role: "user", content: `${prompt}\n\nCONTENT TO ANALYZE:\n${content}` }
-      ],
-    });
-
-    const text = response.content[0].type === "text" ? response.content[0].text : "";
+    const text = await llmCall(`${prompt}\n\nCONTENT TO ANALYZE:\n${content}`);
     // Extract JSON from response
     const jsonMatch = text.match(/\[\s*\{[\s\S]*\}\s*\]/);
     if (!jsonMatch) return [];
@@ -757,4 +758,4 @@ export async function analyzeVendorChanges(
   }
 }
 
-export { anthropic, CHAT_SYSTEM_PROMPT, PROPOSAL_ANALYSIS_PROMPT };
+export { xai, CHAT_SYSTEM_PROMPT, PROPOSAL_ANALYSIS_PROMPT, llmCall, llmStream };

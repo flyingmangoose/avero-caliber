@@ -69,7 +69,7 @@ export async function registerRoutes(
     }
 
     try {
-      const { anthropic } = await import("./ai");
+      const { llmCall } = await import("./ai");
 
       const websiteSection = websiteText.length > 200
         ? `\n\nWEBSITE CONTENT FROM ${domain}:\n${websiteText.substring(0, 30000)}`
@@ -112,13 +112,7 @@ IMPORTANT:
 
 Return ONLY the JSON object.`;
 
-      const response = await anthropic.messages.create({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 4096,
-        messages: [{ role: "user", content: prompt }],
-      });
-
-      const text = response.content[0].type === "text" ? response.content[0].text : "";
+      const text = await llmCall(prompt);
       const jsonStr = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
       const data = JSON.parse(jsonStr);
       res.json({ success: true, data, source: websiteText.length > 200 ? "website" : "knowledge" });
@@ -169,13 +163,8 @@ Return ONLY the JSON object.`;
         return res.status(400).json({ error: "Could not extract meaningful text from the document." });
       }
 
-      const { anthropic } = await import("./ai");
-      const response = await anthropic.messages.create({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 4096,
-        messages: [{
-          role: "user",
-          content: `You are analyzing a government RFP/SOW/procurement document for an ERP/EAM implementation project. Extract all relevant information.
+      const { llmCall } = await import("./ai");
+      const response_text = await llmCall(`You are analyzing a government RFP/SOW/procurement document for an ERP/EAM implementation project. Extract all relevant information.
 
 DOCUMENT TEXT:
 ${docText.substring(0, 50000)}
@@ -219,12 +208,9 @@ Extract the following as JSON:
 }
 
 Extract as much as you can find. For items not mentioned in the document, use null. Do NOT make up information that isn't in the document.
-Return ONLY the JSON.`
-        }],
-      });
+Return ONLY the JSON.`);
 
-      const text = response.content[0].type === "text" ? response.content[0].text : "";
-      const jsonStr = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+      const jsonStr = response_text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
       const data = JSON.parse(jsonStr);
       res.json({ success: true, data });
     } catch (err: any) {
@@ -1521,7 +1507,7 @@ Return ONLY the JSON.`
     storage.addChatMessage(projectId, "user", message);
 
     // Build project context
-    const { buildProjectContext, anthropic, CHAT_SYSTEM_PROMPT } = await import("./ai");
+    const { buildProjectContext, llmCall, llmStream, CHAT_SYSTEM_PROMPT } = await import("./ai");
     const projectContext = buildProjectContext(projectId);
     const systemPrompt = CHAT_SYSTEM_PROMPT.replace("{projectContext}", projectContext);
 
@@ -1542,32 +1528,23 @@ Return ONLY the JSON.`
     });
 
     try {
-      const stream = anthropic.messages.stream({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 4096,
-        system: systemPrompt,
-        messages,
-      });
+      const userMessage = messages[messages.length - 1]?.content || "";
+      const stream = await llmStream(userMessage, systemPrompt, 4096);
 
       let fullResponse = "";
 
-      stream.on("text", (text) => {
-        fullResponse += text;
-        res.write(`data: ${JSON.stringify({ type: "text", text })}\n\n`);
-      });
+      for await (const chunk of stream) {
+        const text = chunk.choices[0]?.delta?.content || "";
+        if (text) {
+          fullResponse += text;
+          res.write(`data: ${JSON.stringify({ type: "text", text })}\n\n`);
+        }
+      }
 
-      stream.on("end", () => {
-        // Save assistant message to DB
-        storage.addChatMessage(projectId, "assistant", fullResponse);
-        res.write(`data: ${JSON.stringify({ type: "done" })}\n\n`);
-        res.end();
-      });
-
-      stream.on("error", (error) => {
-        console.error("Chat stream error:", error);
-        res.write(`data: ${JSON.stringify({ type: "error", error: "Stream error occurred" })}\n\n`);
-        res.end();
-      });
+      // Save assistant message to DB
+      storage.addChatMessage(projectId, "assistant", fullResponse);
+      res.write(`data: ${JSON.stringify({ type: "done" })}\n\n`);
+      res.end();
     } catch (error: any) {
       console.error("Chat error:", error);
       res.write(`data: ${JSON.stringify({ type: "error", error: error.message || "Failed to start chat" })}\n\n`);
@@ -1612,26 +1589,14 @@ Return ONLY the JSON.`
       }
 
       // Build context and analyze
-      const { anthropic, PROPOSAL_ANALYSIS_PROMPT, buildProjectContext } = await import("./ai");
+      const { llmCall, PROPOSAL_ANALYSIS_PROMPT, buildProjectContext } = await import("./ai");
       const projectContext = buildProjectContext(projectId);
 
-      const response = await anthropic.messages.create({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 8192,
-        system: PROPOSAL_ANALYSIS_PROMPT,
-        messages: [
-          {
-            role: "user",
-            content: `Here is the project context for reference:\n\n${projectContext}\n\n---\n\nHere is the vendor proposal document to analyze:\n\n${pdfText.substring(0, 100000)}`,
-          },
-        ],
-      });
-
-      // Extract JSON from response
-      const responseText = response.content
-        .filter((block): block is { type: "text"; text: string } => block.type === "text")
-        .map((block) => block.text)
-        .join("");
+      const responseText = await llmCall(
+        `Here is the project context for reference:\n\n${projectContext}\n\n---\n\nHere is the vendor proposal document to analyze:\n\n${pdfText.substring(0, 100000)}`,
+        PROPOSAL_ANALYSIS_PROMPT,
+        8192
+      );
 
       // Parse the JSON response
       let analysisResult;
@@ -2233,7 +2198,7 @@ Return ONLY the JSON.`
       }
 
       // Generate AI narrative
-      const { anthropic } = await import("./ai");
+      const { llmCall } = await import("./ai");
       const narrativePrompt = `Generate a concise IV&V Weekly Pulse Report executive narrative (3-4 paragraphs) for the following project compliance data.
 
 Contract: ${baseline.contractName}
@@ -2254,15 +2219,8 @@ Write in professional consulting tone covering: overall posture assessment, key 
 
       let narrative = "";
       try {
-        const aiResponse = await anthropic.messages.create({
-          model: "claude_sonnet_4_6",
-          max_tokens: 1024,
-          messages: [{ role: "user", content: narrativePrompt }],
-        });
-        narrative = aiResponse.content
-          .filter((block): block is { type: "text"; text: string } => block.type === "text")
-          .map(block => block.text)
-          .join("");
+        const { llmCall } = await import("./ai");
+        narrative = await llmCall(narrativePrompt, undefined, 1024);
       } catch (aiErr: any) {
         console.error("AI narrative generation failed:", aiErr.message);
         narrative = `**Overall Posture: ${overallPosture.toUpperCase()}** (${postureTrend})\n\nDeliverables accepted: ${acceptedPct}% with ${openDeviations.length} open deviations. ${riskHighlights.length > 0 ? "Key risks: " + riskHighlights.join(", ") + "." : "No critical risks identified."}`;
@@ -2646,7 +2604,7 @@ Write in professional consulting tone covering: overall posture assessment, key 
     existingMessages.push({ role: "user", content: message, timestamp: new Date().toISOString() });
 
     // Build AI context
-    const { buildDiscoveryInterviewPrompt, anthropic } = await import("./ai");
+    const { buildDiscoveryInterviewPrompt, llmStream } = await import("./ai");
     const orgProfileData = storage.getOrgProfile(interview.projectId);
     const systemPrompt = buildDiscoveryInterviewPrompt(
       interview.functionalArea,
@@ -2673,35 +2631,24 @@ Write in professional consulting tone covering: overall posture assessment, key 
     });
 
     try {
-      const stream = anthropic.messages.stream({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 2048,
-        system: systemPrompt,
-        messages: claudeMessages,
-      });
+      const lastUserMsg = claudeMessages[claudeMessages.length - 1]?.content || "";
+      const stream = await llmStream(lastUserMsg, systemPrompt, 2048);
 
       let fullResponse = "";
 
-      stream.on("text", (text) => {
-        fullResponse += text;
-        res.write(`data: ${JSON.stringify({ type: "text", text })}\n\n`);
-      });
+      for await (const chunk of stream) {
+        const text = chunk.choices[0]?.delta?.content || "";
+        if (text) {
+          fullResponse += text;
+          res.write(`data: ${JSON.stringify({ type: "text", text })}\n\n`);
+        }
+      }
 
-      stream.on("end", () => {
-        // Save assistant response
-        existingMessages.push({ role: "assistant", content: fullResponse, timestamp: new Date().toISOString() });
-        storage.updateDiscoveryInterview(id, { messages: JSON.stringify(existingMessages) });
-        res.write(`data: ${JSON.stringify({ type: "done" })}\n\n`);
-        res.end();
-      });
-
-      stream.on("error", (error) => {
-        console.error("Interview stream error:", error);
-        // Still save the user message even on error
-        storage.updateDiscoveryInterview(id, { messages: JSON.stringify(existingMessages) });
-        res.write(`data: ${JSON.stringify({ type: "error", error: "Stream error occurred" })}\n\n`);
-        res.end();
-      });
+      // Save assistant response
+      existingMessages.push({ role: "assistant", content: fullResponse, timestamp: new Date().toISOString() });
+      storage.updateDiscoveryInterview(id, { messages: JSON.stringify(existingMessages) });
+      res.write(`data: ${JSON.stringify({ type: "done" })}\n\n`);
+      res.end();
     } catch (error: any) {
       console.error("Interview error:", error);
       storage.updateDiscoveryInterview(id, { messages: JSON.stringify(existingMessages) });
