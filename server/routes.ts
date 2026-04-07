@@ -2548,7 +2548,88 @@ Write in professional consulting tone covering: overall posture assessment, key 
     res.json(interview);
   });
 
-  // SSE streaming interview message
+  // Generate AI interview guide for a functional area
+  app.post("/api/discovery/interviews/:interviewId/generate-guide", async (req, res) => {
+    const id = parseInt(req.params.interviewId);
+    const interview = storage.getDiscoveryInterview(id);
+    if (!interview) return res.status(404).json({ error: "Interview not found" });
+    try {
+      const { generateInterviewGuide } = await import("./ai");
+      const orgProfile = storage.getOrgProfile(interview.projectId);
+      const guide = await generateInterviewGuide(interview.functionalArea, orgProfile || null);
+      // Store the guide in the interview's messages field as JSON
+      // Always use object format for guided interview data (not the old chat array format)
+      let existingData: any = {};
+      if (interview.messages) {
+        const parsed = JSON.parse(interview.messages);
+        if (parsed && !Array.isArray(parsed)) existingData = parsed;
+      }
+      existingData.guide = guide.questions;
+      if (!existingData.answers) existingData.answers = {};
+      const jsonStr = JSON.stringify(existingData);
+      console.log(`[guide] Saving guide for interview ${id}, data length: ${jsonStr.length}, guide count: ${existingData.guide?.length}`);
+      const result = storage.updateDiscoveryInterview(id, {
+        messages: jsonStr,
+        status: "in_progress",
+      });
+      console.log(`[guide] Update result:`, result ? `saved, messages length: ${result.messages?.length}` : 'FAILED');
+      res.json(guide);
+    } catch (error: any) {
+      console.error("Guide generation error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Save answer for a specific question
+  app.post("/api/discovery/interviews/:interviewId/save-answer", (req, res) => {
+    const id = parseInt(req.params.interviewId);
+    const interview = storage.getDiscoveryInterview(id);
+    if (!interview) return res.status(404).json({ error: "Interview not found" });
+    const { questionId, answer, status } = req.body;
+    const parsed = interview.messages ? JSON.parse(interview.messages) : {};
+    const data = (parsed && !Array.isArray(parsed)) ? parsed : {};
+    if (!data.answers) data.answers = {};
+    data.answers[questionId] = { answer, status: status || "answered", updatedAt: new Date().toISOString() };
+    storage.updateDiscoveryInterview(id, { messages: JSON.stringify(data) });
+    res.json({ success: true });
+  });
+
+  // Import transcript from Fireflies, Otter, or manual paste and extract answers
+  app.post("/api/discovery/interviews/:interviewId/import-transcript", async (req, res) => {
+    const id = parseInt(req.params.interviewId);
+    const interview = storage.getDiscoveryInterview(id);
+    if (!interview) return res.status(404).json({ error: "Interview not found" });
+    const { transcript } = req.body;
+    if (!transcript) return res.status(400).json({ error: "Transcript is required" });
+    try {
+      const { processTranscript } = await import("./ai");
+      const data = interview.messages ? JSON.parse(interview.messages) : {};
+      const questions = (data.guide || []).map((q: any) => ({ id: q.id, question: q.question }));
+      const result = await processTranscript(interview.functionalArea, transcript, questions);
+      // Merge extracted answers into existing answers
+      if (!data.answers) data.answers = {};
+      for (const ans of result.answers) {
+        data.answers[ans.questionId] = {
+          answer: ans.extractedAnswer,
+          keyPoints: ans.keyPoints,
+          painPoints: ans.painPoints,
+          followUpNeeded: ans.followUpNeeded,
+          status: ans.followUpNeeded ? "follow_up" : "answered",
+          source: "transcript",
+          updatedAt: new Date().toISOString(),
+        };
+      }
+      data.additionalFindings = result.additionalFindings;
+      data.transcriptImported = true;
+      storage.updateDiscoveryInterview(id, { messages: JSON.stringify(data) });
+      res.json(result);
+    } catch (error: any) {
+      console.error("Transcript processing error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // SSE streaming interview message (legacy chat mode)
   app.post("/api/discovery/interviews/:interviewId/message", async (req, res) => {
     const id = parseInt(req.params.interviewId);
     const interview = storage.getDiscoveryInterview(id);

@@ -194,6 +194,133 @@ ${selectedVendors.map(v => `- ${v.name} (${v.shortName}) — ${v.platformType} p
 
 // ==================== DISCOVERY WIZARD AI ====================
 
+// Generate structured interview guide for a consultant to use in face-to-face meetings
+export async function generateInterviewGuide(
+  functionalArea: string,
+  orgProfileData: any | null
+): Promise<{ questions: Array<{ id: string; category: string; question: string; probes: string[]; whatToListenFor: string }> }> {
+  let orgContext = "No organization profile available yet.";
+  if (orgProfileData) {
+    const parts: string[] = [];
+    if (orgProfileData.entityName) parts.push(`Organization: ${orgProfileData.entityName}`);
+    if (orgProfileData.entityType) parts.push(`Type: ${orgProfileData.entityType}`);
+    if (orgProfileData.state) parts.push(`State: ${orgProfileData.state}`);
+    if (orgProfileData.population) parts.push(`Population served: ${orgProfileData.population?.toLocaleString()}`);
+    if (orgProfileData.employeeCount) parts.push(`Employees: ${orgProfileData.employeeCount?.toLocaleString()}`);
+    if (orgProfileData.annualBudget) parts.push(`Annual budget: ${orgProfileData.annualBudget}`);
+    if (orgProfileData.currentSystems) {
+      try {
+        const systems = typeof orgProfileData.currentSystems === "string" ? JSON.parse(orgProfileData.currentSystems) : orgProfileData.currentSystems;
+        if (Array.isArray(systems) && systems.length > 0) {
+          parts.push(`Current systems: ${systems.map((s: any) => `${s.name} (${s.module || s.vendor || ""})`).join(", ")}`);
+        }
+      } catch {}
+    }
+    if (orgProfileData.painSummary) parts.push(`Key challenges: ${orgProfileData.painSummary}`);
+    orgContext = parts.join("\n");
+  }
+
+  const response = await anthropic.messages.create({
+    model: "claude-sonnet-4-20250514",
+    max_tokens: 4096,
+    messages: [{ role: "user", content: `You are a senior ERP/EAM implementation consultant preparing a discovery interview guide for the ${functionalArea} department.
+
+ORGANIZATION CONTEXT:
+${orgContext}
+
+Generate a structured interview guide with 10-12 questions organized into categories. This guide will be used by a consultant sitting face-to-face with a client stakeholder.
+
+Categories should follow this progression:
+1. "Current State" — understand existing systems, processes, users
+2. "Day-to-Day Operations" — walk through key workflows step by step
+3. "Pain Points & Challenges" — what's broken, slow, manual, error-prone
+4. "Volume & Complexity" — transaction counts, user counts, approval chains, reporting
+5. "Integrations & Dependencies" — what other systems/departments are connected
+6. "Future State" — what does success look like, what capabilities are missing
+
+For each question, provide:
+- A clear, conversational question the consultant should ask
+- 2-3 follow-up probes if the answer is too brief
+- A "what to listen for" note (what signals matter in the answer)
+
+Return JSON:
+{
+  "questions": [
+    {
+      "id": "q1",
+      "category": "Current State",
+      "question": "Walk me through your current [process] — from start to finish, how does it work today?",
+      "probes": ["How many people are involved?", "What system do you use for this?", "How long does it typically take?"],
+      "whatToListenFor": "Manual handoffs, system limitations, workarounds"
+    }
+  ]
+}
+
+Make questions specific to ${functionalArea} in a government context. Use conversational language a consultant would actually say.` }],
+  });
+
+  const text = response.content[0].type === "text" ? response.content[0].text : "";
+  const jsonMatch = text.match(/\{[\s\S]*"questions"[\s\S]*\}/);
+  if (!jsonMatch) return { questions: [] };
+  try {
+    return JSON.parse(jsonMatch[0]);
+  } catch {
+    return { questions: [] };
+  }
+}
+
+// Process meeting transcript (from Fireflies, Otter, manual notes) and extract structured answers
+export async function processTranscript(
+  functionalArea: string,
+  transcript: string,
+  questions: Array<{ id: string; question: string }>
+): Promise<{ answers: Array<{ questionId: string; extractedAnswer: string; keyPoints: string[]; painPoints: string[]; followUpNeeded: boolean }>; additionalFindings: string[] }> {
+  const questionList = questions.map(q => `${q.id}: ${q.question}`).join("\n");
+
+  const response = await anthropic.messages.create({
+    model: "claude-sonnet-4-20250514",
+    max_tokens: 4096,
+    messages: [{ role: "user", content: `You are analyzing a meeting transcript from a ${functionalArea} discovery interview. Extract structured answers mapped to the interview questions.
+
+INTERVIEW QUESTIONS:
+${questionList}
+
+TRANSCRIPT:
+${transcript}
+
+For each question that was discussed in the transcript, extract:
+- The answer/response from the client (summarized clearly, not verbatim)
+- Key points mentioned
+- Any pain points or problems revealed
+- Whether a follow-up conversation is needed (answer was incomplete or raised new questions)
+
+Also identify any additional findings from the transcript that don't map to specific questions but are relevant to the ${functionalArea} discovery.
+
+Return JSON:
+{
+  "answers": [
+    {
+      "questionId": "q1",
+      "extractedAnswer": "Clear summary of their response",
+      "keyPoints": ["point 1", "point 2"],
+      "painPoints": ["pain point if mentioned"],
+      "followUpNeeded": false
+    }
+  ],
+  "additionalFindings": ["finding not tied to a specific question"]
+}` }],
+  });
+
+  const text = response.content[0].type === "text" ? response.content[0].text : "";
+  const jsonMatch = text.match(/\{[\s\S]*"answers"[\s\S]*\}/);
+  if (!jsonMatch) return { answers: [], additionalFindings: [] };
+  try {
+    return JSON.parse(jsonMatch[0]);
+  } catch {
+    return { answers: [], additionalFindings: [] };
+  }
+}
+
 export function buildDiscoveryInterviewPrompt(
   functionalArea: string,
   orgProfileData: any | null,
