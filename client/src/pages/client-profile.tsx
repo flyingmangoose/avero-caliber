@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { useParams } from "wouter";
+import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -30,14 +30,30 @@ function parseJSON<T>(val: string | null | undefined, fallback: T): T {
 
 export default function ClientProfilePage() {
   const { id } = useParams<{ id: string }>();
+  const [location] = useLocation();
+  const isClientRoute = location.includes('/clients/');
   const projectId = parseInt(id!);
   const qc = useQueryClient();
   const { toast } = useToast();
 
-  const { data: profile, isLoading } = useQuery<Profile>({
+  const { data: clientData } = useQuery<any>({
+    queryKey: ["/api/clients", projectId],
+    queryFn: () => apiRequest("GET", `/api/clients/${projectId}`).then(r => r.json()),
+    enabled: isClientRoute,
+  });
+  const { data: orgProfile, isLoading } = useQuery<Profile>({
     queryKey: ["/api/projects", projectId, "org-profile"],
     queryFn: () => apiRequest("GET", `/api/projects/${projectId}/org-profile`).then(r => r.json()),
+    enabled: !isClientRoute,
   });
+  const profile: Profile | undefined = isClientRoute && clientData ? {
+    id: clientData.id, projectId: 0, entityType: clientData.entityType, entityName: clientData.name,
+    state: clientData.state, population: clientData.population, employeeCount: clientData.employeeCount,
+    annualBudget: clientData.annualBudget, currentSystems: clientData.currentSystems,
+    departments: clientData.departments, painSummary: clientData.painSummary,
+    domain: clientData.domain, leadership: clientData.leadership,
+    documents: clientData.documents, createdAt: clientData.createdAt,
+  } : orgProfile;
   const { data: project } = useQuery<any>({
     queryKey: ["/api/projects", projectId],
     queryFn: () => apiRequest("GET", `/api/projects/${projectId}`).then(r => r.json()),

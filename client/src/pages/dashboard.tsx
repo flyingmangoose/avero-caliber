@@ -1,707 +1,785 @@
 import { useState } from "react";
+import { Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Link, useLocation } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { Project } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import {
+  Collapsible,
+  CollapsibleTrigger,
+  CollapsibleContent,
+} from "@/components/ui/collapsible";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Plus,
-  FileText,
-  BarChart3,
-  Layers,
-  AlertTriangle,
   Trash2,
-  FolderOpen,
-  ArrowRight,
-  Sparkles,
-  Loader2,
-  Save,
-  ArrowLeft,
+  ChevronDown,
+  ChevronRight,
   Building2,
-  Info,
-  Upload,
-  CheckCircle2,
-  X,
-  Calendar,
-  DollarSign,
-  Target,
-  ClipboardList,
+  Users,
   Globe,
+  Loader2,
+  FolderOpen,
+  Briefcase,
+  MapPin,
+  DollarSign,
+  BarChart3,
 } from "lucide-react";
 
-const API_BASE = "__PORT_5000__".startsWith("__") ? "" : "__PORT_5000__";
+// ── Types ──────────────────────────────────────────────────────────────────────
 
-interface ProjectWithStats extends Project {
-  stats: {
-    totalRequirements: number;
-    criticalCount: number;
-    desiredCount: number;
-    moduleCoverage: number;
-    responseStats: Record<string, number>;
-  };
+interface ProjectSummary {
+  id: number;
+  name: string;
+  status: string;
+  engagementModules: string; // JSON string
 }
 
-const STATUS_LABELS: Record<string, string> = {
-  draft: "Draft",
-  requirements_review: "Requirements Review",
-  stakeholder_workshop: "Stakeholder Workshop",
-  vendor_evaluation: "Vendor Evaluation",
-  final_report: "Final Report",
-  complete: "Complete",
-  active: "Active",
-  finalized: "Finalized",
+interface ClientWithProjects {
+  id: number;
+  name: string;
+  domain: string | null;
+  entityType: string | null;
+  state: string | null;
+  population: number | null;
+  employeeCount: number | null;
+  annualBudget: string | null;
+  projects: ProjectSummary[];
+  projectCount: number;
+}
+
+// ── Constants ──────────────────────────────────────────────────────────────────
+
+const ENTITY_TYPE_LABELS: Record<string, string> = {
+  city: "City",
+  county: "County",
+  utility: "Utility",
+  transit: "Transit",
+  port: "Port",
+  state_agency: "State Agency",
+  special_district: "Special District",
 };
 
-const ENTITY_TYPES = [
-  { value: "city", label: "City" },
-  { value: "county", label: "County" },
-  { value: "utility", label: "Utility District" },
-  { value: "transit", label: "Transit Authority" },
-  { value: "port", label: "Port Authority" },
-  { value: "state_agency", label: "State Agency" },
-  { value: "special_district", label: "Special District" },
-];
+// Left border color per entity type
+const ENTITY_BORDER_COLOR: Record<string, string> = {
+  city: "#3b82f6",
+  county: "#22c55e",
+  utility: "#14b8a6",
+  transit: "#a855f7",
+  port: "#f97316",
+  state_agency: "#ef4444",
+  special_district: "#6366f1",
+};
 
-function statusBadge(status: string) {
-  const map: Record<string, string> = {
-    draft: "bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-800/30 dark:text-gray-400 dark:border-gray-700/30",
-    requirements_review: "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-700/30",
-    stakeholder_workshop: "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-[#d4a853] dark:border-amber-700/30",
-    vendor_evaluation: "bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:border-purple-700/30",
-    final_report: "bg-teal-100 text-teal-700 border-teal-200 dark:bg-teal-900/30 dark:text-teal-400 dark:border-teal-700/30",
-    complete: "bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-700/30",
-    active: "bg-primary/10 text-primary dark:bg-accent/20 dark:text-accent",
-    finalized: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
-  };
-  const label = STATUS_LABELS[status] || status;
+// Entity type badge bg
+const ENTITY_BADGE_CLASS: Record<string, string> = {
+  city: "bg-blue-100 text-blue-700 border-blue-200",
+  county: "bg-green-100 text-green-700 border-green-200",
+  utility: "bg-teal-100 text-teal-700 border-teal-200",
+  transit: "bg-purple-100 text-purple-700 border-purple-200",
+  port: "bg-orange-100 text-orange-700 border-orange-200",
+  state_agency: "bg-red-100 text-red-700 border-red-200",
+  special_district: "bg-indigo-100 text-indigo-700 border-indigo-200",
+};
+
+const MODULE_BADGE_CLASS: Record<string, string> = {
+  selection: "bg-blue-100 text-blue-700 border-blue-200",
+  ivv: "bg-amber-100 text-amber-700 border-amber-200",
+  health_check: "bg-rose-100 text-rose-700 border-rose-200",
+};
+
+const MODULE_LABELS: Record<string, string> = {
+  selection: "Selection",
+  ivv: "IV&V",
+  health_check: "Health Check",
+};
+
+// ── Helper components ──────────────────────────────────────────────────────────
+
+function EntityTypeBadge({ type }: { type: string | null }) {
+  if (!type) return null;
+  const label = ENTITY_TYPE_LABELS[type] ?? type;
+  const cls = ENTITY_BADGE_CLASS[type] ?? "bg-gray-100 text-gray-700 border-gray-200";
   return (
-    <Badge variant="outline" className={`text-[10px] font-semibold uppercase tracking-wide ${map[status] || "bg-muted text-muted-foreground"}`} data-testid={`badge-status-${status}`}>
+    <Badge variant="outline" className={`text-[10px] font-semibold uppercase tracking-wide ${cls}`}>
       {label}
     </Badge>
   );
 }
 
-export default function Dashboard() {
-  const { toast } = useToast();
-  const [, setLocation] = useLocation();
-  const [dialogOpen, setDialogOpen] = useState(false);
-
-  const { data: projects, isLoading } = useQuery<ProjectWithStats[]>({
-    queryKey: ["/api/projects"],
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: async (id: number) => { await apiRequest("DELETE", `/api/projects/${id}`); },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
-      toast({ title: "Project deleted" });
-    },
-  });
-
-  const totalReqs = projects?.reduce((s, p) => s + p.stats.totalRequirements, 0) ?? 0;
-  const totalCritical = projects?.reduce((s, p) => s + p.stats.criticalCount, 0) ?? 0;
-  const totalModules = projects?.reduce((s, p) => s + p.stats.moduleCoverage, 0) ?? 0;
-
+function StatusBadge({ status }: { status: string }) {
+  const cls =
+    status === "active"
+      ? "bg-green-100 text-green-700 border-green-200"
+      : "bg-gray-100 text-gray-600 border-gray-200";
   return (
-    <div className="p-6 max-w-6xl mx-auto space-y-6" data-testid="page-dashboard">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight">Projects</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Manage ERP requirements across client engagements</p>
-        </div>
-        <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); }}>
-          <DialogTrigger asChild>
-            <Button data-testid="button-create-project" className="gap-1.5">
-              <Plus className="w-4 h-4" />New Project
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
-            <CreateProjectFlow onClose={() => setDialogOpen(false)} onCreated={(id) => {
-              setDialogOpen(false);
-              queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
-              setLocation(`/projects/${id}/discovery`);
-            }} />
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      {/* Aggregate Stats */}
-      <div className="grid grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary/10 dark:bg-accent/15">
-              <FileText className="w-5 h-5 text-primary dark:text-accent" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{totalReqs}</p>
-              <p className="text-xs text-muted-foreground">Total Requirements</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-red-50 dark:bg-red-900/15">
-              <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{totalReqs > 0 ? Math.round((totalCritical / totalReqs) * 100) : 0}%</p>
-              <p className="text-xs text-muted-foreground">Critical Requirements</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-blue-50 dark:bg-blue-900/15">
-              <Layers className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{totalModules}</p>
-              <p className="text-xs text-muted-foreground">Modules Covered</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Portfolio Link */}
-      {projects && projects.length >= 2 && (
-        <Link href="/portfolio" className="inline-flex items-center gap-1.5 text-xs font-medium text-primary dark:text-accent hover:underline no-underline" data-testid="link-portfolio-insights">
-          View Portfolio Insights
-          <ArrowRight className="w-3.5 h-3.5" />
-        </Link>
-      )}
-
-      {/* Project List */}
-      {isLoading ? (
-        <div className="space-y-3">
-          {[1, 2, 3].map(i => <Skeleton key={i} className="h-24 w-full rounded-lg" />)}
-        </div>
-      ) : projects && projects.length > 0 ? (
-        <div className="space-y-3">
-          {projects.map((project) => (
-            <Card key={project.id} className="hover:shadow-md transition-shadow" data-testid={`card-project-${project.id}`}>
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between">
-                  <Link href={`/projects/${project.id}`} className="flex-1 min-w-0 no-underline group">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="text-sm font-semibold truncate group-hover:text-primary dark:group-hover:text-accent transition-colors">
-                        {project.name}
-                      </h3>
-                      {statusBadge(project.status)}
-                      {(project as any).engagementMode === "self_service" ? (
-                        <Badge className="text-[9px] px-1.5 py-0 bg-[#d4a853]/20 text-[#d4a853] border-[#d4a853]/30" data-testid={`badge-mode-${project.id}`}>Self-Service</Badge>
-                      ) : (
-                        <Badge className="text-[9px] px-1.5 py-0 bg-muted text-muted-foreground" data-testid={`badge-mode-${project.id}`}>Consulting</Badge>
-                      )}
-                    </div>
-                    {project.description && (
-                      <p className="text-xs text-muted-foreground truncate mb-3">{project.description}</p>
-                    )}
-                    <div className="flex items-center gap-5 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1"><FileText className="w-3.5 h-3.5" />{project.stats.totalRequirements} requirements</span>
-                      <span className="flex items-center gap-1"><BarChart3 className="w-3.5 h-3.5" />{project.stats.criticalCount} critical</span>
-                      <span className="flex items-center gap-1"><Layers className="w-3.5 h-3.5" />{project.stats.moduleCoverage} modules</span>
-                    </div>
-                  </Link>
-                  <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-destructive shrink-0 ml-2"
-                    onClick={() => { if (confirm("Delete this project and all its requirements?")) deleteMutation.mutate(project.id); }}
-                    data-testid={`button-delete-project-${project.id}`}>
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : (
-        <Card>
-          <CardContent className="p-12 text-center">
-            <FolderOpen className="w-12 h-12 mx-auto text-muted-foreground/40 mb-3" />
-            <h3 className="text-sm font-semibold mb-1">No projects yet</h3>
-            <p className="text-xs text-muted-foreground mb-4">Create your first project to start defining ERP requirements.</p>
-            <Button onClick={() => setDialogOpen(true)} variant="outline" size="sm" className="gap-1.5">
-              <Plus className="w-3.5 h-3.5" />Create Project
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-    </div>
+    <Badge variant="outline" className={`text-[10px] font-semibold uppercase tracking-wide ${cls}`}>
+      {status === "active" ? "Active" : status.charAt(0).toUpperCase() + status.slice(1)}
+    </Badge>
   );
 }
 
-/* ==================== Multi-Step Create Project Flow ==================== */
+function ModuleBadges({ modulesJson }: { modulesJson: string }) {
+  let mods: string[] = [];
+  try {
+    mods = JSON.parse(modulesJson ?? "[]");
+  } catch {
+    mods = [];
+  }
+  return (
+    <span className="flex flex-wrap gap-1">
+      {mods.map((m) => (
+        <Badge
+          key={m}
+          variant="outline"
+          className={`text-[9px] font-semibold uppercase tracking-wide ${MODULE_BADGE_CLASS[m] ?? "bg-gray-100 text-gray-600 border-gray-200"}`}
+        >
+          {MODULE_LABELS[m] ?? m}
+        </Badge>
+      ))}
+    </span>
+  );
+}
 
-function CreateProjectFlow({ onClose, onCreated }: { onClose: () => void; onCreated: (id: number) => void }) {
+function formatNumber(n: number | null | undefined): string {
+  if (n == null) return "—";
+  return n.toLocaleString();
+}
+
+// ── Main Dashboard ─────────────────────────────────────────────────────────────
+
+export default function Dashboard() {
   const { toast } = useToast();
-  const [step, setStep] = useState<1 | 2>(1);
 
-  // Step 1 fields
-  const [domain, setDomain] = useState("");
-  const [engagementMode, setEngagementMode] = useState("consulting");
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  // Dialog state
+  const [newClientOpen, setNewClientOpen] = useState(false);
+  const [newProjectOpen, setNewProjectOpen] = useState(false);
+  const [newProjectClientId, setNewProjectClientId] = useState<number | null>(null);
+  const [newProjectClientName, setNewProjectClientName] = useState("");
 
-  // Step 2 fields — populated by enrichment or manual
-  const [entityName, setEntityName] = useState("");
-  const [entityType, setEntityType] = useState("city");
-  const [state, setState] = useState("");
-  const [profile, setProfile] = useState<any>(null);
-  const [docData, setDocData] = useState<any>(null);
-  const [population, setPopulation] = useState("");
-  const [employeeCount, setEmployeeCount] = useState("");
-  const [annualBudget, setAnnualBudget] = useState("");
-  const [departments, setDepartments] = useState<{ name: string; headcount: string }[]>([]);
-  const [systems, setSystems] = useState<{ name: string; module: string; vendor: string; yearsInUse: string }[]>([]);
-  const [modules, setModules] = useState<Record<string, boolean>>({ selection: true, ivv: false, health_check: false });
-  const [description, setDescription] = useState("");
+  // New client form
+  const [clientName, setClientName] = useState("");
+  const [clientDomain, setClientDomain] = useState("");
 
-  // Apply extracted/researched data, document data wins over domain data
-  const applyData = (d: any, isDocument: boolean) => {
-    if (isDocument || !entityName) { if (d.entityName) setEntityName(d.entityName); }
-    if (isDocument || !state) { if (d.state) setState(d.state); }
-    if (d.entityType) setEntityType(d.entityType);
-    if ((isDocument || !population) && d.population) setPopulation(d.population.toString());
-    if ((isDocument || !employeeCount) && d.employeeCount) setEmployeeCount(d.employeeCount.toString());
-    if ((isDocument || !annualBudget) && d.annualBudget) setAnnualBudget(d.annualBudget);
-    if (d.departments?.length && (isDocument || departments.length === 0)) {
-      setDepartments(d.departments.map((dep: any) => ({ name: dep.name, headcount: dep.headcount?.toString() || "" })));
-    }
-    if (d.currentSystems?.length && (isDocument || systems.length === 0)) {
-      setSystems(d.currentSystems.map((s: any) => ({ name: s.name || "", module: s.module || "", vendor: s.vendor || "", yearsInUse: s.yearsInUse?.toString() || "" })));
-    }
-    if (isDocument || !description) {
-      const desc = isDocument && d.projectDescription ? d.projectDescription : d.keyFacts || "";
-      if (desc) setDescription(desc);
-    }
-    setProfile((prev: any) => ({
-      ...prev,
-      keyFacts: (isDocument ? d.keyFacts : d.keyFacts || prev?.keyFacts) || null,
-      challenges: (isDocument ? d.challenges : d.challenges || prev?.challenges) || null,
-      leadership: d.leadership || prev?.leadership || null,
-    }));
-    if (isDocument) setDocData(d);
-  };
-
-  const enrichMutation = useMutation({
-    mutationFn: async () => {
-      const hasDomain = domain.trim().length > 0;
-      const hasFile = !!uploadedFile;
-      if (!hasDomain && !hasFile) throw new Error("Enter a domain or upload a document");
-
-      const promises: Promise<{ type: string; data: any }>[] = [];
-
-      if (hasDomain) {
-        const cleanDomain = domain.trim().replace(/^https?:\/\//, "").replace(/\/+$/, "");
-        promises.push(
-          apiRequest("POST", "/api/research-domain", { domain: cleanDomain })
-            .then(r => r.json()).then(r => ({ type: "domain", data: r.data }))
-        );
-      }
-      if (hasFile) {
-        const formData = new FormData();
-        formData.append("file", uploadedFile!);
-        promises.push(
-          fetch(`${API_BASE}/api/extract-document`, { method: "POST", body: formData })
-            .then(r => { if (!r.ok) throw new Error("Extraction failed"); return r.json(); })
-            .then(r => ({ type: "document", data: r.data }))
-        );
-      }
-
-      return Promise.all(promises);
-    },
-    onSuccess: (results: { type: string; data: any }[]) => {
-      // Apply domain data first, then document data on top (document wins conflicts)
-      const domainResult = results.find(r => r.type === "domain");
-      const docResult = results.find(r => r.type === "document");
-      if (domainResult) applyData(domainResult.data, false);
-      if (docResult) applyData(docResult.data, true);
-      setStep(2);
-    },
-    onError: (e: any) => toast({ title: "Enrichment failed", description: e.message, variant: "destructive" }),
+  // New project form
+  const [projectName, setProjectName] = useState("");
+  const [projectModules, setProjectModules] = useState<Record<string, boolean>>({
+    selection: true,
+    ivv: false,
+    health_check: false,
   });
 
-  const createMutation = useMutation({
+  // Expanded client set
+  const [expandedClients, setExpandedClients] = useState<Set<number>>(new Set());
+
+  // ── Data fetching ──
+
+  const { data: clients, isLoading } = useQuery<ClientWithProjects[]>({
+    queryKey: ["/api/clients"],
+  });
+
+  // ── Mutations ──
+
+  const createClientMutation = useMutation({
+    mutationFn: async ({ enrich }: { enrich: boolean }) => {
+      const res = await apiRequest("POST", "/api/clients", {
+        name: clientName.trim(),
+        domain: clientDomain.trim() || undefined,
+      });
+      const client = await res.json();
+      if (enrich && clientDomain.trim()) {
+        await apiRequest("POST", `/api/clients/${client.id}/enrich`);
+      }
+      return client;
+    },
+    onSuccess: (client) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
+      toast({ title: "Client created", description: client.name });
+      setNewClientOpen(false);
+      setClientName("");
+      setClientDomain("");
+      // Auto-expand new client
+      setExpandedClients((prev) => new Set([...prev, client.id]));
+    },
+    onError: (e: any) =>
+      toast({ title: "Error creating client", description: e.message, variant: "destructive" }),
+  });
+
+  const deleteClientMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest("DELETE", `/api/clients/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
+      toast({ title: "Client deleted" });
+    },
+    onError: (e: any) =>
+      toast({ title: "Error deleting client", description: e.message, variant: "destructive" }),
+  });
+
+  const createProjectMutation = useMutation({
     mutationFn: async () => {
-      const mods = Object.entries(modules).filter(([, v]) => v).map(([k]) => k);
-      const projRes = await apiRequest("POST", "/api/projects", {
-        name: entityName || "New Project",
-        description,
-        status: "draft",
+      const mods = Object.entries(projectModules)
+        .filter(([, v]) => v)
+        .map(([k]) => k);
+      const res = await apiRequest("POST", "/api/projects", {
+        name: projectName.trim(),
+        clientId: newProjectClientId,
         engagementModules: JSON.stringify(mods),
-        engagementMode,
+        status: "draft",
       });
-      const project = await projRes.json();
-      await apiRequest("POST", `/api/projects/${project.id}/org-profile`, {
-        entityType, entityName, state,
-        population: population ? parseInt(population) : null,
-        employeeCount: employeeCount ? parseInt(employeeCount) : null,
-        annualBudget,
-        painSummary: profile?.challenges || docData?.challenges || "",
-        currentSystems: JSON.stringify(systems),
-        departments: JSON.stringify(departments),
-      });
-      return project;
+      return res.json();
     },
-    onSuccess: (project: any) => {
-      toast({ title: "Project created", description: `${entityName} is ready for discovery.` });
-      onCreated(project.id);
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
+      toast({ title: "Project created" });
+      setNewProjectOpen(false);
+      setProjectName("");
+      setProjectModules({ selection: true, ivv: false, health_check: false });
     },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e: any) =>
+      toast({ title: "Error creating project", description: e.message, variant: "destructive" }),
   });
 
-  const skipToManual = () => { setProfile(null); setDocData(null); setDepartments([]); setSystems([]); setStep(2); };
+  const deleteProjectMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest("DELETE", `/api/projects/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
+      toast({ title: "Project deleted" });
+    },
+    onError: (e: any) =>
+      toast({ title: "Error deleting project", description: e.message, variant: "destructive" }),
+  });
 
-  const addDept = () => setDepartments(p => [...p, { name: "", headcount: "" }]);
-  const removeDept = (i: number) => setDepartments(p => p.filter((_, idx) => idx !== i));
-  const updateDept = (i: number, field: string, value: string) =>
-    setDepartments(p => p.map((d, idx) => idx === i ? { ...d, [field]: value } : d));
-  const addSystem = () => setSystems(p => [...p, { name: "", module: "", vendor: "", yearsInUse: "" }]);
-  const removeSystem = (i: number) => setSystems(p => p.filter((_, idx) => idx !== i));
-  const updateSystem = (i: number, field: string, value: string) =>
-    setSystems(p => p.map((s, idx) => idx === i ? { ...s, [field]: value } : s));
+  // ── Derived stats ──
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
-    if (f) setUploadedFile(f);
+  const totalClients = clients?.length ?? 0;
+  const activeProjects =
+    clients?.reduce(
+      (sum, c) => sum + c.projects.filter((p) => p.status === "active").length,
+      0
+    ) ?? 0;
+  const totalProjects = clients?.reduce((sum, c) => sum + c.projectCount, 0) ?? 0;
+
+  // ── Helpers ──
+
+  const toggleExpand = (id: number) => {
+    setExpandedClients((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   };
 
-  const isBusy = enrichMutation.isPending;
-  const loadingLabel = domain.trim() && uploadedFile
-    ? `Researching ${domain.trim()} & extracting ${uploadedFile.name}...`
-    : uploadedFile ? `Extracting from ${uploadedFile.name}...` : `Researching ${domain.trim()}...`;
+  const openNewProject = (clientId: number, clientName: string) => {
+    setNewProjectClientId(clientId);
+    setNewProjectClientName(clientName);
+    setProjectName("");
+    setProjectModules({ selection: true, ivv: false, health_check: false });
+    setNewProjectOpen(true);
+  };
 
-  if (step === 1) {
-    return (
-      <>
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Building2 className="w-5 h-5 text-[#d4a853]" />New Engagement
-          </DialogTitle>
-        </DialogHeader>
-        <ScrollArea className="flex-1 -mx-6 px-6">
-          <div className="space-y-4 pt-2 pb-2">
-            {/* Domain input — primary field */}
+  const openNewClient = () => {
+    setClientName("");
+    setClientDomain("");
+    setNewClientOpen(true);
+  };
+
+  // ── Render ──
+
+  return (
+    <div className="p-6 max-w-5xl mx-auto space-y-6" data-testid="page-dashboard">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-bold tracking-tight text-[#1a2744] dark:text-white">
+            Clients &amp; Projects
+          </h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Manage your client engagements
+          </p>
+        </div>
+        <Button
+          onClick={openNewClient}
+          className="gap-1.5 bg-[#d4a853] hover:bg-[#c49843] text-white"
+          data-testid="button-new-client"
+        >
+          <Plus className="w-4 h-4" />
+          New Client
+        </Button>
+      </div>
+
+      {/* Stats Row */}
+      <div className="grid grid-cols-3 gap-4">
+        <Card>
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-[#1a2744]/10 dark:bg-[#1a2744]/40">
+              <Building2 className="w-5 h-5 text-[#1a2744] dark:text-[#d4a853]" />
+            </div>
             <div>
-              <label className="text-sm font-medium mb-1.5 block">Client Website / Domain</label>
+              <p className="text-2xl font-bold">{isLoading ? "—" : totalClients}</p>
+              <p className="text-xs text-muted-foreground">Total Clients</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-green-50 dark:bg-green-900/20">
+              <BarChart3 className="w-5 h-5 text-green-600 dark:text-green-400" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{isLoading ? "—" : activeProjects}</p>
+              <p className="text-xs text-muted-foreground">Active Projects</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-[#d4a853]/15">
+              <Briefcase className="w-5 h-5 text-[#d4a853]" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{isLoading ? "—" : totalProjects}</p>
+              <p className="text-xs text-muted-foreground">Total Projects</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Client Cards */}
+      {isLoading ? (
+        <div className="space-y-3">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-24 w-full rounded-lg" />
+          ))}
+        </div>
+      ) : clients && clients.length > 0 ? (
+        <div className="space-y-3">
+          {clients.map((client) => {
+            const isExpanded = expandedClients.has(client.id);
+            const borderColor =
+              ENTITY_BORDER_COLOR[client.entityType ?? ""] ?? "#1a2744";
+
+            return (
+              <Collapsible
+                key={client.id}
+                open={isExpanded}
+                onOpenChange={() => toggleExpand(client.id)}
+              >
+                <Card
+                  className="overflow-hidden transition-shadow hover:shadow-md"
+                  style={{ borderLeft: `4px solid ${borderColor}` }}
+                  data-testid={`card-client-${client.id}`}
+                >
+                  <CardContent className="p-0">
+                    {/* Collapsed header — always visible */}
+                    <CollapsibleTrigger asChild>
+                      <button
+                        className="w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-muted/30 transition-colors"
+                        data-testid={`toggle-client-${client.id}`}
+                      >
+                        {/* Chevron */}
+                        <span className="shrink-0 text-muted-foreground">
+                          {isExpanded ? (
+                            <ChevronDown className="w-4 h-4" />
+                          ) : (
+                            <ChevronRight className="w-4 h-4" />
+                          )}
+                        </span>
+
+                        {/* Client name + badges */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-bold text-sm text-[#1a2744] dark:text-white truncate">
+                              {client.name}
+                            </span>
+                            <EntityTypeBadge type={client.entityType} />
+                            {client.state && (
+                              <span className="text-xs text-muted-foreground flex items-center gap-0.5">
+                                <MapPin className="w-3 h-3" />
+                                {client.state}
+                              </span>
+                            )}
+                          </div>
+                          {/* Metadata row */}
+                          <div className="flex items-center gap-4 mt-1 text-[11px] text-muted-foreground flex-wrap">
+                            {client.population != null && (
+                              <span className="flex items-center gap-1">
+                                <Users className="w-3 h-3" />
+                                Pop. {formatNumber(client.population)}
+                              </span>
+                            )}
+                            {client.employeeCount != null && (
+                              <span className="flex items-center gap-1">
+                                <Briefcase className="w-3 h-3" />
+                                {formatNumber(client.employeeCount)} employees
+                              </span>
+                            )}
+                            {client.annualBudget && (
+                              <span className="flex items-center gap-1">
+                                <DollarSign className="w-3 h-3" />
+                                {client.annualBudget}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Project count pill */}
+                        <span className="shrink-0 text-xs text-muted-foreground font-medium bg-muted px-2 py-0.5 rounded-full">
+                          {client.projectCount} project{client.projectCount !== 1 ? "s" : ""}
+                        </span>
+                      </button>
+                    </CollapsibleTrigger>
+
+                    {/* Expanded content */}
+                    <CollapsibleContent>
+                      <div className="px-4 pb-4 pt-1 border-t border-border/50 space-y-3">
+                        {/* Expanded header: domain link + action buttons */}
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <div className="flex items-center gap-3 flex-wrap text-xs text-muted-foreground">
+                            {client.domain && (
+                              <a
+                                href={`https://${client.domain}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1 hover:text-[#d4a853] transition-colors"
+                                data-testid={`link-domain-${client.id}`}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <Globe className="w-3.5 h-3.5" />
+                                {client.domain}
+                              </a>
+                            )}
+                            {client.population != null && (
+                              <span>Pop. {formatNumber(client.population)}</span>
+                            )}
+                            {client.employeeCount != null && (
+                              <span>{formatNumber(client.employeeCount)} employees</span>
+                            )}
+                            {client.annualBudget && <span>{client.annualBudget}</span>}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Link
+                              href={`/clients/${client.id}/profile`}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-7 text-xs"
+                                data-testid={`button-view-profile-${client.id}`}
+                              >
+                                View Profile
+                              </Button>
+                            </Link>
+                            <Button
+                              size="sm"
+                              className="h-7 text-xs bg-[#d4a853] hover:bg-[#c49843] text-white gap-1"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openNewProject(client.id, client.name);
+                              }}
+                              data-testid={`button-add-project-${client.id}`}
+                            >
+                              <Plus className="w-3 h-3" />
+                              Add Project
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 text-xs text-muted-foreground hover:text-destructive"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (
+                                  confirm(
+                                    `Delete client "${client.name}" and all its projects?`
+                                  )
+                                ) {
+                                  deleteClientMutation.mutate(client.id);
+                                }
+                              }}
+                              data-testid={`button-delete-client-${client.id}`}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          </div>
+                        </div>
+
+                        {/* Project list */}
+                        {client.projects.length > 0 ? (
+                          <div className="space-y-1.5">
+                            {client.projects.map((project) => (
+                              <div
+                                key={project.id}
+                                className="flex items-center gap-2 px-3 py-2 rounded-md bg-muted/40 hover:bg-muted/70 transition-colors group"
+                                data-testid={`row-project-${project.id}`}
+                              >
+                                <Link
+                                  href={`/projects/${project.id}`}
+                                  className="flex-1 min-w-0 flex items-center gap-2 no-underline"
+                                  data-testid={`link-project-${project.id}`}
+                                >
+                                  <span className="text-sm font-medium truncate text-[#1a2744] dark:text-white group-hover:text-[#d4a853] transition-colors">
+                                    {project.name}
+                                  </span>
+                                  <StatusBadge status={project.status} />
+                                  <ModuleBadges modulesJson={project.engagementModules} />
+                                </Link>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-opacity"
+                                  onClick={() => {
+                                    if (
+                                      confirm(
+                                        `Delete project "${project.name}"?`
+                                      )
+                                    ) {
+                                      deleteProjectMutation.mutate(project.id);
+                                    }
+                                  }}
+                                  data-testid={`button-delete-project-${project.id}`}
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-center py-4 text-xs text-muted-foreground">
+                            No projects yet.{" "}
+                            <button
+                              className="underline text-[#d4a853] hover:text-[#c49843]"
+                              onClick={() => openNewProject(client.id, client.name)}
+                              data-testid={`button-first-project-${client.id}`}
+                            >
+                              Add the first project
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </CollapsibleContent>
+                  </CardContent>
+                </Card>
+              </Collapsible>
+            );
+          })}
+        </div>
+      ) : (
+        /* Empty state */
+        <Card>
+          <CardContent className="p-12 text-center">
+            <FolderOpen className="w-12 h-12 mx-auto text-muted-foreground/40 mb-3" />
+            <h3 className="text-sm font-semibold mb-1">No clients yet</h3>
+            <p className="text-xs text-muted-foreground mb-4">
+              Create your first client to get started.
+            </p>
+            <Button
+              onClick={openNewClient}
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              data-testid="button-empty-new-client"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              New Client
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ── New Client Dialog ── */}
+      <Dialog open={newClientOpen} onOpenChange={setNewClientOpen}>
+        <DialogContent className="max-w-md" data-testid="dialog-new-client">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Building2 className="w-5 h-5 text-[#d4a853]" />
+              New Client
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-1">
+            <div className="space-y-1.5">
+              <Label htmlFor="client-name">
+                Name <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="client-name"
+                placeholder="e.g., City of Springfield"
+                value={clientName}
+                onChange={(e) => setClientName(e.target.value)}
+                data-testid="input-client-name"
+                autoFocus
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="client-domain">
+                Domain{" "}
+                <span className="text-xs text-muted-foreground font-normal">
+                  (optional, e.g. springfield-or.gov)
+                </span>
+              </Label>
               <div className="relative">
                 <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
-                <Input placeholder="e.g., portlandoregon.gov" value={domain} className="text-base h-11 pl-9"
-                  onChange={e => setDomain(e.target.value)} data-testid="input-domain" autoFocus />
+                <Input
+                  id="client-domain"
+                  placeholder="springfield-or.gov"
+                  value={clientDomain}
+                  onChange={(e) => setClientDomain(e.target.value)}
+                  className="pl-9"
+                  data-testid="input-client-domain"
+                />
               </div>
             </div>
-
-            {/* Document upload — optional */}
-            <div>
-              <label className="text-sm font-medium mb-1.5 block flex items-center gap-1.5">
-                <FileText className="w-4 h-4 text-muted-foreground" />Upload Project Documents
-                <span className="text-[10px] font-normal text-muted-foreground">(optional)</span>
-              </label>
-              <label className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-4 cursor-pointer transition-colors hover:border-[#d4a853]/50 hover:bg-[#d4a853]/5"
-                data-testid="dropzone-upload">
-                <input type="file" className="hidden" accept=".pdf,.docx" onChange={handleFileChange} data-testid="input-file-upload" />
-                <Upload className="w-6 h-6 text-muted-foreground/40 mb-1" />
-                <p className="text-xs font-medium text-muted-foreground">Drop RFP, SOW, or project docs here or click to browse</p>
-                <p className="text-[10px] text-muted-foreground/60 mt-0.5">PDF, DOCX supported. Max 50MB.</p>
-              </label>
-              {uploadedFile && (
-                <div className="flex items-center gap-2 mt-2 px-3 py-1.5 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 rounded-md">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                  <span className="text-xs text-emerald-700 dark:text-emerald-400 flex-1 truncate">{uploadedFile.name}</span>
-                  <span className="text-[10px] text-emerald-600/60">{(uploadedFile.size / 1024).toFixed(0)} KB</span>
-                  <button className="text-muted-foreground hover:text-red-500 p-0.5" onClick={() => setUploadedFile(null)} data-testid="btn-remove-file">
-                    <X className="w-3 h-3" />
-                  </button>
-                </div>
+            <div className="flex gap-2 pt-1">
+              {clientDomain.trim() && (
+                <Button
+                  className="flex-1 bg-[#d4a853] hover:bg-[#c49843] text-white gap-2"
+                  disabled={!clientName.trim() || createClientMutation.isPending}
+                  onClick={() => createClientMutation.mutate({ enrich: true })}
+                  data-testid="button-create-enrich"
+                >
+                  {createClientMutation.isPending ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Globe className="w-4 h-4" />
+                  )}
+                  Create &amp; Enrich
+                </Button>
               )}
+              <Button
+                variant={clientDomain.trim() ? "outline" : "default"}
+                className={
+                  clientDomain.trim()
+                    ? "flex-1"
+                    : "flex-1 bg-[#d4a853] hover:bg-[#c49843] text-white"
+                }
+                disabled={!clientName.trim() || createClientMutation.isPending}
+                onClick={() => createClientMutation.mutate({ enrich: false })}
+                data-testid="button-create-client"
+              >
+                {createClientMutation.isPending && !clientDomain.trim() ? (
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                ) : null}
+                Create
+              </Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
-            {/* Engagement Mode */}
-            <div>
-              <label className="text-sm font-medium mb-2 block">Engagement Mode</label>
-              <div className="flex gap-4">
-                {([
-                  { value: "consulting", label: "Consulting", desc: "Consultant-led process" },
-                  { value: "self_service", label: "Self-Service", desc: "Client uses AI directly" },
-                ] as const).map(mode => (
-                  <label key={mode.value} className="flex items-start gap-2 cursor-pointer flex-1 border rounded-lg p-3 transition-colors hover:bg-muted/50"
-                    style={engagementMode === mode.value ? { borderColor: "#d4a853", backgroundColor: "rgba(212,168,83,0.05)" } : {}}>
-                    <input type="radio" name="engagementMode" className="mt-0.5 accent-[#d4a853]"
-                      checked={engagementMode === mode.value} onChange={() => setEngagementMode(mode.value)}
-                      data-testid={`mode-${mode.value}`} />
+      {/* ── New Project Dialog ── */}
+      <Dialog open={newProjectOpen} onOpenChange={setNewProjectOpen}>
+        <DialogContent className="max-w-md" data-testid="dialog-new-project">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Briefcase className="w-5 h-5 text-[#d4a853]" />
+              New Project
+              {newProjectClientName && (
+                <span className="text-sm font-normal text-muted-foreground">
+                  — {newProjectClientName}
+                </span>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-1">
+            <div className="space-y-1.5">
+              <Label htmlFor="project-name">
+                Project Name <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="project-name"
+                placeholder="e.g., ERP Selection 2025"
+                value={projectName}
+                onChange={(e) => setProjectName(e.target.value)}
+                data-testid="input-project-name"
+                autoFocus
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Engagement Modules</Label>
+              <div className="space-y-2">
+                {(
+                  [
+                    {
+                      key: "selection",
+                      label: "Selection",
+                      desc: "Requirements & vendor evaluation",
+                    },
+                    {
+                      key: "ivv",
+                      label: "IV&V",
+                      desc: "Independent verification & validation",
+                    },
+                    {
+                      key: "health_check",
+                      label: "Health Check",
+                      desc: "RAID log, budget & schedule review",
+                    },
+                  ] as const
+                ).map((mod) => (
+                  <label
+                    key={mod.key}
+                    className="flex items-start gap-2.5 cursor-pointer border rounded-lg p-2.5 hover:bg-muted/50 transition-colors"
+                    style={
+                      projectModules[mod.key]
+                        ? {
+                            borderColor: "#d4a853",
+                            backgroundColor: "rgba(212,168,83,0.05)",
+                          }
+                        : {}
+                    }
+                    data-testid={`label-module-${mod.key}`}
+                  >
+                    <Checkbox
+                      id={`mod-${mod.key}`}
+                      checked={projectModules[mod.key]}
+                      onCheckedChange={(checked) =>
+                        setProjectModules((prev) => ({
+                          ...prev,
+                          [mod.key]: !!checked,
+                        }))
+                      }
+                      className="mt-0.5"
+                      data-testid={`checkbox-module-${mod.key}`}
+                    />
                     <div>
-                      <span className="text-sm font-medium">{mode.label}</span>
-                      <p className="text-[10px] text-muted-foreground">{mode.desc}</p>
+                      <span className="text-sm font-medium">{mod.label}</span>
+                      <p className="text-[11px] text-muted-foreground">{mod.desc}</p>
                     </div>
                   </label>
                 ))}
               </div>
             </div>
-          </div>
-        </ScrollArea>
-        <div className="pt-3 border-t border-border/50 shrink-0 space-y-2">
-          <Button className="w-full bg-[#d4a853] hover:bg-[#c49843] text-white gap-2 h-10"
-            disabled={(!domain.trim() && !uploadedFile) || isBusy}
-            onClick={() => enrichMutation.mutate()} data-testid="btn-enrich">
-            {isBusy ? (
-              <><Loader2 className="w-4 h-4 animate-spin" />{loadingLabel}</>
-            ) : (
-              <><Sparkles className="w-4 h-4" />Enrich & Continue</>
-            )}
-          </Button>
-          <button className="w-full text-xs text-muted-foreground hover:text-foreground transition-colors text-center py-1"
-            onClick={skipToManual} data-testid="btn-skip-research">
-            Or enter details manually
-          </button>
-        </div>
-      </>
-    );
-  }
-
-  // Document-specific context
-  const timeline = docData?.timeline;
-  const budgetInfo = docData?.budget;
-  const scope = docData?.projectScope;
-  const keyReqs = docData?.keyRequirements;
-  const evalCriteria = docData?.evaluationCriteria;
-  const leadership = profile?.leadership;
-  const hasDocContext = scope?.length || timeline || budgetInfo || keyReqs?.length || evalCriteria?.length;
-
-  return (
-    <>
-      <DialogHeader>
-        <DialogTitle className="flex items-center gap-2">
-          <button onClick={() => setStep(1)} className="text-muted-foreground hover:text-foreground" data-testid="btn-back-step1">
-            <ArrowLeft className="w-4 h-4" />
-          </button>
-          Confirm Profile{entityName ? ` — ${entityName}` : ""}
-        </DialogTitle>
-      </DialogHeader>
-      <ScrollArea className="flex-1 -mx-6 px-6">
-        <div className="space-y-5 pb-4">
-          {/* Domain reference */}
-          {domain.trim() && (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Globe className="w-3.5 h-3.5" />
-              <span>{domain.trim().replace(/^https?:\/\//, "").replace(/\/+$/, "")}</span>
-            </div>
-          )}
-
-          {/* Document context cards */}
-          {hasDocContext && (
-            <div className="grid grid-cols-2 gap-2">
-              {scope?.length > 0 && (
-                <div className="border rounded-lg p-3 bg-purple-50/50 dark:bg-purple-950/20 border-purple-200 dark:border-purple-800" data-testid="card-scope">
-                  <p className="text-[10px] font-semibold text-purple-600 dark:text-purple-400 flex items-center gap-1 mb-1.5"><Target className="w-3 h-3" />Project Scope</p>
-                  <div className="flex flex-wrap gap-1">
-                    {scope.map((s: string, i: number) => <Badge key={i} variant="outline" className="text-[9px] border-purple-300 dark:border-purple-700">{s}</Badge>)}
-                  </div>
-                </div>
+            <Button
+              className="w-full bg-[#d4a853] hover:bg-[#c49843] text-white gap-2"
+              disabled={!projectName.trim() || createProjectMutation.isPending}
+              onClick={() => createProjectMutation.mutate()}
+              data-testid="button-submit-project"
+            >
+              {createProjectMutation.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Plus className="w-4 h-4" />
               )}
-              {timeline && Object.values(timeline).some(Boolean) && (
-                <div className="border rounded-lg p-3 bg-blue-50/50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800" data-testid="card-timeline">
-                  <p className="text-[10px] font-semibold text-blue-600 dark:text-blue-400 flex items-center gap-1 mb-1.5"><Calendar className="w-3 h-3" />Timeline</p>
-                  <div className="space-y-0.5 text-[10px]">
-                    {timeline.rfpIssueDate && <p><span className="text-muted-foreground">RFP Issued:</span> {timeline.rfpIssueDate}</p>}
-                    {timeline.proposalDueDate && <p><span className="text-muted-foreground">Proposals Due:</span> {timeline.proposalDueDate}</p>}
-                    {timeline.expectedStartDate && <p><span className="text-muted-foreground">Expected Start:</span> {timeline.expectedStartDate}</p>}
-                    {timeline.expectedGoLive && <p><span className="text-muted-foreground">Go-Live:</span> {timeline.expectedGoLive}</p>}
-                    {timeline.contractTerm && <p><span className="text-muted-foreground">Term:</span> {timeline.contractTerm}</p>}
-                  </div>
-                </div>
-              )}
-              {budgetInfo && Object.values(budgetInfo).some(Boolean) && (
-                <div className="border rounded-lg p-3 bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800" data-testid="card-budget">
-                  <p className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 mb-1.5"><DollarSign className="w-3 h-3" />Budget</p>
-                  <div className="space-y-0.5 text-[10px]">
-                    {budgetInfo.estimatedTotal && <p><span className="text-muted-foreground">Total:</span> {budgetInfo.estimatedTotal}</p>}
-                    {budgetInfo.implementationBudget && <p><span className="text-muted-foreground">Implementation:</span> {budgetInfo.implementationBudget}</p>}
-                    {budgetInfo.annualOperating && <p><span className="text-muted-foreground">Annual Operating:</span> {budgetInfo.annualOperating}</p>}
-                  </div>
-                </div>
-              )}
-              {evalCriteria?.length > 0 && (
-                <div className="border rounded-lg p-3 bg-amber-50/50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800" data-testid="card-eval-criteria">
-                  <p className="text-[10px] font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-1 mb-1.5"><BarChart3 className="w-3 h-3" />Evaluation Criteria</p>
-                  <div className="space-y-0.5 text-[10px]">
-                    {evalCriteria.map((c: any, i: number) => (
-                      <div key={i} className="flex justify-between">
-                        <span>{c.criterion}</span>
-                        {c.weight && <span className="text-muted-foreground">{c.weight}</span>}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Key requirements from document */}
-          {keyReqs?.length > 0 && (
-            <div className="border rounded-lg p-3 bg-gray-50/50 dark:bg-gray-900/50 border-gray-200 dark:border-gray-800" data-testid="card-key-requirements">
-              <p className="text-[10px] font-semibold text-foreground flex items-center gap-1 mb-1.5"><ClipboardList className="w-3 h-3 text-[#d4a853]" />Key Requirements from Document ({keyReqs.length})</p>
-              <div className="space-y-1 max-h-[120px] overflow-y-auto">
-                {keyReqs.map((r: string, i: number) => (
-                  <p key={i} className="text-[10px] text-foreground pl-3 border-l-2 border-[#d4a853]/40">{r}</p>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* AI context cards */}
-          {(profile?.keyFacts || profile?.challenges || leadership?.length > 0) && (
-            <div className="grid grid-cols-2 gap-2">
-              {profile?.keyFacts && (
-                <div className="border rounded-lg p-3 bg-blue-50/50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
-                  <p className="text-[10px] font-semibold text-blue-600 dark:text-blue-400 flex items-center gap-1 mb-1"><Info className="w-3 h-3" />Key Facts</p>
-                  <p className="text-xs text-foreground">{profile.keyFacts}</p>
-                </div>
-              )}
-              {profile?.challenges && (
-                <div className="border rounded-lg p-3 bg-amber-50/50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800">
-                  <p className="text-[10px] font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-1 mb-1"><AlertTriangle className="w-3 h-3" />Common Challenges</p>
-                  <p className="text-xs text-foreground">{profile.challenges}</p>
-                </div>
-              )}
-              {leadership?.length > 0 && (
-                <div className="border rounded-lg p-3 bg-gray-50/50 dark:bg-gray-900/50 border-gray-200 dark:border-gray-800">
-                  <p className="text-[10px] font-semibold text-foreground flex items-center gap-1 mb-1"><Building2 className="w-3 h-3 text-muted-foreground" />Leadership</p>
-                  <div className="space-y-0.5 text-[10px]">
-                    {leadership.slice(0, 5).map((l: any, i: number) => (
-                      <p key={i}><span className="font-medium">{l.name}</span> <span className="text-muted-foreground">— {l.title}</span></p>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Basic info */}
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <label className="text-xs text-muted-foreground mb-1 block">Entity Name</label>
-              <Input className="h-8 text-xs" value={entityName} onChange={e => setEntityName(e.target.value)} data-testid="input-entity-name-2" />
-            </div>
-            <div>
-              <label className="text-xs text-muted-foreground mb-1 block">Entity Type</label>
-              <Select value={entityType} onValueChange={setEntityType}>
-                <SelectTrigger className="h-8 text-xs" data-testid="select-entity-type-2"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {ENTITY_TYPES.map(t => <SelectItem key={t.value} value={t.value} className="text-xs">{t.label}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="text-xs text-muted-foreground mb-1 block">State</label>
-              <Input className="h-8 text-xs" value={state} onChange={e => setState(e.target.value)} data-testid="input-state-2" />
-            </div>
+              Create Project
+            </Button>
           </div>
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <label className="text-xs text-muted-foreground mb-1 block">Population</label>
-              <Input className="h-8 text-xs" type="number" value={population} onChange={e => setPopulation(e.target.value)} data-testid="input-population" />
-            </div>
-            <div>
-              <label className="text-xs text-muted-foreground mb-1 block">Employee Count</label>
-              <Input className="h-8 text-xs" type="number" value={employeeCount} onChange={e => setEmployeeCount(e.target.value)} data-testid="input-employees" />
-            </div>
-            <div>
-              <label className="text-xs text-muted-foreground mb-1 block">Annual Budget</label>
-              <Input className="h-8 text-xs" placeholder="e.g., $150M" value={annualBudget} onChange={e => setAnnualBudget(e.target.value)} data-testid="input-budget" />
-            </div>
-          </div>
-
-          {/* Description */}
-          <div>
-            <label className="text-xs text-muted-foreground mb-1 block">Project Description</label>
-            <Textarea className="text-xs min-h-[50px]" placeholder="Brief scope..." value={description} onChange={e => setDescription(e.target.value)} data-testid="input-description" />
-          </div>
-
-          {/* Departments */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="text-xs font-semibold">Departments</label>
-              <Button variant="outline" size="sm" className="h-6 text-[10px] gap-1" onClick={addDept} data-testid="btn-add-dept">
-                <Plus className="w-2.5 h-2.5" />Add
-              </Button>
-            </div>
-            <div className="space-y-1.5">
-              {departments.map((d, i) => (
-                <div key={i} className="grid grid-cols-[1fr_80px_24px] gap-1.5 items-center">
-                  <Input className="h-7 text-xs" placeholder="Department" value={d.name} onChange={e => updateDept(i, "name", e.target.value)} data-testid={`dept-name-${i}`} />
-                  <Input className="h-7 text-xs" placeholder="HC" type="number" value={d.headcount} onChange={e => updateDept(i, "headcount", e.target.value)} data-testid={`dept-hc-${i}`} />
-                  <button className="text-muted-foreground hover:text-red-500 p-0.5" onClick={() => removeDept(i)} data-testid={`dept-remove-${i}`}><Trash2 className="w-3 h-3" /></button>
-                </div>
-              ))}
-              {departments.length === 0 && <p className="text-[10px] text-muted-foreground">No departments. Click Add to start.</p>}
-            </div>
-          </div>
-
-          {/* Systems */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="text-xs font-semibold">Current Systems</label>
-              <Button variant="outline" size="sm" className="h-6 text-[10px] gap-1" onClick={addSystem} data-testid="btn-add-system">
-                <Plus className="w-2.5 h-2.5" />Add
-              </Button>
-            </div>
-            <div className="space-y-1.5">
-              {systems.map((s, i) => (
-                <div key={i} className="grid grid-cols-[1fr_1fr_1fr_60px_24px] gap-1.5 items-center">
-                  <Input className="h-7 text-xs" placeholder="System" value={s.name} onChange={e => updateSystem(i, "name", e.target.value)} data-testid={`sys-name-${i}`} />
-                  <Input className="h-7 text-xs" placeholder="Module" value={s.module} onChange={e => updateSystem(i, "module", e.target.value)} data-testid={`sys-module-${i}`} />
-                  <Input className="h-7 text-xs" placeholder="Vendor" value={s.vendor} onChange={e => updateSystem(i, "vendor", e.target.value)} data-testid={`sys-vendor-${i}`} />
-                  <Input className="h-7 text-xs" placeholder="Yrs" value={s.yearsInUse} onChange={e => updateSystem(i, "yearsInUse", e.target.value)} data-testid={`sys-years-${i}`} />
-                  <button className="text-muted-foreground hover:text-red-500 p-0.5" onClick={() => removeSystem(i)} data-testid={`sys-remove-${i}`}><Trash2 className="w-3 h-3" /></button>
-                </div>
-              ))}
-              {systems.length === 0 && <p className="text-[10px] text-muted-foreground">No systems known. Click Add to start.</p>}
-            </div>
-          </div>
-
-          {/* Engagement Modules */}
-          <div>
-            <label className="text-xs font-semibold mb-2 block">Engagement Modules</label>
-            <div className="flex gap-3">
-              {([
-                { key: "selection", label: "Selection", desc: "Requirements & vendor eval" },
-                { key: "ivv", label: "IV&V Oversight", desc: "Compliance & checkpoints" },
-                { key: "health_check", label: "Health Check", desc: "RAID, budget, schedule" },
-              ] as const).map(mod => (
-                <label key={mod.key} className="flex items-start gap-2 cursor-pointer border rounded-lg p-2.5 flex-1 transition-colors hover:bg-muted/50"
-                  style={modules[mod.key] ? { borderColor: "#d4a853", backgroundColor: "rgba(212,168,83,0.05)" } : {}}>
-                  <input type="checkbox" className="mt-0.5 accent-[#d4a853]" checked={modules[mod.key]}
-                    onChange={e => setModules(prev => ({ ...prev, [mod.key]: e.target.checked }))} data-testid={`module-${mod.key}`} />
-                  <div>
-                    <span className="text-xs font-medium">{mod.label}</span>
-                    <p className="text-[9px] text-muted-foreground">{mod.desc}</p>
-                  </div>
-                </label>
-              ))}
-            </div>
-          </div>
-        </div>
-      </ScrollArea>
-      <div className="pt-3 border-t border-border/50 shrink-0">
-        <Button className="w-full bg-[#d4a853] hover:bg-[#c49843] text-white gap-2 h-10"
-          disabled={!entityName.trim() || createMutation.isPending}
-          onClick={() => createMutation.mutate()} data-testid="button-submit-project">
-          {createMutation.isPending ? <><Loader2 className="w-4 h-4 animate-spin" />Creating project...</> : <><Save className="w-4 h-4" />Create Project</>}
-        </Button>
-      </div>
-    </>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }

@@ -56,6 +56,13 @@ export function AppSidebar() {
     enabled: !!projectId,
   });
 
+  const clientId = project?.clientId;
+  const { data: client } = useQuery<any>({
+    queryKey: ["/api/clients", clientId],
+    queryFn: () => apiRequest("GET", `/api/clients/${clientId}`).then(r => r.json()),
+    enabled: !!clientId,
+  });
+
   const modules: string[] = project?.engagementModules ? (typeof project.engagementModules === "string" ? JSON.parse(project.engagementModules) : project.engagementModules) : ["selection"];
   const hasModule = (m: string) => modules.includes(m);
 
@@ -95,13 +102,20 @@ export function AppSidebar() {
         {/* Project-context navigation */}
         {projectId && (
           <SidebarGroup>
+            {client && (
+              <div className="px-3 pb-1">
+                <Link href={`/clients/${clientId}/profile`} className="text-xs font-semibold text-[#d4a853] hover:underline truncate block">
+                  {client.name}
+                </Link>
+              </div>
+            )}
             <SidebarGroupLabel className="text-sidebar-foreground/50 text-[10px] uppercase tracking-widest font-semibold">Project</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {/* Client Profile */}
+                {/* Client Profile - now links to client level */}
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={location === `/projects/${projectId}/client-profile`}>
-                    <Link href={`/projects/${projectId}/client-profile`} data-testid="nav-client-profile">
+                  <SidebarMenuButton asChild isActive={location === `/clients/${clientId}/profile`}>
+                    <Link href={clientId ? `/clients/${clientId}/profile` : `/projects/${projectId}/client-profile`} data-testid="nav-client-profile">
                       <Building2 className="w-4 h-4" />
                       <span>Client Profile</span>
                     </Link>

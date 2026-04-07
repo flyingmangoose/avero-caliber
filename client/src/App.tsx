@@ -49,6 +49,7 @@ function AppLayout() {
               <Route path="/projects/:id/client-profile" component={ClientProfilePage} />
               <Route path="/projects/:id/discovery" component={DiscoveryPage} />
               <Route path="/projects/:id/future-state" component={FutureStatePage} />
+              <Route path="/clients/:id/profile" component={ClientProfilePage} />
               <Route path="/projects/:id" component={ProjectView} />
               <Route path="/templates" component={TemplateLibrary} />
               <Route path="/knowledge-base" component={KnowledgeBasePage} />

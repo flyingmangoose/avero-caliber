@@ -220,6 +220,85 @@ Return ONLY the JSON.`);
     }
   });
 
+  // ==================== CLIENTS ====================
+
+  app.get("/api/clients", (_req, res) => {
+    const clientsList = storage.getClients();
+    const allProjects = storage.getProjects();
+    const enriched = clientsList.map(c => ({
+      ...c,
+      projects: allProjects.filter(p => p.clientId === c.id).map(p => ({
+        id: p.id, name: p.name, status: p.status, engagementModules: p.engagementModules,
+      })),
+      projectCount: allProjects.filter(p => p.clientId === c.id).length,
+    }));
+    // Also include orphan projects (no client) as a virtual "Unassigned" group
+    const orphans = allProjects.filter(p => !p.clientId);
+    if (orphans.length > 0) {
+      enriched.push({
+        id: 0, name: "Unassigned Projects", domain: null, entityType: null, state: null,
+        population: null, employeeCount: null, annualBudget: null, currentSystems: null,
+        departments: null, painSummary: null, leadership: null, documents: null,
+        description: "", createdAt: "", updatedAt: null,
+        projects: orphans.map(p => ({ id: p.id, name: p.name, status: p.status, engagementModules: p.engagementModules })),
+        projectCount: orphans.length,
+      } as any);
+    }
+    res.json(enriched);
+  });
+
+  app.get("/api/clients/:id", (req, res) => {
+    const client = storage.getClient(parseInt(req.params.id));
+    if (!client) return res.status(404).json({ error: "Client not found" });
+    res.json(client);
+  });
+
+  app.post("/api/clients", (req, res) => {
+    const client = storage.createClient(req.body);
+    res.json(client);
+  });
+
+  app.patch("/api/clients/:id", (req, res) => {
+    const updated = storage.updateClient(parseInt(req.params.id), req.body);
+    if (!updated) return res.status(404).json({ error: "Client not found" });
+    res.json(updated);
+  });
+
+  app.delete("/api/clients/:id", (req, res) => {
+    storage.deleteClient(parseInt(req.params.id));
+    res.json({ success: true });
+  });
+
+  app.post("/api/clients/:id/enrich", async (req, res) => {
+    const clientId = parseInt(req.params.id);
+    const client = storage.getClient(clientId);
+    if (!client) return res.status(404).json({ error: "Client not found" });
+    const { domain } = req.body;
+    if (!domain) return res.status(400).json({ error: "Domain required" });
+    try {
+      let websiteText = "";
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 10000);
+        const response = await fetch(`https://${domain}`, { signal: controller.signal, headers: { "User-Agent": "AveroCaliberBot/1.0" } });
+        clearTimeout(timeout);
+        if (response.ok) {
+          const html = await response.text();
+          websiteText = html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").substring(0, 8000);
+        }
+      } catch {}
+      const { llmCall } = await import("./ai");
+      const prompt = `Analyze this government entity's website and your knowledge to create a comprehensive profile.\n\nDomain: ${domain}\nWebsite content: ${websiteText || "(unable to fetch)"}\n\nReturn JSON with: entityType, entityName, state, population, employeeCount, annualBudget, description, painSummary, currentSystems (array of {name, module, vendor, yearsInUse}), departments (array of {name, headcount, keyProcesses}), leadership (array of {name, title}).\n\nReturn ONLY valid JSON.`;
+      const text = await llmCall(prompt);
+      const jsonStr = text.replace(/\`\`\`json\n?/g, "").replace(/\`\`\`\n?/g, "").trim();
+      const data = JSON.parse(jsonStr);
+      const updated = storage.updateClient(clientId, { ...data, domain });
+      res.json({ success: true, data: updated });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // ==================== PROJECTS ====================
 
   app.get("/api/projects", (_req, res) => {

@@ -30,6 +30,7 @@ import {
   type DiscoveryInterview, discoveryInterviews,
   type DiscoveryPainPoint, discoveryPainPoints,
   type ProcessTransformation, processTransformations,
+  type Client, clients,
   type ProjectDocument, projectDocuments,
   type MonitoringSource, monitoringSources,
   type MonitoringRun, monitoringRuns,
@@ -479,6 +480,13 @@ export function scoreToNumber(score: string): number {
 }
 
 export interface IStorage {
+  // Clients
+  createClient(data: any): Client;
+  getClients(): Client[];
+  getClient(id: number): Client | undefined;
+  updateClient(id: number, data: any): Client | undefined;
+  deleteClient(id: number): void;
+
   // Projects
   getProjects(): Project[];
   getProject(id: number): Project | undefined;
@@ -781,6 +789,49 @@ export interface EvaluationResult {
 }
 
 export class DatabaseStorage implements IStorage {
+  // ==================== Clients ====================
+
+  createClient(data: any): Client {
+    return db.insert(clients).values({
+      name: data.name,
+      domain: data.domain ?? null,
+      entityType: data.entityType ?? null,
+      state: data.state ?? null,
+      population: data.population ?? null,
+      employeeCount: data.employeeCount ?? null,
+      annualBudget: data.annualBudget ?? null,
+      currentSystems: typeof data.currentSystems === "string" ? data.currentSystems : JSON.stringify(data.currentSystems || []),
+      departments: typeof data.departments === "string" ? data.departments : JSON.stringify(data.departments || []),
+      painSummary: data.painSummary ?? null,
+      leadership: typeof data.leadership === "string" ? data.leadership : JSON.stringify(data.leadership || []),
+      documents: typeof data.documents === "string" ? data.documents : JSON.stringify(data.documents || []),
+      description: data.description ?? "",
+    }).returning().get();
+  }
+
+  getClients(): Client[] {
+    return db.select().from(clients).orderBy(clients.name).all();
+  }
+
+  getClient(id: number): Client | undefined {
+    return db.select().from(clients).where(eq(clients.id, id)).get();
+  }
+
+  updateClient(id: number, data: any): Client | undefined {
+    const updateData: any = { ...data, updatedAt: new Date().toISOString() };
+    if (updateData.currentSystems && typeof updateData.currentSystems !== "string") updateData.currentSystems = JSON.stringify(updateData.currentSystems);
+    if (updateData.departments && typeof updateData.departments !== "string") updateData.departments = JSON.stringify(updateData.departments);
+    if (updateData.leadership && typeof updateData.leadership !== "string") updateData.leadership = JSON.stringify(updateData.leadership);
+    if (updateData.documents && typeof updateData.documents !== "string") updateData.documents = JSON.stringify(updateData.documents);
+    return db.update(clients).set(updateData).where(eq(clients.id, id)).returning().get();
+  }
+
+  deleteClient(id: number): void {
+    db.delete(clients).where(eq(clients.id, id)).run();
+  }
+
+  // ==================== Projects ====================
+
   getProjects(): Project[] {
     return db.select().from(projects).orderBy(desc(projects.updatedAt)).all();
   }

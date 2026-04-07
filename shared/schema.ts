@@ -2,8 +2,36 @@ import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// ==================== CLIENTS ====================
+
+export const clients = sqliteTable("clients", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  name: text("name").notNull(),
+  domain: text("domain"), // website domain for enrichment
+  entityType: text("entity_type"), // city, county, utility, transit, port, state_agency, special_district
+  state: text("state"),
+  population: integer("population"),
+  employeeCount: integer("employee_count"),
+  annualBudget: text("annual_budget"),
+  currentSystems: text("current_systems"), // JSON
+  departments: text("departments"), // JSON
+  painSummary: text("pain_summary"),
+  leadership: text("leadership"), // JSON
+  documents: text("documents"), // JSON: uploaded docs
+  description: text("description").default(""),
+  createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
+  updatedAt: text("updated_at").$defaultFn(() => new Date().toISOString()),
+});
+
+export const insertClientSchema = createInsertSchema(clients).omit({ id: true, createdAt: true, updatedAt: true });
+export type Client = typeof clients.$inferSelect;
+export type InsertClient = z.infer<typeof insertClientSchema>;
+
+// ==================== PROJECTS ====================
+
 export const projects = sqliteTable("projects", {
   id: integer("id").primaryKey({ autoIncrement: true }),
+  clientId: integer("client_id").references(() => clients.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   description: text("description").notNull().default(""),
   status: text("status").notNull().default("draft"),
