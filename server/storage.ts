@@ -30,6 +30,7 @@ import {
   type DiscoveryInterview, discoveryInterviews,
   type DiscoveryPainPoint, discoveryPainPoints,
   type ProcessTransformation, processTransformations,
+  type ProjectDocument, projectDocuments,
   type MonitoringSource, monitoringSources,
   type MonitoringRun, monitoringRuns,
   type VendorChange, vendorChanges,
@@ -689,6 +690,13 @@ export interface IStorage {
   getProcessTransformations(projectId: number, vendorPlatform?: string): ProcessTransformation[];
   getProcessTransformation(id: number): ProcessTransformation | undefined;
   deleteProcessTransformations(projectId: number, vendorPlatform?: string, functionalArea?: string): void;
+
+  // Project Documents
+  createProjectDocument(data: any): ProjectDocument;
+  getProjectDocuments(projectId: number, documentType?: string): ProjectDocument[];
+  getProjectDocument(id: number): ProjectDocument | undefined;
+  updateProjectDocument(id: number, data: any): ProjectDocument | undefined;
+  deleteProjectDocument(id: number): void;
 
   // Monitoring Pipeline
   createMonitoringSource(data: any): MonitoringSource;
@@ -2413,6 +2421,48 @@ export class DatabaseStorage implements IStorage {
     if (vendorPlatform) conditions.push(eq(processTransformations.vendorPlatform, vendorPlatform));
     if (functionalArea) conditions.push(eq(processTransformations.functionalArea, functionalArea));
     db.delete(processTransformations).where(and(...conditions)).run();
+  }
+
+  // ==================== PROJECT DOCUMENTS ====================
+
+  createProjectDocument(data: any): ProjectDocument {
+    return db.insert(projectDocuments).values({
+      projectId: data.projectId,
+      fileName: data.fileName,
+      fileSize: data.fileSize ?? null,
+      mimeType: data.mimeType ?? null,
+      documentType: data.documentType,
+      source: data.source || "upload",
+      rawText: data.rawText ?? null,
+      aiAnalysis: data.aiAnalysis ?? null,
+      analysisStatus: data.analysisStatus || "pending",
+      extractedItems: data.extractedItems ?? null,
+      period: data.period ?? null,
+      uploadedBy: data.uploadedBy ?? null,
+    }).returning().get();
+  }
+
+  getProjectDocuments(projectId: number, documentType?: string): ProjectDocument[] {
+    if (documentType) {
+      return db.select().from(projectDocuments)
+        .where(and(eq(projectDocuments.projectId, projectId), eq(projectDocuments.documentType, documentType)))
+        .orderBy(desc(projectDocuments.createdAt)).all();
+    }
+    return db.select().from(projectDocuments)
+      .where(eq(projectDocuments.projectId, projectId))
+      .orderBy(desc(projectDocuments.createdAt)).all();
+  }
+
+  getProjectDocument(id: number): ProjectDocument | undefined {
+    return db.select().from(projectDocuments).where(eq(projectDocuments.id, id)).get();
+  }
+
+  updateProjectDocument(id: number, data: any): ProjectDocument | undefined {
+    return db.update(projectDocuments).set(data).where(eq(projectDocuments.id, id)).returning().get();
+  }
+
+  deleteProjectDocument(id: number): void {
+    db.delete(projectDocuments).where(eq(projectDocuments.id, id)).run();
   }
 
   // ==================== MONITORING PIPELINE ====================

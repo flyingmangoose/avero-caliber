@@ -13,7 +13,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Stethoscope, ChevronLeft, Plus, Trash2, Edit2, Loader2, AlertTriangle, DollarSign, Calendar, Sparkles } from "lucide-react";
+import { Stethoscope, ChevronLeft, Plus, Trash2, Edit2, Loader2, AlertTriangle, DollarSign, Calendar, Sparkles, FileText } from "lucide-react";
+import { DocumentsTab } from "./health-check-documents";
 
 const DOMAINS = [
   { key: "governance", label: "Governance & Oversight", icon: "🏛️", desc: "Project governance, decision-making, stakeholder engagement" },
@@ -170,6 +171,7 @@ export default function HealthCheckPage() {
               <TabsTrigger value="assessment" data-testid="tab-assessment">Assessment</TabsTrigger>
               <TabsTrigger value="raid" data-testid="tab-raid">RAID Log</TabsTrigger>
               <TabsTrigger value="budget" data-testid="tab-budget">Budget & Schedule</TabsTrigger>
+              <TabsTrigger value="documents" data-testid="tab-documents"><FileText className="w-4 h-4 mr-1 inline" />Documents</TabsTrigger>
             </TabsList>
 
             {/* TAB 1: Assessment Domains */}
@@ -326,6 +328,9 @@ export default function HealthCheckPage() {
                   )}
                 </div>
               </div>
+            </TabsContent>
+            <TabsContent value="documents">
+              <DocumentsTab projectId={projectId} />
             </TabsContent>
           </Tabs>
         </div>

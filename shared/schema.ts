@@ -558,6 +558,29 @@ export type InsertDiscoveryPainPoint = z.infer<typeof insertDiscoveryPainPointSc
 export type ProcessTransformation = typeof processTransformations.$inferSelect;
 export type InsertProcessTransformation = z.infer<typeof insertProcessTransformationSchema>;
 
+// ==================== PROJECT DOCUMENTS ====================
+
+export const projectDocuments = sqliteTable("project_documents", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  projectId: integer("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  fileName: text("file_name").notNull(),
+  fileSize: integer("file_size"),
+  mimeType: text("mime_type"),
+  documentType: text("document_type").notNull(), // status_report, raid_log, risk_register, test_results, budget_report, schedule_update, change_request, meeting_minutes, sow_contract, other
+  source: text("source").default("upload"), // upload, jira, smartsheet, azure_devops
+  rawText: text("raw_text"), // extracted text content
+  aiAnalysis: text("ai_analysis"), // JSON: structured extraction results
+  analysisStatus: text("analysis_status").default("pending"), // pending, processing, completed, failed
+  extractedItems: text("extracted_items"), // JSON: { raids: [], budgetItems: [], scheduleItems: [], findings: [], metrics: {} }
+  period: text("period"), // e.g. "Week ending 2026-03-28" or "Q1 2026"
+  uploadedBy: text("uploaded_by"),
+  createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
+});
+
+export const insertProjectDocumentSchema = createInsertSchema(projectDocuments).omit({ id: true, createdAt: true });
+export type ProjectDocument = typeof projectDocuments.$inferSelect;
+export type InsertProjectDocument = z.infer<typeof insertProjectDocumentSchema>;
+
 // ==================== VENDOR MONITORING PIPELINE ====================
 
 // Sources to monitor for each vendor platform (release notes URLs, press pages, etc.)

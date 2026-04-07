@@ -758,4 +758,82 @@ export async function analyzeVendorChanges(
   }
 }
 
+// ==================== HEALTH CHECK DOCUMENT ANALYSIS ====================
+
+export async function analyzeHealthCheckDocument(
+  documentType: string,
+  documentText: string,
+  projectContext?: string
+): Promise<{
+  summary: string;
+  overallHealth: string;
+  raids: Array<{ type: string; title: string; description: string; severity: string; status: string; owner?: string; dueDate?: string }>;
+  budgetItems: Array<{ category: string; description: string; amount: number; date?: string; notes?: string }>;
+  scheduleItems: Array<{ milestone: string; originalDate?: string; currentDate?: string; status: string; varianceDays?: number; notes?: string }>;
+  findings: Array<{ domain: string; severity: string; finding: string; evidence: string; recommendation: string }>;
+  metrics: Record<string, any>;
+}> {
+  const contextStr = projectContext ? `\nPROJECT CONTEXT:\n${projectContext}` : "";
+
+  const text = await llmCall(`You are an expert IV&V consultant analyzing a project document for a government ERP/EAM implementation health check.
+
+DOCUMENT TYPE: ${documentType}
+${contextStr}
+
+Analyze the following document and extract ALL structured data. Be thorough — every risk, issue, budget line, schedule milestone, and finding matters.
+
+For each category, extract as much as possible:
+
+1. RAID ITEMS: Risks, Assumptions, Issues, Dependencies
+   - Classify each as risk/assumption/issue/dependency
+   - Assign severity: critical, high, medium, low
+   - Status: open, mitigated, closed, escalated
+   - Include owner and due dates if mentioned
+
+2. BUDGET ITEMS: Any financial data
+   - Categories: original_contract, change_order, additional_funding, actual_spend
+   - Amounts in dollars (as integers, no decimals)
+
+3. SCHEDULE ITEMS: Milestones, dates, delays
+   - Original vs current dates
+   - Status: on_track, at_risk, delayed, completed
+   - Calculate variance in days if dates are available
+
+4. FINDINGS: Assessment observations
+   - Domain: governance, technical, raid, budget_schedule
+   - Severity: critical, high, medium, low, info
+   - Include specific evidence from the document
+   - Provide actionable recommendations
+
+5. METRICS: Key numbers mentioned (defect counts, user counts, completion %, SLA adherence, etc.)
+
+6. OVERALL HEALTH: critical, high, medium, low, or satisfactory
+
+7. SUMMARY: 2-3 sentence executive summary of the document
+
+Return JSON:
+{
+  "summary": "Executive summary",
+  "overallHealth": "medium",
+  "raids": [{"type": "risk", "title": "", "description": "", "severity": "high", "status": "open", "owner": "", "dueDate": ""}],
+  "budgetItems": [{"category": "actual_spend", "description": "", "amount": 0, "date": "", "notes": ""}],
+  "scheduleItems": [{"milestone": "", "originalDate": "", "currentDate": "", "status": "delayed", "varianceDays": 30, "notes": ""}],
+  "findings": [{"domain": "governance", "severity": "high", "finding": "", "evidence": "", "recommendation": ""}],
+  "metrics": {}
+}
+
+DOCUMENT TEXT:
+${documentText.substring(0, 30000)}`, undefined, 8192);
+
+  const jsonMatch = text.match(/\{[\s\S]*"summary"[\s\S]*\}/);
+  if (!jsonMatch) {
+    return { summary: "Unable to parse document", overallHealth: "medium", raids: [], budgetItems: [], scheduleItems: [], findings: [], metrics: {} };
+  }
+  try {
+    return JSON.parse(jsonMatch[0]);
+  } catch {
+    return { summary: "Unable to parse document", overallHealth: "medium", raids: [], budgetItems: [], scheduleItems: [], findings: [], metrics: {} };
+  }
+}
+
 export { xai, CHAT_SYSTEM_PROMPT, PROPOSAL_ANALYSIS_PROMPT, llmCall, llmStream };

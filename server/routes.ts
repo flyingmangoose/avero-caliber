@@ -3529,6 +3529,144 @@ Write in professional consulting tone covering: overall posture assessment, key 
     res.json({ success: true });
   });
 
+  // ==================== HEALTH CHECK DOCUMENT UPLOAD & ANALYSIS ====================
+
+  // Get all documents for a project
+  app.get("/api/projects/:id/documents", (req, res) => {
+    const projectId = parseInt(req.params.id);
+    const documentType = req.query.documentType as string | undefined;
+    res.json(storage.getProjectDocuments(projectId, documentType));
+  });
+
+  // Upload a document (text extracted client-side or from file)
+  app.post("/api/projects/:id/documents", (req, res) => {
+    const projectId = parseInt(req.params.id);
+    const { fileName, fileSize, mimeType, documentType, rawText, period, uploadedBy } = req.body;
+    const doc = storage.createProjectDocument({
+      projectId, fileName, fileSize, mimeType, documentType, rawText, period, uploadedBy,
+      analysisStatus: rawText ? "pending" : "pending",
+    });
+    res.json(doc);
+  });
+
+  // Analyze an uploaded document with AI
+  app.post("/api/projects/:id/documents/:docId/analyze", async (req, res) => {
+    const docId = parseInt(req.params.docId);
+    const doc = storage.getProjectDocument(docId);
+    if (!doc) return res.status(404).json({ error: "Document not found" });
+    if (!doc.rawText) return res.status(400).json({ error: "No text content to analyze" });
+
+    storage.updateProjectDocument(docId, { analysisStatus: "processing" });
+
+    try {
+      const { analyzeHealthCheckDocument, buildProjectContext } = await import("./ai");
+      const projectContext = buildProjectContext(parseInt(req.params.id));
+      const analysis = await analyzeHealthCheckDocument(doc.documentType, doc.rawText, projectContext);
+
+      storage.updateProjectDocument(docId, {
+        aiAnalysis: JSON.stringify(analysis),
+        extractedItems: JSON.stringify({
+          raids: analysis.raids,
+          budgetItems: analysis.budgetItems,
+          scheduleItems: analysis.scheduleItems,
+          findings: analysis.findings,
+          metrics: analysis.metrics,
+        }),
+        analysisStatus: "completed",
+      });
+
+      res.json(analysis);
+    } catch (error: any) {
+      storage.updateProjectDocument(docId, { analysisStatus: "failed" });
+      console.error("Document analysis error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Apply extracted items from a document into health check data
+  app.post("/api/projects/:id/documents/:docId/apply", (req, res) => {
+    const projectId = parseInt(req.params.id);
+    const docId = parseInt(req.params.docId);
+    const doc = storage.getProjectDocument(docId);
+    if (!doc || !doc.extractedItems) return res.status(400).json({ error: "No extracted items" });
+
+    const items = JSON.parse(doc.extractedItems);
+    const applied = { raids: 0, budgetItems: 0, scheduleItems: 0, findings: 0 };
+
+    // Apply RAID items
+    for (const raid of (items.raids || [])) {
+      storage.createRaidItem({
+        projectId,
+        type: raid.type || "risk",
+        title: raid.title,
+        description: raid.description,
+        severity: raid.severity || "medium",
+        status: raid.status || "open",
+        owner: raid.owner || null,
+        dueDate: raid.dueDate || null,
+      });
+      applied.raids++;
+    }
+
+    // Apply budget items
+    for (const budget of (items.budgetItems || [])) {
+      storage.createBudgetItem({
+        projectId,
+        category: budget.category || "actual_spend",
+        description: budget.description,
+        amount: budget.amount || 0,
+        date: budget.date || null,
+        notes: budget.notes || null,
+      });
+      applied.budgetItems++;
+    }
+
+    // Apply schedule items
+    for (const sched of (items.scheduleItems || [])) {
+      storage.createScheduleItem({
+        projectId,
+        milestone: sched.milestone,
+        originalDate: sched.originalDate || null,
+        currentDate: sched.currentDate || null,
+        status: sched.status || "on_track",
+        varianceDays: sched.varianceDays || null,
+        notes: sched.notes || null,
+      });
+      applied.scheduleItems++;
+    }
+
+    // Apply findings as assessments
+    const findingsByDomain: Record<string, any[]> = {};
+    for (const f of (items.findings || [])) {
+      const domain = f.domain || "governance";
+      if (!findingsByDomain[domain]) findingsByDomain[domain] = [];
+      findingsByDomain[domain].push(f);
+    }
+    for (const [domain, findings] of Object.entries(findingsByDomain)) {
+      const worstSeverity = findings.reduce((worst: string, f: any) => {
+        const order = ["critical", "high", "medium", "low", "satisfactory"];
+        return order.indexOf(f.severity) < order.indexOf(worst) ? f.severity : worst;
+      }, "satisfactory");
+      storage.createHealthCheckAssessment({
+        projectId,
+        domain,
+        overallRating: worstSeverity,
+        findings: JSON.stringify(findings),
+        summary: findings.map((f: any) => f.finding).join(". "),
+        assessedBy: `AI Analysis - ${doc.fileName}`,
+      });
+      applied.findings += findings.length;
+    }
+
+    res.json({ success: true, applied });
+  });
+
+  // Delete a document
+  app.delete("/api/projects/:id/documents/:docId", (req, res) => {
+    storage.deleteProjectDocument(parseInt(req.params.docId));
+    res.json({ success: true });
+  });
+
   // ==================== VENDOR MONITORING PIPELINE ====================
 
   // Sources CRUD
