@@ -590,7 +590,8 @@ export type InsertProcessTransformation = z.infer<typeof insertProcessTransforma
 
 export const projectDocuments = sqliteTable("project_documents", {
   id: integer("id").primaryKey({ autoIncrement: true }),
-  projectId: integer("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  projectId: integer("project_id").references(() => projects.id, { onDelete: "cascade" }),
+  clientId: integer("client_id").references(() => clients.id, { onDelete: "cascade" }),
   fileName: text("file_name").notNull(),
   fileSize: integer("file_size"),
   mimeType: text("mime_type"),

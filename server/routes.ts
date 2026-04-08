@@ -299,13 +299,27 @@ Return ONLY the JSON.`);
     }
   });
 
-  // Extract data from uploaded document for client profile
+  // Upload and extract document for client (stores in project_documents + enriches client profile)
   app.post("/api/clients/:id/extract-document", async (req, res) => {
     const clientId = parseInt(req.params.id);
     const client = storage.getClient(clientId);
     if (!client) return res.status(404).json({ error: "Client not found" });
-    const { fileName, documentText } = req.body;
+    const { fileName, documentText, documentType } = req.body;
     if (!documentText) return res.status(400).json({ error: "Document text required" });
+
+    // Store the document in project_documents at the client level
+    const doc = storage.createProjectDocument({
+      clientId,
+      projectId: null,
+      fileName: fileName || "uploaded-document.txt",
+      fileSize: documentText.length,
+      mimeType: "text/plain",
+      documentType: documentType || "sow_contract",
+      source: "upload",
+      rawText: documentText.substring(0, 50000),
+      analysisStatus: "processing",
+    });
+
     try {
       const { llmCall } = await import("./ai");
       const prompt = `Extract government entity profile information from this document. The document is "${fileName || "uploaded document"}".
@@ -324,24 +338,31 @@ Only include fields that are clearly present in the document. Return ONLY valid 
       const text = await llmCall(prompt);
       const jsonStr = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
       const data = JSON.parse(jsonStr);
-      // Map entityName to name for client table
       if (data.entityName) { data.name = data.entityName; delete data.entityName; }
-      // Merge with existing client data (only fill nulls/empties)
       const updates: any = {};
       for (const [key, val] of Object.entries(data)) {
         if (val != null && val !== "" && ((client as any)[key] == null || (client as any)[key] === "")) {
           updates[key] = val;
         }
       }
-      // Track document in client's documents list
-      const docs = client.documents ? JSON.parse(client.documents) : [];
-      docs.push({ filename: fileName, uploadedAt: new Date().toISOString(), extractedFields: Object.keys(updates) });
-      updates.documents = JSON.stringify(docs);
       const updated = storage.updateClient(clientId, updates);
-      res.json({ success: true, data: updated, extractedFields: Object.keys(updates).length });
+      // Mark document as analyzed
+      storage.updateProjectDocument(doc.id, {
+        analysisStatus: "completed",
+        aiAnalysis: JSON.stringify(data),
+      });
+      res.json({ success: true, data: updated, extractedFields: Object.keys(updates).length, documentId: doc.id });
     } catch (err: any) {
+      storage.updateProjectDocument(doc.id, { analysisStatus: "failed" });
       res.status(500).json({ error: err.message });
     }
+  });
+
+  // Get client-level documents
+  app.get("/api/clients/:id/documents", (req, res) => {
+    const clientId = parseInt(req.params.id);
+    const documentType = req.query.documentType as string | undefined;
+    res.json(storage.getClientDocuments(clientId, documentType));
   });
 
   // ==================== PROJECTS ====================

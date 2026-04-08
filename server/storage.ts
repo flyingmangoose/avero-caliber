@@ -2478,7 +2478,8 @@ export class DatabaseStorage implements IStorage {
 
   createProjectDocument(data: any): ProjectDocument {
     return db.insert(projectDocuments).values({
-      projectId: data.projectId,
+      projectId: data.projectId ?? null,
+      clientId: data.clientId ?? null,
       fileName: data.fileName,
       fileSize: data.fileSize ?? null,
       mimeType: data.mimeType ?? null,
@@ -2494,13 +2495,32 @@ export class DatabaseStorage implements IStorage {
   }
 
   getProjectDocuments(projectId: number, documentType?: string): ProjectDocument[] {
+    // Get project's own documents + client-level documents
+    const project = db.select().from(projects).where(eq(projects.id, projectId)).get();
+    const clientId = project?.clientId;
+    const conditions: any[] = [eq(projectDocuments.projectId, projectId)];
+    if (clientId) {
+      conditions.push(eq(projectDocuments.clientId, clientId));
+    }
+    let query;
+    if (documentType) {
+      query = db.select().from(projectDocuments)
+        .where(and(or(...conditions), eq(projectDocuments.documentType, documentType)));
+    } else {
+      query = db.select().from(projectDocuments)
+        .where(or(...conditions));
+    }
+    return query.orderBy(desc(projectDocuments.createdAt)).all();
+  }
+
+  getClientDocuments(clientId: number, documentType?: string): ProjectDocument[] {
     if (documentType) {
       return db.select().from(projectDocuments)
-        .where(and(eq(projectDocuments.projectId, projectId), eq(projectDocuments.documentType, documentType)))
+        .where(and(eq(projectDocuments.clientId, clientId), eq(projectDocuments.documentType, documentType)))
         .orderBy(desc(projectDocuments.createdAt)).all();
     }
     return db.select().from(projectDocuments)
-      .where(eq(projectDocuments.projectId, projectId))
+      .where(eq(projectDocuments.clientId, clientId))
       .orderBy(desc(projectDocuments.createdAt)).all();
   }
 
