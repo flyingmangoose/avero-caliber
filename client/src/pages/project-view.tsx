@@ -732,10 +732,21 @@ export default function ProjectView() {
             All Projects
           </Link>
           <h2 className="text-sm font-semibold truncate" data-testid="text-project-name">{project.name}</h2>
-          <div className="flex items-center gap-2 mt-1">
+          <div className="flex items-center gap-2 mt-1 flex-wrap">
             <Badge variant="outline" className="text-[10px] font-semibold uppercase">{project.status}</Badge>
             <span className="text-[10px] text-muted-foreground">{project.stats.totalRequirements} reqs</span>
           </div>
+          {project.engagementModules && (() => {
+            try {
+              const mods: string[] = JSON.parse(project.engagementModules);
+              const labels: Record<string, string> = { selection: "Selection", ivv: "IV&V", health_check: "Health Check" };
+              return mods.length > 0 ? (
+                <div className="flex gap-1 mt-1.5 flex-wrap">
+                  {mods.map(m => <Badge key={m} className="text-[9px] bg-muted text-muted-foreground">{labels[m] || m}</Badge>)}
+                </div>
+              ) : null;
+            } catch { return null; }
+          })()}
         </div>
         <ScrollArea className="flex-1">
           <div className="p-2">

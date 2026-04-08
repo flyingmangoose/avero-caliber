@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -162,6 +162,7 @@ function formatNumber(n: number | null | undefined): string {
 
 export default function Dashboard() {
   const { toast } = useToast();
+  const [, navigate] = useLocation();
 
   // Dialog state
   const [newClientOpen, setNewClientOpen] = useState(false);
@@ -243,12 +244,13 @@ export default function Dashboard() {
       });
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (project: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
-      toast({ title: "Project created" });
+      toast({ title: "Project created", description: project.name });
       setNewProjectOpen(false);
       setProjectName("");
       setProjectModules({ selection: true, ivv: false, health_check: false });
+      navigate(`/projects/${project.id}`);
     },
     onError: (e: any) =>
       toast({ title: "Error creating project", description: e.message, variant: "destructive" }),
