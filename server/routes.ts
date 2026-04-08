@@ -3340,6 +3340,61 @@ Write in professional consulting tone covering: overall posture assessment, key 
         ]),
       });
 
+      storage.createHealthCheckAssessment({
+        projectId, domain: "change_management", overallRating: "critical", assessedBy: "IV&V Assessment Team",
+        summary: "Change management is critically deficient. No Prosci-certified OCM lead despite contractual requirement. Training plan rejected 3 times. No organizational readiness assessment completed.",
+        findings: JSON.stringify([
+          { severity: "critical", finding: "No OCM lead assigned despite contractual requirement for Prosci-certified resource.", evidence: "Contract deliverable tracking log", recommendation: "Require SI to staff qualified OCM lead within 2 weeks or escalate as contract breach" },
+          { severity: "critical", finding: "Training plan rejected 3 times by client. No approved plan exists with UAT 6 weeks away.", evidence: "PMO document review log", recommendation: "Emergency training plan development with client SME co-authorship" },
+          { severity: "high", finding: "No organizational readiness assessment performed. Department-level adoption risks unknown.", evidence: "Stakeholder interviews revealed no readiness activities", recommendation: "Conduct rapid readiness assessment across all impacted departments" },
+        ]),
+      });
+      storage.createHealthCheckAssessment({
+        projectId, domain: "data_migration", overallRating: "high", assessedBy: "IV&V Assessment Team",
+        summary: "Data migration shows significant risk. Mock 2 conversion had 12% error rate on vendor master records. Legacy data quality issues unresolved. No cutover rehearsal scheduled.",
+        findings: JSON.stringify([
+          { severity: "critical", finding: "Mock 2 data conversion showed 12% error rate on vendor master records vs. 2% target.", evidence: "Mock conversion reconciliation report", recommendation: "Root cause analysis required before Mock 3. Do not proceed without <5% error rate." },
+          { severity: "high", finding: "Legacy AP data has 15,000 duplicate vendor records. No cleansing plan in place.", evidence: "Data profiling analysis", recommendation: "Data cleansing sprint needed before next mock conversion" },
+          { severity: "medium", finding: "No cutover rehearsal scheduled. Go-live cutover plan has not been drafted.", evidence: "Project schedule review", recommendation: "Schedule cutover rehearsal minimum 8 weeks before go-live" },
+        ]),
+      });
+      storage.createHealthCheckAssessment({
+        projectId, domain: "testing_quality", overallRating: "critical", assessedBy: "IV&V Assessment Team",
+        summary: "Testing is critically behind. SIT at 34% completion with 2 weeks remaining. 156 open defects with 12 critical. UAT entry criteria cannot be met at current trajectory.",
+        findings: JSON.stringify([
+          { severity: "critical", finding: "SIT execution at 34% with 2 weeks remaining. Current burn rate projects 55% at SIT end.", evidence: "Test management system metrics", recommendation: "Extend SIT by minimum 4 weeks. Establish daily defect triage." },
+          { severity: "critical", finding: "12 critical defects open including payroll calculation errors and GL posting failures.", evidence: "Defect tracker extract", recommendation: "All critical defects must be resolved before UAT entry. No exceptions." },
+          { severity: "high", finding: "No regression test automation. Each fix cycle requires full manual re-test.", evidence: "Test strategy document review", recommendation: "Invest in regression automation for core financial processes" },
+        ]),
+      });
+      storage.createHealthCheckAssessment({
+        projectId, domain: "vendor_performance", overallRating: "high", assessedBy: "IV&V Assessment Team",
+        summary: "SI performance raises concerns. Key resources rotated without notice. Deliverable quality requires multiple revision cycles. SI self-reporting omits material issues.",
+        findings: JSON.stringify([
+          { severity: "high", finding: "SI rotated 3 key technical resources in past 60 days without client notification or transition.", evidence: "Resource tracking and stakeholder interviews", recommendation: "Enforce contract clause requiring 30-day notice for key resource changes" },
+          { severity: "high", finding: "Average deliverable requires 2.8 revision cycles before acceptance. Industry norm is 1.5.", evidence: "Deliverable acceptance log analysis", recommendation: "Implement deliverable quality gates with draft review before formal submission" },
+          { severity: "medium", finding: "SI status reports consistently omit or downgrade material risks identified independently.", evidence: "Compared SI reports to independent findings", recommendation: "Require joint status reporting with IV&V validation" },
+        ]),
+      });
+      storage.createHealthCheckAssessment({
+        projectId, domain: "compliance_security", overallRating: "medium", assessedBy: "IV&V Assessment Team",
+        summary: "Compliance posture is moderate. SOC 2 audit readiness not yet assessed. Data privacy impact assessment pending. Security architecture review shows adequate controls for phase 1.",
+        findings: JSON.stringify([
+          { severity: "high", finding: "No SOC 2 readiness assessment performed despite requirement for post-go-live audit.", evidence: "Compliance requirements matrix", recommendation: "Engage compliance team for SOC 2 gap assessment within 30 days" },
+          { severity: "medium", finding: "Data privacy impact assessment not yet completed for PII handling in new system.", evidence: "Privacy compliance checklist", recommendation: "Complete DPIA before UAT begins to avoid late-stage redesign" },
+          { severity: "low", finding: "Security architecture review shows adequate access controls and encryption for Phase 1 scope.", evidence: "Security architecture review document", recommendation: "Continue monitoring. Plan Phase 2 security enhancements." },
+        ]),
+      });
+      storage.createHealthCheckAssessment({
+        projectId, domain: "scope_requirements", overallRating: "high", assessedBy: "IV&V Assessment Team",
+        summary: "Scope management at risk. 47 change requests submitted, 12 approved without documented impact analysis. Requirements traceability matrix incomplete for 3 modules.",
+        findings: JSON.stringify([
+          { severity: "high", finding: "47 change requests submitted. 12 approved without documented schedule/budget impact analysis.", evidence: "Change request log review", recommendation: "Freeze non-critical CRs. Require impact analysis for all pending requests." },
+          { severity: "high", finding: "Requirements traceability matrix incomplete for Procurement, Inventory, and Asset Management modules.", evidence: "RTM coverage analysis", recommendation: "Complete RTM before UAT entry to ensure all requirements are testable" },
+          { severity: "medium", finding: "3 customizations approved that could have been handled with configuration. Increases long-term maintenance cost.", evidence: "Technical design review", recommendation: "Re-evaluate customizations for configuration alternatives during UAT" },
+        ]),
+      });
+
       // 20 RAID Items
       const raidItems = [
         { type: "risk", title: "Go-live date unrealistic", severity: "critical", status: "open", owner: "Steering Committee", description: "Current October 2026 go-live target is not achievable given SIT delays, defect trajectory, and incomplete integrations.", siReported: 0, siDiscrepancy: null },
@@ -3475,6 +3530,12 @@ Write in professional consulting tone covering: overall posture assessment, key 
       raid: "RAID Log Analysis",
       technical: "Technical Architecture & Quality",
       budget_schedule: "Budget & Schedule Performance",
+      change_management: "Change Management & Adoption",
+      data_migration: "Data Migration & Conversion",
+      testing_quality: "Testing & Quality",
+      vendor_performance: "Vendor/SI Performance",
+      compliance_security: "Compliance & Security",
+      scope_requirements: "Scope & Requirements",
     };
 
     const RATING_LABELS: Record<string, string> = {

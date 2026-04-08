@@ -22,6 +22,12 @@ const DOMAINS = [
   { key: "raid", label: "RAID Log Analysis", icon: "⚠️", desc: "Risks, assumptions, issues, dependencies" },
   { key: "technical", label: "Technical Architecture", icon: "🔧", desc: "Architecture quality, technical debt, integration health" },
   { key: "budget_schedule", label: "Budget & Schedule", icon: "📊", desc: "Budget variance, schedule adherence, resource utilization" },
+  { key: "change_management", label: "Change Management & Adoption", icon: "👥", desc: "Organizational readiness, training, communications, user adoption" },
+  { key: "data_migration", label: "Data Migration & Conversion", icon: "🔄", desc: "Data quality, mapping completeness, conversion testing, cutover readiness" },
+  { key: "testing_quality", label: "Testing & Quality", icon: "🧪", desc: "SIT/UAT progress, defect trends, test coverage, regression status" },
+  { key: "vendor_performance", label: "Vendor/SI Performance", icon: "🤝", desc: "SI delivery quality, resource availability, responsiveness, knowledge transfer" },
+  { key: "compliance_security", label: "Compliance & Security", icon: "🔒", desc: "Regulatory compliance, audit readiness, data privacy, security controls" },
+  { key: "scope_requirements", label: "Scope & Requirements", icon: "📋", desc: "Scope creep tracking, requirements traceability, gap analysis, customization decisions" },
 ];
 
 const RATINGS = ["critical", "high", "medium", "low", "satisfactory"];

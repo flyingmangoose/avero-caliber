@@ -920,10 +920,17 @@ For each category, extract as much as possible:
    - Calculate variance in days if dates are available
 
 4. FINDINGS: Assessment observations
-   - Domain: governance, technical, raid, budget_schedule
+   - Domain: governance, technical, raid, budget_schedule, change_management, data_migration, testing_quality, vendor_performance, compliance_security, scope_requirements
    - Severity: critical, high, medium, low, info
    - Include specific evidence from the document
    - Provide actionable recommendations
+   - Map findings to the most relevant domain:
+     * change_management: training, adoption, communications, organizational readiness
+     * data_migration: data quality, mapping, conversion testing, cutover planning
+     * testing_quality: SIT/UAT, defect trends, test coverage, regression
+     * vendor_performance: SI delivery, resource availability, staffing, knowledge transfer
+     * compliance_security: regulatory, audit, data privacy, security controls
+     * scope_requirements: scope creep, requirements traceability, gap analysis, customizations
 
 5. METRICS: Key numbers mentioned (defect counts, user counts, completion %, SLA adherence, etc.)
 
@@ -1085,30 +1092,16 @@ Return a JSON response with this exact structure:
   "overallHealth": "critical|high|medium|low|satisfactory",
   "executiveSummary": "3-5 sentence executive summary of project health, highlighting the most important issues and trends",
   "domains": [
-    {
-      "domain": "governance",
-      "rating": "critical|high|medium|low|satisfactory",
-      "summary": "2-3 sentence assessment of this domain",
-      "findings": [{"severity": "critical|high|medium|low", "finding": "What was found", "evidence": "Specific evidence from the data", "recommendation": "What to do about it"}]
-    },
-    {
-      "domain": "raid",
-      "rating": "...",
-      "summary": "...",
-      "findings": [...]
-    },
-    {
-      "domain": "technical",
-      "rating": "...",
-      "summary": "...",
-      "findings": [...]
-    },
-    {
-      "domain": "budget_schedule",
-      "rating": "...",
-      "summary": "...",
-      "findings": [...]
-    }
+    {"domain": "governance", "rating": "critical|high|medium|low|satisfactory", "summary": "2-3 sentence assessment", "findings": [{"severity": "...", "finding": "...", "evidence": "...", "recommendation": "..."}]},
+    {"domain": "raid", "rating": "...", "summary": "...", "findings": [...]},
+    {"domain": "technical", "rating": "...", "summary": "...", "findings": [...]},
+    {"domain": "budget_schedule", "rating": "...", "summary": "...", "findings": [...]},
+    {"domain": "change_management", "rating": "...", "summary": "Organizational readiness, training progress, adoption risks", "findings": [...]},
+    {"domain": "data_migration", "rating": "...", "summary": "Data quality, mapping completeness, conversion testing status", "findings": [...]},
+    {"domain": "testing_quality", "rating": "...", "summary": "SIT/UAT progress, defect trends, test coverage", "findings": [...]},
+    {"domain": "vendor_performance", "rating": "...", "summary": "SI delivery quality, resource availability, contract performance", "findings": [...]},
+    {"domain": "compliance_security", "rating": "...", "summary": "Regulatory compliance, audit readiness, security posture", "findings": [...]},
+    {"domain": "scope_requirements", "rating": "...", "summary": "Scope management, requirements coverage, gap analysis status", "findings": [...]}
   ],
   "topRisks": [
     {"title": "Risk title", "severity": "critical|high|medium|low", "impact": "Brief description of potential impact"}
@@ -1119,7 +1112,8 @@ Return a JSON response with this exact structure:
 }
 
 Keep topRisks to the 3-5 most important. Keep recommendedActions to 3-5 prioritized items. Each domain should have 2-5 findings.
-Return ONLY valid JSON.`, undefined, 8192);
+If insufficient data exists for a domain, still include it with rating "low" and a finding noting that more data is needed.
+Return ONLY valid JSON.`, undefined, 16384);
 
   const jsonMatch = text.match(/\{[\s\S]*"overallHealth"[\s\S]*\}/);
   if (!jsonMatch) {
