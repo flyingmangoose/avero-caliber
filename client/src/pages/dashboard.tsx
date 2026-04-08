@@ -199,7 +199,7 @@ export default function Dashboard() {
       });
       const client = await res.json();
       if (enrich && clientDomain.trim()) {
-        await apiRequest("POST", `/api/clients/${client.id}/enrich`);
+        await apiRequest("POST", `/api/clients/${client.id}/enrich`, { domain: clientDomain.trim() });
       }
       return client;
     },
