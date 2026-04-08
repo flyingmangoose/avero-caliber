@@ -68,8 +68,23 @@ export default function ClientProfilePage() {
   });
 
   const saveMutation = useMutation({
-    mutationFn: (data: any) => apiRequest("POST", `/api/projects/${projectId}/org-profile`, data).then(r => r.json()),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["/api/projects", projectId, "org-profile"] }),
+    mutationFn: (data: any) => {
+      if (isClientRoute) {
+        // Map org-profile field names to client table field names
+        const mapped: any = { ...data };
+        if ('entityName' in mapped) { mapped.name = mapped.entityName; delete mapped.entityName; }
+        return apiRequest("PATCH", `/api/clients/${projectId}`, mapped).then(r => r.json());
+      }
+      return apiRequest("POST", `/api/projects/${projectId}/org-profile`, data).then(r => r.json());
+    },
+    onSuccess: () => {
+      if (isClientRoute) {
+        qc.invalidateQueries({ queryKey: ["/api/clients", projectId] });
+        qc.invalidateQueries({ queryKey: ["/api/clients"] });
+      } else {
+        qc.invalidateQueries({ queryKey: ["/api/projects", projectId, "org-profile"] });
+      }
+    },
   });
 
   // Re-enrich dialog
@@ -77,11 +92,22 @@ export default function ClientProfilePage() {
   const [enrichDomain, setEnrichDomain] = useState("");
   const enrichMutation = useMutation({
     mutationFn: async (domain: string) => {
+      if (isClientRoute) {
+        const res = await apiRequest("POST", `/api/clients/${projectId}/enrich`, { domain });
+        return res.json();
+      }
       const res = await apiRequest("POST", "/api/research-domain", { domain });
       return res.json();
     },
     onSuccess: (result) => {
       if (!result.success) { toast({ title: "Enrichment failed", variant: "destructive" }); return; }
+      if (isClientRoute) {
+        qc.invalidateQueries({ queryKey: ["/api/clients", projectId] });
+        qc.invalidateQueries({ queryKey: ["/api/clients"] });
+        toast({ title: "Client profile enriched" });
+        setEnrichOpen(false);
+        return;
+      }
       const d = result.data;
       const current = profile || {} as any;
       let updatedCount = 0;
