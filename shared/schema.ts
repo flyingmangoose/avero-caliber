@@ -601,6 +601,7 @@ export const projectDocuments = sqliteTable("project_documents", {
   aiAnalysis: text("ai_analysis"), // JSON: structured extraction results
   analysisStatus: text("analysis_status").default("pending"), // pending, processing, completed, failed
   extractedItems: text("extracted_items"), // JSON: { raids: [], budgetItems: [], scheduleItems: [], findings: [], metrics: {} }
+  appliedAt: text("applied_at"), // ISO timestamp when items were applied to health check; null = not yet applied
   period: text("period"), // e.g. "Week ending 2026-03-28" or "Q1 2026"
   uploadedBy: text("uploaded_by"),
   createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),

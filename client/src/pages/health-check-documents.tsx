@@ -37,6 +37,7 @@ interface ProjectDocument {
   aiAnalysis: string | null;
   analysisStatus: string;
   extractedItems: string | null;
+  appliedAt: string | null;
   period: string | null;
   createdAt: string;
 }
@@ -221,16 +222,19 @@ function DocumentRow({
           {/* Detailed sections */}
           <ExtractedDetails analysis={analysis} />
 
-          {/* Apply result feedback */}
-          {applyResult && (
+          {/* Applied status indicator */}
+          {(applyResult || doc.appliedAt) && (
             <div className="flex items-center gap-2 text-xs text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 rounded p-2">
               <Check className="w-3.5 h-3.5 shrink-0" />
-              Applied: {applyResult.applied.raids?.length ?? 0} RAID, {applyResult.applied.budgetItems?.length ?? 0} budget, {applyResult.applied.scheduleItems?.length ?? 0} schedule, {applyResult.applied.findings?.length ?? 0} findings
+              {applyResult
+                ? <>Applied: {applyResult.applied.raids ?? 0} RAID, {applyResult.applied.budgetItems ?? 0} budget, {applyResult.applied.scheduleItems ?? 0} schedule, {applyResult.applied.findings ?? 0} findings</>
+                : <>Applied on {formatDate(doc.appliedAt!)}</>
+              }
             </div>
           )}
 
-          {/* Apply button */}
-          {hasItems && (
+          {/* Apply button — only if not already applied */}
+          {hasItems && !doc.appliedAt && !applyResult && (
             <Button
               size="sm"
               className="bg-[#1a2744] hover:bg-[#243460] text-white text-xs gap-1.5"
@@ -421,9 +425,10 @@ export function DocumentsTab({ projectId }: { projectId: number }) {
         fd.append("file", selectedFile);
         fd.append("documentType", documentType);
         if (period) fd.append("period", period);
-        const uploadRes = await fetch(`__PORT_5000__/api/projects/${projectId}/documents/upload`.replace(/__PORT_5000__/g, ""), {
+        const uploadRes = await fetch(`/api/projects/${projectId}/documents/upload`, {
           method: "POST",
           body: fd,
+          credentials: "same-origin",
         });
         if (!uploadRes.ok) {
           const err = await uploadRes.json().catch(() => ({ error: "Upload failed" }));

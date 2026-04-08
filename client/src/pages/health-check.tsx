@@ -11,8 +11,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Stethoscope, ChevronLeft, Plus, Trash2, Edit2, Loader2, AlertTriangle, DollarSign, Calendar, Sparkles, FileText } from "lucide-react";
 import { DocumentsTab } from "./health-check-documents";
 
@@ -39,14 +40,36 @@ const SCHEDULE_STATUSES = ["on_track", "at_risk", "delayed", "completed"];
 const BUDGET_CATEGORIES = ["original_contract", "change_order", "additional_funding", "actual_spend"];
 
 type AssessmentForm = { domain: string; overallRating: string; summary: string; findings: string; assessedBy: string };
-type RaidForm = { type: string; title: string; description: string; severity: string; owner: string };
+type RaidForm = { type: string; title: string; description: string; severity: string; status: string; owner: string };
 type BudgetForm = { category: string; description: string; amount: string; date: string; notes: string };
 type ScheduleForm = { milestone: string; originalDate: string; currentDate: string; status: string; notes: string };
 
 const emptyAssessment = (): AssessmentForm => ({ domain: "", overallRating: "", summary: "", findings: "", assessedBy: "" });
-const emptyRaid = (): RaidForm => ({ type: "risk", title: "", description: "", severity: "medium", owner: "" });
+const emptyRaid = (): RaidForm => ({ type: "risk", title: "", description: "", severity: "medium", status: "open", owner: "" });
 const emptyBudget = (): BudgetForm => ({ category: "actual_spend", description: "", amount: "", date: "", notes: "" });
 const emptySchedule = (): ScheduleForm => ({ milestone: "", originalDate: "", currentDate: "", status: "on_track", notes: "" });
+
+// Helper to render findings that may be JSON or plain text
+function renderFindings(findings: string | null | undefined): string {
+  if (!findings) return "";
+  try {
+    const parsed = JSON.parse(findings);
+    if (Array.isArray(parsed)) {
+      return parsed.map((f: any) => {
+        if (typeof f === "string") return f;
+        const parts: string[] = [];
+        if (f.finding) parts.push(f.finding);
+        if (f.severity) parts.push(`[${f.severity}]`);
+        if (f.evidence) parts.push(`Evidence: ${f.evidence}`);
+        if (f.recommendation) parts.push(`Recommendation: ${f.recommendation}`);
+        return parts.join(" — ");
+      }).join("\n\n");
+    }
+    return findings;
+  } catch {
+    return findings;
+  }
+}
 
 export default function HealthCheckPage() {
   const { id } = useParams<{ id: string }>();
@@ -55,8 +78,9 @@ export default function HealthCheckPage() {
 
   const [assessDialog, setAssessDialog] = useState<{ open: boolean; editId?: number; form: AssessmentForm }>({ open: false, form: emptyAssessment() });
   const [raidDialog, setRaidDialog] = useState<{ open: boolean; editId?: number; form: RaidForm }>({ open: false, form: emptyRaid() });
-  const [budgetDialog, setBudgetDialog] = useState<{ open: boolean; form: BudgetForm }>({ open: false, form: emptyBudget() });
-  const [scheduleDialog, setScheduleDialog] = useState<{ open: boolean; form: ScheduleForm }>({ open: false, form: emptySchedule() });
+  const [budgetDialog, setBudgetDialog] = useState<{ open: boolean; editId?: number; form: BudgetForm }>({ open: false, form: emptyBudget() });
+  const [scheduleDialog, setScheduleDialog] = useState<{ open: boolean; editId?: number; form: ScheduleForm }>({ open: false, form: emptySchedule() });
+  const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; type: string; id: number; label: string }>({ open: false, type: "", id: 0, label: "" });
 
   const { data: project } = useQuery<any>({ queryKey: ["/api/projects", projectId], queryFn: () => apiRequest("GET", `/api/projects/${projectId}`).then(r => r.json()), enabled: !!projectId });
   const { data: assessments = [] } = useQuery<any[]>({ queryKey: ["/api/projects", projectId, "hc-assessments"], queryFn: () => apiRequest("GET", `/api/projects/${projectId}/health-check/assessments`).then(r => r.json()), enabled: !!projectId });
@@ -100,8 +124,11 @@ export default function HealthCheckPage() {
   });
 
   const saveBudget = useMutation({
-    mutationFn: (d: any) => apiRequest("POST", `/api/projects/${projectId}/budget`, d).then(r => r.json()),
-    onSuccess: () => { invalidateAll(); setBudgetDialog({ open: false, form: emptyBudget() }); toast({ title: "Budget entry added" }); },
+    mutationFn: (d: any) => {
+      if (budgetDialog.editId) return apiRequest("PATCH", `/api/budget/${budgetDialog.editId}`, d).then(r => r.json());
+      return apiRequest("POST", `/api/projects/${projectId}/budget`, d).then(r => r.json());
+    },
+    onSuccess: () => { invalidateAll(); setBudgetDialog({ open: false, form: emptyBudget() }); toast({ title: "Budget entry saved" }); },
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
@@ -111,8 +138,11 @@ export default function HealthCheckPage() {
   });
 
   const saveSchedule = useMutation({
-    mutationFn: (d: any) => apiRequest("POST", `/api/projects/${projectId}/schedule`, d).then(r => r.json()),
-    onSuccess: () => { invalidateAll(); setScheduleDialog({ open: false, form: emptySchedule() }); toast({ title: "Milestone added" }); },
+    mutationFn: (d: any) => {
+      if (scheduleDialog.editId) return apiRequest("PATCH", `/api/schedule/${scheduleDialog.editId}`, d).then(r => r.json());
+      return apiRequest("POST", `/api/projects/${projectId}/schedule`, d).then(r => r.json());
+    },
+    onSuccess: () => { invalidateAll(); setScheduleDialog({ open: false, form: emptySchedule() }); toast({ title: "Milestone saved" }); },
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
@@ -121,6 +151,19 @@ export default function HealthCheckPage() {
     onSuccess: () => { invalidateAll(); toast({ title: "Deleted" }); },
   });
 
+  function confirmDelete(type: string, id: number, label: string) {
+    setDeleteConfirm({ open: true, type, id, label });
+  }
+
+  function executeDelete() {
+    const { type, id } = deleteConfirm;
+    if (type === "assessment") deleteAssessment.mutate(id);
+    else if (type === "raid") deleteRaid.mutate(id);
+    else if (type === "budget") deleteBudget.mutate(id);
+    else if (type === "schedule") deleteSchedule.mutate(id);
+    setDeleteConfirm({ open: false, type: "", id: 0, label: "" });
+  }
+
   const assessmentMap = Object.fromEntries(assessments.map((a: any) => [a.domain, a]));
   const budgetEntries = budgetData?.entries || [];
   const budgetSummary = budgetData?.summary || { originalContract: 0, totalChangeOrders: 0, totalAdditionalFunding: 0, totalActualSpend: 0, variance: 0 };
@@ -128,14 +171,22 @@ export default function HealthCheckPage() {
   function openAssessDialog(domain: string) {
     const existing = assessmentMap[domain];
     if (existing) {
-      setAssessDialog({ open: true, editId: existing.id, form: { domain, overallRating: existing.overallRating || "", summary: existing.summary || "", findings: existing.findings || "", assessedBy: existing.assessedBy || "" } });
+      setAssessDialog({ open: true, editId: existing.id, form: { domain, overallRating: existing.overallRating || "", summary: existing.summary || "", findings: renderFindings(existing.findings), assessedBy: existing.assessedBy || "" } });
     } else {
       setAssessDialog({ open: true, form: { ...emptyAssessment(), domain } });
     }
   }
 
   function openRaidEdit(item: any) {
-    setRaidDialog({ open: true, editId: item.id, form: { type: item.type, title: item.title, description: item.description || "", severity: item.severity || "medium", owner: item.owner || "" } });
+    setRaidDialog({ open: true, editId: item.id, form: { type: item.type, title: item.title, description: item.description || "", severity: item.severity || "medium", status: item.status || "open", owner: item.owner || "" } });
+  }
+
+  function openBudgetEdit(item: any) {
+    setBudgetDialog({ open: true, editId: item.id, form: { category: item.category || "actual_spend", description: item.description || "", amount: String(item.amount || 0), date: item.date || "", notes: item.notes || "" } });
+  }
+
+  function openScheduleEdit(item: any) {
+    setScheduleDialog({ open: true, editId: item.id, form: { milestone: item.milestone || "", originalDate: item.originalDate || "", currentDate: item.currentDate || "", status: item.status || "on_track", notes: item.notes || "" } });
   }
 
   return (
@@ -230,7 +281,7 @@ export default function HealthCheckPage() {
                         <TableCell>
                           <div className="flex gap-1">
                             <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => openRaidEdit(item)} data-testid={`edit-raid-${item.id}`}><Edit2 className="w-3 h-3" /></Button>
-                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-destructive" onClick={() => deleteRaid.mutate(item.id)} data-testid={`delete-raid-${item.id}`}><Trash2 className="w-3 h-3" /></Button>
+                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-destructive" onClick={() => confirmDelete("raid", item.id, item.title)} data-testid={`delete-raid-${item.id}`}><Trash2 className="w-3 h-3" /></Button>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -274,7 +325,7 @@ export default function HealthCheckPage() {
                         <TableHead className="text-xs">Category</TableHead>
                         <TableHead className="text-xs">Description</TableHead>
                         <TableHead className="text-xs text-right">Amount</TableHead>
-                        <TableHead className="text-xs w-12"></TableHead>
+                        <TableHead className="text-xs w-16"></TableHead>
                       </TableRow></TableHeader>
                       <TableBody>
                         {budgetEntries.map((e: any) => (
@@ -282,7 +333,12 @@ export default function HealthCheckPage() {
                             <TableCell><Badge variant="outline" className="text-[10px]">{e.category?.replace(/_/g, " ")}</Badge></TableCell>
                             <TableCell className="text-xs">{e.description}</TableCell>
                             <TableCell className="text-xs text-right font-mono">${Number(e.amount || 0).toLocaleString()}</TableCell>
-                            <TableCell><Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-destructive" onClick={() => deleteBudget.mutate(e.id)}><Trash2 className="w-3 h-3" /></Button></TableCell>
+                            <TableCell>
+                              <div className="flex gap-1">
+                                <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => openBudgetEdit(e)} data-testid={`edit-budget-${e.id}`}><Edit2 className="w-3 h-3" /></Button>
+                                <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-destructive" onClick={() => confirmDelete("budget", e.id, e.description)} data-testid={`delete-budget-${e.id}`}><Trash2 className="w-3 h-3" /></Button>
+                              </div>
+                            </TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
@@ -307,7 +363,7 @@ export default function HealthCheckPage() {
                         <TableHead className="text-xs">Original</TableHead>
                         <TableHead className="text-xs">Current</TableHead>
                         <TableHead className="text-xs">Status</TableHead>
-                        <TableHead className="text-xs w-12"></TableHead>
+                        <TableHead className="text-xs w-16"></TableHead>
                       </TableRow></TableHeader>
                       <TableBody>
                         {scheduleItems.map((s: any) => (
@@ -320,7 +376,12 @@ export default function HealthCheckPage() {
                                 {s.status?.replace(/_/g, " ")}
                               </Badge>
                             </TableCell>
-                            <TableCell><Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-destructive" onClick={() => deleteSchedule.mutate(s.id)}><Trash2 className="w-3 h-3" /></Button></TableCell>
+                            <TableCell>
+                              <div className="flex gap-1">
+                                <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => openScheduleEdit(s)} data-testid={`edit-schedule-${s.id}`}><Edit2 className="w-3 h-3" /></Button>
+                                <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-destructive" onClick={() => confirmDelete("schedule", s.id, s.milestone)} data-testid={`delete-schedule-${s.id}`}><Trash2 className="w-3 h-3" /></Button>
+                              </div>
+                            </TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
@@ -377,12 +438,21 @@ export default function HealthCheckPage() {
         <DialogContent data-testid="dialog-raid">
           <DialogHeader><DialogTitle className="text-sm">{raidDialog.editId ? "Edit" : "Add"} RAID Item</DialogTitle></DialogHeader>
           <div className="space-y-3">
-            <div>
-              <label className="text-xs text-muted-foreground">Type</label>
-              <Select value={raidDialog.form.type} onValueChange={v => setRaidDialog(p => ({ ...p, form: { ...p.form, type: v } }))}>
-                <SelectTrigger className="h-8 text-xs" data-testid="select-raid-type"><SelectValue /></SelectTrigger>
-                <SelectContent>{RAID_TYPES.map(t => <SelectItem key={t} value={t} className="text-xs capitalize">{t}</SelectItem>)}</SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs text-muted-foreground">Type</label>
+                <Select value={raidDialog.form.type} onValueChange={v => setRaidDialog(p => ({ ...p, form: { ...p.form, type: v } }))}>
+                  <SelectTrigger className="h-8 text-xs" data-testid="select-raid-type"><SelectValue /></SelectTrigger>
+                  <SelectContent>{RAID_TYPES.map(t => <SelectItem key={t} value={t} className="text-xs capitalize">{t}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">Status</label>
+                <Select value={raidDialog.form.status} onValueChange={v => setRaidDialog(p => ({ ...p, form: { ...p.form, status: v } }))}>
+                  <SelectTrigger className="h-8 text-xs" data-testid="select-raid-status"><SelectValue /></SelectTrigger>
+                  <SelectContent>{STATUSES.map(s => <SelectItem key={s} value={s} className="text-xs capitalize">{s}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
             </div>
             <div>
               <label className="text-xs text-muted-foreground">Title</label>
@@ -418,7 +488,7 @@ export default function HealthCheckPage() {
       {/* Budget Dialog */}
       <Dialog open={budgetDialog.open} onOpenChange={o => !o && setBudgetDialog({ open: false, form: emptyBudget() })}>
         <DialogContent data-testid="dialog-budget">
-          <DialogHeader><DialogTitle className="text-sm">Add Budget Entry</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle className="text-sm">{budgetDialog.editId ? "Edit" : "Add"} Budget Entry</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div>
               <label className="text-xs text-muted-foreground">Category</label>
@@ -441,6 +511,10 @@ export default function HealthCheckPage() {
                 <Input type="date" className="h-8 text-xs" value={budgetDialog.form.date} onChange={e => setBudgetDialog(p => ({ ...p, form: { ...p.form, date: e.target.value } }))} data-testid="input-budget-date" />
               </div>
             </div>
+            <div>
+              <label className="text-xs text-muted-foreground">Notes</label>
+              <Input className="h-8 text-xs" value={budgetDialog.form.notes} onChange={e => setBudgetDialog(p => ({ ...p, form: { ...p.form, notes: e.target.value } }))} data-testid="input-budget-notes" />
+            </div>
           </div>
           <DialogFooter>
             <Button size="sm" className="bg-[#d4a853] hover:bg-[#c49843] text-white text-xs" disabled={saveBudget.isPending}
@@ -454,7 +528,7 @@ export default function HealthCheckPage() {
       {/* Schedule Dialog */}
       <Dialog open={scheduleDialog.open} onOpenChange={o => !o && setScheduleDialog({ open: false, form: emptySchedule() })}>
         <DialogContent data-testid="dialog-schedule">
-          <DialogHeader><DialogTitle className="text-sm">Add Schedule Milestone</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle className="text-sm">{scheduleDialog.editId ? "Edit" : "Add"} Schedule Milestone</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div>
               <label className="text-xs text-muted-foreground">Milestone</label>
@@ -490,6 +564,22 @@ export default function HealthCheckPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteConfirm.open} onOpenChange={o => !o && setDeleteConfirm({ open: false, type: "", id: 0, label: "" })}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-sm">Delete {deleteConfirm.type}?</AlertDialogTitle>
+            <AlertDialogDescription className="text-xs">
+              This will permanently delete "{deleteConfirm.label}". This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="text-xs h-8">Cancel</AlertDialogCancel>
+            <AlertDialogAction className="text-xs h-8 bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={executeDelete}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

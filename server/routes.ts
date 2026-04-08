@@ -3818,6 +3818,7 @@ Write in professional consulting tone covering: overall posture assessment, key 
     const docId = parseInt(req.params.docId);
     const doc = storage.getProjectDocument(docId);
     if (!doc || !doc.extractedItems) return res.status(400).json({ error: "No extracted items" });
+    if (doc.appliedAt) return res.status(409).json({ error: "Items from this document have already been applied", appliedAt: doc.appliedAt });
 
     const items = JSON.parse(doc.extractedItems);
     const applied = { raids: 0, budgetItems: 0, scheduleItems: 0, findings: 0 };
@@ -3886,6 +3887,9 @@ Write in professional consulting tone covering: overall posture assessment, key 
       });
       applied.findings += findings.length;
     }
+
+    // Mark document as applied to prevent duplicate applies
+    storage.updateProjectDocument(docId, { appliedAt: new Date().toISOString() });
 
     res.json({ success: true, applied });
   });

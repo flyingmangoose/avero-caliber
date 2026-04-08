@@ -104,6 +104,13 @@ export function buildProjectContext(projectId: number): string {
   const workshopSummary = storage.getWorkshopSummary(projectId);
   const customCriteriaData = storage.getCustomCriteria(projectId);
 
+  // Discovery & client context
+  const client = project.clientId ? storage.getClient(project.clientId) : undefined;
+  const orgProfileData = storage.getOrgProfile(projectId);
+  const painPoints = storage.getPainPoints(projectId);
+  const interviews = storage.getDiscoveryInterviews(projectId);
+  const transformations = storage.getProcessTransformations(projectId);
+
   // Module breakdown
   const moduleGroups: Record<string, { total: number; critical: number; desired: number }> = {};
   for (const req of reqs) {
@@ -127,8 +134,90 @@ export function buildProjectContext(projectId: number): string {
   let context = `PROJECT: ${project.name}
 Description: ${project.description || "N/A"}
 Status: ${project.status}
+Engagement Modules: ${project.engagementModules || "N/A"}
 Created: ${project.createdAt}
+`;
 
+  // Client/Organization context
+  if (client) {
+    context += `\nCLIENT ORGANIZATION:
+- Name: ${client.name}
+- Entity Type: ${client.entityType || "Unknown"}
+- State: ${client.state || "Unknown"}
+- Population: ${client.population ? client.population.toLocaleString() : "Unknown"}
+- Employees: ${client.employeeCount ? client.employeeCount.toLocaleString() : "Unknown"}
+- Annual Budget: ${client.annualBudget || "Unknown"}
+- Description: ${client.description || "N/A"}
+- Pain Summary: ${client.painSummary || "N/A"}
+`;
+    try {
+      const systems = client.currentSystems ? JSON.parse(client.currentSystems) : [];
+      if (systems.length > 0) {
+        context += `Current Systems:\n`;
+        for (const sys of systems) {
+          context += `  - ${sys.name || sys.vendor || "Unknown"}: ${sys.module || ""} (${sys.yearsInUse ? sys.yearsInUse + " years" : "unknown tenure"})\n`;
+        }
+      }
+    } catch {}
+    try {
+      const depts = client.departments ? JSON.parse(client.departments) : [];
+      if (depts.length > 0) {
+        context += `Departments: ${depts.map((d: any) => `${d.name}${d.headcount ? ` (${d.headcount})` : ""}`).join(", ")}\n`;
+      }
+    } catch {}
+  }
+
+  // Org profile from discovery
+  if (orgProfileData) {
+    context += `\nORGANIZATION PROFILE (from discovery):
+- Entity: ${orgProfileData.entityName || client?.name || "N/A"} (${orgProfileData.entityType || "Unknown"})
+- State: ${orgProfileData.state || "Unknown"}
+- Population: ${orgProfileData.population ? orgProfileData.population.toLocaleString() : "Unknown"}
+- Employees: ${orgProfileData.employeeCount ? orgProfileData.employeeCount.toLocaleString() : "Unknown"}
+- Annual Budget: ${orgProfileData.annualBudget || "Unknown"}
+- Pain Summary: ${orgProfileData.painSummary || "N/A"}
+`;
+  }
+
+  // Discovery pain points
+  if (painPoints.length > 0) {
+    context += `\nDISCOVERY PAIN POINTS (${painPoints.length} identified):\n`;
+    for (const pp of painPoints.slice(0, 15)) {
+      context += `- [${pp.functionalArea}] ${pp.description}`;
+      if (pp.severity) context += ` (severity: ${pp.severity})`;
+      if (pp.impact) context += ` — Impact: ${pp.impact}`;
+      if (pp.currentWorkaround) context += ` — Workaround: ${pp.currentWorkaround}`;
+      context += `\n`;
+    }
+    if (painPoints.length > 15) context += `  ... and ${painPoints.length - 15} more pain points\n`;
+  }
+
+  // Discovery interviews - extracted findings
+  if (interviews.length > 0) {
+    const interviewsWithFindings = interviews.filter(i => i.findings);
+    if (interviewsWithFindings.length > 0) {
+      context += `\nDISCOVERY INTERVIEW FINDINGS (${interviewsWithFindings.length} interviews):\n`;
+      for (const interview of interviewsWithFindings.slice(0, 10)) {
+        context += `- ${interview.functionalArea}`;
+        if (interview.interviewee) context += ` (${interview.interviewee}${interview.role ? `, ${interview.role}` : ""})`;
+        context += `: ${interview.findings?.substring(0, 200) || "No findings extracted"}\n`;
+      }
+    }
+  }
+
+  // Process transformations
+  if (transformations.length > 0) {
+    context += `\nPROCESS TRANSFORMATIONS (${transformations.length} areas analyzed):\n`;
+    for (const t of transformations.slice(0, 10)) {
+      context += `- ${t.functionalArea} (${t.vendorPlatform}):`;
+      if (t.currentManualSteps != null) context += ` Current: ${t.currentStepCount || "?"} steps (${t.currentManualSteps} manual)`;
+      if (t.futureStepCount != null) context += ` → Future: ${t.futureStepCount} steps`;
+      if (t.currentDescription) context += ` | Current: ${t.currentDescription.substring(0, 100)}`;
+      context += `\n`;
+    }
+  }
+
+  context += `
 REQUIREMENTS SUMMARY:
 - Total: ${stats.totalRequirements}
 - Critical: ${stats.criticalCount}
