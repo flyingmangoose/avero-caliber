@@ -67,9 +67,12 @@ function AppLayout() {
 }
 
 function AuthGate() {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     queryKey: ["/auth/me"],
-    queryFn: () => fetch("/auth/me").then(r => r.json()),
+    queryFn: () => fetch("/auth/me").then(r => {
+      if (!r.ok) return { authRequired: false }; // treat errors as no-auth mode
+      return r.json();
+    }),
     retry: false,
     staleTime: 5 * 60 * 1000,
   });
@@ -82,11 +85,9 @@ function AuthGate() {
     );
   }
 
-  // data is null when no user is logged in
-  // data is { authRequired: false } when Google OAuth is not configured (dev mode)
-  // data is { id, name, ... } when user is logged in
-  // Show login only if data is null (auth configured but not logged in)
-  if (data === null) {
+  // Show login ONLY when auth is configured AND user is not logged in (data is strictly null)
+  // Any error, undefined, or { authRequired: false } → skip login
+  if (data === null && !isError) {
     return <LoginPage />;
   }
 
