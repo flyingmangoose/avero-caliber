@@ -160,12 +160,13 @@ function DocumentRow({
   return (
     <div className="border border-border/50 rounded-lg overflow-hidden">
       {/* Row header */}
-      <div className="flex items-center gap-3 px-4 py-3 bg-card hover:bg-muted/30 transition-colors">
-        <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
-
-        <div className="flex-1 min-w-0">
-          <p className="text-xs font-medium truncate">{doc.fileName}</p>
-          {doc.period && <p className="text-[10px] text-muted-foreground">{doc.period}</p>}
+      <div className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-3 items-center px-4 py-3 bg-card hover:bg-muted/30 transition-colors">
+        <div className="flex items-center gap-2 min-w-0">
+          <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
+          <div className="min-w-0">
+            <p className="text-xs font-medium truncate">{doc.fileName}</p>
+            {doc.period && <p className="text-[10px] text-muted-foreground">{doc.period}</p>}
+          </div>
         </div>
 
         <Badge className={`text-[10px] shrink-0 ${typeInfo.color}`}>{typeInfo.label}</Badge>
@@ -410,7 +411,7 @@ function Collapsible({
 
 // ─── Main DocumentsTab component ─────────────────────────────────────────────
 
-export function DocumentsTab({ projectId }: { projectId: number }) {
+export function DocumentsTab({ projectId, onApplyComplete }: { projectId: number; onApplyComplete?: () => void }) {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -694,6 +695,7 @@ export function DocumentsTab({ projectId }: { projectId: number }) {
                     queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "budget"] });
                     queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "schedule"] });
                     queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "hc-assessments"] });
+                    onApplyComplete?.();
                   }}
                 />
               ))}

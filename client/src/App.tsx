@@ -24,6 +24,7 @@ import NotFound from "@/pages/not-found";
 import WorkshopView from "@/pages/workshop";
 import Portfolio from "@/pages/portfolio";
 import VendorMonitoringPage from "@/pages/vendor-monitoring";
+import AboutPage from "@/pages/about";
 
 const sidebarStyle = {
   "--sidebar-width": "18rem",
@@ -54,6 +55,7 @@ function AppLayout() {
               <Route path="/templates" component={TemplateLibrary} />
               <Route path="/knowledge-base" component={KnowledgeBasePage} />
               <Route path="/vendor-monitoring" component={VendorMonitoringPage} />
+              <Route path="/about" component={AboutPage} />
               <Route component={NotFound} />
             </Switch>
           </main>

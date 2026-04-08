@@ -37,6 +37,7 @@ import {
   type VendorChange, vendorChanges,
   type MonitoringAlert, monitoringAlerts,
   type ProjectBaseline, projectBaselines,
+  type AssessmentHistory, assessmentHistory,
 } from "@shared/schema";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import Database from "better-sqlite3";
@@ -335,6 +336,16 @@ sqlite.exec(`
     status TEXT DEFAULT 'on_track',
     variance_days INTEGER,
     notes TEXT,
+    created_at TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS assessment_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    domain TEXT NOT NULL,
+    previous_rating TEXT NOT NULL,
+    new_rating TEXT NOT NULL,
+    changed_by TEXT,
     created_at TEXT NOT NULL
   );
 
@@ -674,6 +685,10 @@ export interface IStorage {
   getScheduleEntries(projectId: number): ScheduleTracking[];
   updateScheduleEntry(id: number, data: Partial<{ milestone: string; originalDate: string | null; currentDate: string | null; actualDate: string | null; status: string; varianceDays: number | null; notes: string | null }>): ScheduleTracking | undefined;
   deleteScheduleEntry(id: number): void;
+
+  // Assessment History
+  createAssessmentHistory(data: { projectId: number; domain: string; previousRating: string; newRating: string; changedBy?: string }): AssessmentHistory;
+  getAssessmentHistory(projectId: number, domain?: string): AssessmentHistory[];
 
   // Project Baseline (Contract/SOW)
   getProjectBaseline(projectId: number): ProjectBaseline | undefined;
@@ -2225,6 +2240,32 @@ export class DatabaseStorage implements IStorage {
 
   deleteScheduleEntry(id: number): void {
     db.delete(scheduleTracking).where(eq(scheduleTracking.id, id)).run();
+  }
+
+  // ==================== ASSESSMENT HISTORY ====================
+
+  createAssessmentHistory(data: { projectId: number; domain: string; previousRating: string; newRating: string; changedBy?: string }): AssessmentHistory {
+    return db.insert(assessmentHistory).values({
+      projectId: data.projectId,
+      domain: data.domain,
+      previousRating: data.previousRating,
+      newRating: data.newRating,
+      changedBy: data.changedBy || null,
+      createdAt: new Date().toISOString(),
+    }).returning().get();
+  }
+
+  getAssessmentHistory(projectId: number, domain?: string): AssessmentHistory[] {
+    if (domain) {
+      return db.select().from(assessmentHistory)
+        .where(and(eq(assessmentHistory.projectId, projectId), eq(assessmentHistory.domain, domain)))
+        .orderBy(desc(assessmentHistory.createdAt))
+        .all();
+    }
+    return db.select().from(assessmentHistory)
+      .where(eq(assessmentHistory.projectId, projectId))
+      .orderBy(desc(assessmentHistory.createdAt))
+      .all();
   }
 
   // ==================== PROJECT BASELINE (CONTRACT/SOW) ====================

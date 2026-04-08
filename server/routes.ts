@@ -3552,6 +3552,9 @@ Write in professional consulting tone covering: overall posture assessment, key 
           assessedBy: "AI Synthesis",
         };
         if (existing) {
+          if (existing.overallRating && existing.overallRating !== domainResult.rating) {
+            storage.createAssessmentHistory({ projectId, domain: domainResult.domain, previousRating: existing.overallRating, newRating: domainResult.rating, changedBy: "AI Synthesis" });
+          }
           storage.updateHealthCheckAssessment(existing.id, assessmentData);
         } else {
           storage.createHealthCheckAssessment({ projectId, ...assessmentData });
@@ -3563,6 +3566,15 @@ Write in professional consulting tone covering: overall posture assessment, key 
       console.error("Health check synthesis error:", err);
       res.status(500).json({ error: "Synthesis failed: " + (err.message || "Unknown error") });
     }
+  });
+
+  // ==================== ASSESSMENT HISTORY ====================
+
+  app.get("/api/projects/:id/health-check/history", (req, res) => {
+    const projectId = parseInt(req.params.id);
+    const domain = req.query.domain as string | undefined;
+    const history = storage.getAssessmentHistory(projectId, domain);
+    res.json(history);
   });
 
   // ==================== PROJECT BASELINE (CONTRACT/SOW) ====================
@@ -3949,7 +3961,8 @@ Write in professional consulting tone covering: overall posture assessment, key 
       applied.scheduleItems++;
     }
 
-    // Apply findings as assessments
+    // Apply findings as assessments (upsert — append to existing, don't create duplicates)
+    const existingAssessments = storage.getHealthCheckAssessments(projectId);
     const findingsByDomain: Record<string, any[]> = {};
     for (const f of (items.findings || [])) {
       const domain = f.domain || "governance";
@@ -3961,14 +3974,39 @@ Write in professional consulting tone covering: overall posture assessment, key 
         const order = ["critical", "high", "medium", "low", "satisfactory"];
         return order.indexOf(f.severity) < order.indexOf(worst) ? f.severity : worst;
       }, "satisfactory");
-      storage.createHealthCheckAssessment({
-        projectId,
-        domain,
-        overallRating: worstSeverity,
-        findings: JSON.stringify(findings),
-        summary: findings.map((f: any) => f.finding).join(". "),
-        assessedBy: `AI Analysis - ${doc.fileName}`,
-      });
+
+      const existing = existingAssessments.find(a => a.domain === domain);
+      if (existing) {
+        // Append new findings to existing ones
+        let existingFindings: any[] = [];
+        try { existingFindings = existing.findings ? JSON.parse(existing.findings) : []; } catch {}
+        const mergedFindings = [...existingFindings, ...findings];
+        // Recalculate worst severity across all findings
+        const mergedWorst = mergedFindings.reduce((worst: string, f: any) => {
+          const order = ["critical", "high", "medium", "low", "satisfactory"];
+          return order.indexOf(f.severity) < order.indexOf(worst) ? f.severity : worst;
+        }, "satisfactory");
+        const previousRating = existing.overallRating;
+        storage.updateHealthCheckAssessment(existing.id, {
+          overallRating: mergedWorst,
+          findings: JSON.stringify(mergedFindings),
+          summary: mergedFindings.map((f: any) => f.finding).join(". "),
+          assessedBy: `AI Analysis - ${doc.fileName}`,
+        });
+        // Record history if rating changed
+        if (previousRating && previousRating !== mergedWorst) {
+          storage.createAssessmentHistory({ projectId, domain, previousRating, newRating: mergedWorst, changedBy: `Apply - ${doc.fileName}` });
+        }
+      } else {
+        storage.createHealthCheckAssessment({
+          projectId,
+          domain,
+          overallRating: worstSeverity,
+          findings: JSON.stringify(findings),
+          summary: findings.map((f: any) => f.finding).join(". "),
+          assessedBy: `AI Analysis - ${doc.fileName}`,
+        });
+      }
       applied.findings += findings.length;
     }
 

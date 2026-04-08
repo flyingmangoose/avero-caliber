@@ -89,13 +89,14 @@ const HEALTH_BG: Record<string, string> = {
   satisfactory: "bg-emerald-50 border-emerald-200 dark:bg-emerald-950/30 dark:border-emerald-900",
 };
 
-function SynthesisSummary({ synthesis, assessmentMap, raidItems, budgetSummary, scheduleItems, baseline, isSynthesizing, onSynthesize, onEditBaseline }: {
+function SynthesisSummary({ synthesis, assessmentMap, raidItems, budgetSummary, scheduleItems, baseline, assessmentHistory, isSynthesizing, onSynthesize, onEditBaseline }: {
   synthesis: any;
   assessmentMap: Record<string, any>;
   raidItems: any[];
   budgetSummary: any;
   scheduleItems: any[];
   baseline: any;
+  assessmentHistory: any[];
   isSynthesizing: boolean;
   onSynthesize: () => void;
   onEditBaseline: () => void;
@@ -242,12 +243,30 @@ function SynthesisSummary({ synthesis, assessmentMap, raidItems, budgetSummary, 
             try { return existing?.findings ? JSON.parse(existing.findings) : []; } catch { return []; }
           })();
 
+          // Trend from history
+          const domainHistory = assessmentHistory.filter((h: any) => h.domain === d.key);
+          const lastChange = domainHistory[0]; // most recent
+          const ratingOrder = ["critical", "high", "medium", "low", "satisfactory"];
+          const trendDirection = lastChange
+            ? ratingOrder.indexOf(lastChange.newRating) > ratingOrder.indexOf(lastChange.previousRating) ? "improving" : "declining"
+            : null;
+
           return (
             <Card key={d.key} className="overflow-hidden">
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm flex items-center gap-2"><span>{d.icon}</span>{d.label}</CardTitle>
-                  {rating && <Badge className={`text-[10px] ${RATING_COLORS[rating] || ""}`}>{rating.toUpperCase()}</Badge>}
+                  <div className="flex items-center gap-1.5">
+                    {trendDirection && (
+                      <span title={`Was: ${lastChange.previousRating}`}>
+                        {trendDirection === "improving"
+                          ? <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
+                          : <TrendingDown className="w-3.5 h-3.5 text-red-500" />
+                        }
+                      </span>
+                    )}
+                    {rating && <Badge className={`text-[10px] ${RATING_COLORS[rating] || ""}`}>{rating.toUpperCase()}</Badge>}
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="space-y-2">
@@ -352,6 +371,7 @@ export default function HealthCheckPage() {
   const { toast } = useToast();
 
   const [assessDialog, setAssessDialog] = useState<{ open: boolean; editId?: number; form: AssessmentForm }>({ open: false, form: emptyAssessment() });
+  const [findingsEntries, setFindingsEntries] = useState<Array<{ severity: string; finding: string; evidence: string; recommendation: string }>>([]);
   const [raidDialog, setRaidDialog] = useState<{ open: boolean; editId?: number; form: RaidForm }>({ open: false, form: emptyRaid() });
   const [budgetDialog, setBudgetDialog] = useState<{ open: boolean; editId?: number; form: BudgetForm }>({ open: false, form: emptyBudget() });
   const [scheduleDialog, setScheduleDialog] = useState<{ open: boolean; editId?: number; form: ScheduleForm }>({ open: false, form: emptySchedule() });
@@ -366,6 +386,7 @@ export default function HealthCheckPage() {
   const { data: budgetData } = useQuery<any>({ queryKey: ["/api/projects", projectId, "budget"], queryFn: () => apiRequest("GET", `/api/projects/${projectId}/budget`).then(r => r.json()), enabled: !!projectId });
   const { data: scheduleItems = [] } = useQuery<any[]>({ queryKey: ["/api/projects", projectId, "schedule"], queryFn: () => apiRequest("GET", `/api/projects/${projectId}/schedule`).then(r => r.json()), enabled: !!projectId });
   const { data: baseline } = useQuery<any>({ queryKey: ["/api/projects", projectId, "baseline"], queryFn: () => apiRequest("GET", `/api/projects/${projectId}/baseline`).then(r => r.json()), enabled: !!projectId });
+  const { data: assessmentHistoryData = [] } = useQuery<any[]>({ queryKey: ["/api/projects", projectId, "hc-history"], queryFn: () => apiRequest("GET", `/api/projects/${projectId}/health-check/history`).then(r => r.json()), enabled: !!projectId });
 
   const invalidateAll = () => {
     queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "hc-assessments"] });
@@ -373,6 +394,7 @@ export default function HealthCheckPage() {
     queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "budget"] });
     queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "schedule"] });
     queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "baseline"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "hc-history"] });
   };
 
   const saveAssessment = useMutation({
@@ -481,8 +503,26 @@ export default function HealthCheckPage() {
   function openAssessDialog(domain: string) {
     const existing = assessmentMap[domain];
     if (existing) {
-      setAssessDialog({ open: true, editId: existing.id, form: { domain, overallRating: existing.overallRating || "", summary: existing.summary || "", findings: renderFindings(existing.findings), assessedBy: existing.assessedBy || "" } });
+      // Parse structured findings into entries
+      let entries: Array<{ severity: string; finding: string; evidence: string; recommendation: string }> = [];
+      try {
+        const parsed = existing.findings ? JSON.parse(existing.findings) : [];
+        if (Array.isArray(parsed)) {
+          entries = parsed.map((f: any) => ({
+            severity: f.severity || "medium",
+            finding: f.finding || "",
+            evidence: f.evidence || "",
+            recommendation: f.recommendation || "",
+          }));
+        }
+      } catch {
+        // Legacy plain text — put it as a single finding
+        if (existing.findings) entries = [{ severity: "medium", finding: existing.findings, evidence: "", recommendation: "" }];
+      }
+      setFindingsEntries(entries);
+      setAssessDialog({ open: true, editId: existing.id, form: { domain, overallRating: existing.overallRating || "", summary: existing.summary || "", findings: "", assessedBy: existing.assessedBy || "" } });
     } else {
+      setFindingsEntries([]);
       setAssessDialog({ open: true, form: { ...emptyAssessment(), domain } });
     }
   }
@@ -545,6 +585,7 @@ export default function HealthCheckPage() {
                 budgetSummary={budgetSummary}
                 scheduleItems={scheduleItems}
                 baseline={baseline}
+                assessmentHistory={assessmentHistoryData}
                 isSynthesizing={synthesize.isPending}
                 onSynthesize={() => synthesize.mutate()}
                 onEditBaseline={openBaselineDialog}
@@ -759,7 +800,7 @@ export default function HealthCheckPage() {
               </div>
             </TabsContent>
             <TabsContent value="documents">
-              <DocumentsTab projectId={projectId} />
+              <DocumentsTab projectId={projectId} onApplyComplete={() => synthesize.mutate()} />
             </TabsContent>
           </Tabs>
         </div>
@@ -784,8 +825,34 @@ export default function HealthCheckPage() {
               <Textarea className="text-xs" rows={2} value={assessDialog.form.summary} onChange={e => setAssessDialog(p => ({ ...p, form: { ...p.form, summary: e.target.value } }))} data-testid="input-assessment-summary" />
             </div>
             <div>
-              <label className="text-xs text-muted-foreground">Findings</label>
-              <Textarea className="text-xs" rows={3} placeholder="Enter findings (free text)" value={assessDialog.form.findings} onChange={e => setAssessDialog(p => ({ ...p, form: { ...p.form, findings: e.target.value } }))} data-testid="input-assessment-findings" />
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs text-muted-foreground">Findings</label>
+                <Button variant="ghost" size="sm" className="h-6 text-[10px] gap-1" onClick={() => setFindingsEntries(prev => [...prev, { severity: "medium", finding: "", evidence: "", recommendation: "" }])}>
+                  <Plus className="w-3 h-3" />Add Finding
+                </Button>
+              </div>
+              {findingsEntries.length === 0 ? (
+                <p className="text-[11px] text-muted-foreground italic py-2">No findings. Click "Add Finding" to add structured entries.</p>
+              ) : (
+                <div className="space-y-2 max-h-[240px] overflow-y-auto">
+                  {findingsEntries.map((entry, idx) => (
+                    <div key={idx} className="border rounded p-2 space-y-1.5 bg-muted/20">
+                      <div className="flex items-center gap-2">
+                        <Select value={entry.severity} onValueChange={v => setFindingsEntries(prev => prev.map((e, i) => i === idx ? { ...e, severity: v } : e))}>
+                          <SelectTrigger className="h-6 text-[10px] w-[90px]"><SelectValue /></SelectTrigger>
+                          <SelectContent>{SEVERITIES.map(s => <SelectItem key={s} value={s} className="text-xs capitalize">{s}</SelectItem>)}</SelectContent>
+                        </Select>
+                        <Input className="h-6 text-[11px] flex-1" placeholder="Finding" value={entry.finding} onChange={e => setFindingsEntries(prev => prev.map((en, i) => i === idx ? { ...en, finding: e.target.value } : en))} />
+                        <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-destructive shrink-0" onClick={() => setFindingsEntries(prev => prev.filter((_, i) => i !== idx))}>
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
+                      </div>
+                      <Input className="h-6 text-[11px]" placeholder="Evidence (what was observed)" value={entry.evidence} onChange={e => setFindingsEntries(prev => prev.map((en, i) => i === idx ? { ...en, evidence: e.target.value } : en))} />
+                      <Input className="h-6 text-[11px]" placeholder="Recommendation" value={entry.recommendation} onChange={e => setFindingsEntries(prev => prev.map((en, i) => i === idx ? { ...en, recommendation: e.target.value } : en))} />
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
             <div>
               <label className="text-xs text-muted-foreground">Assessed By</label>
@@ -794,7 +861,10 @@ export default function HealthCheckPage() {
           </div>
           <DialogFooter>
             <Button size="sm" className="bg-[#d4a853] hover:bg-[#c49843] text-white text-xs" disabled={saveAssessment.isPending}
-              onClick={() => saveAssessment.mutate(assessDialog.form)} data-testid="button-save-assessment">
+              onClick={() => saveAssessment.mutate({
+                ...assessDialog.form,
+                findings: findingsEntries.length > 0 ? JSON.stringify(findingsEntries.filter(e => e.finding.trim())) : null,
+              })} data-testid="button-save-assessment">
               {saveAssessment.isPending ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}Save
             </Button>
           </DialogFooter>

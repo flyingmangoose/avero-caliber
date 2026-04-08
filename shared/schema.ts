@@ -452,6 +452,19 @@ export type InsertBudgetTracking = z.infer<typeof insertBudgetTrackingSchema>;
 export type ScheduleTracking = typeof scheduleTracking.$inferSelect;
 export type InsertScheduleTracking = z.infer<typeof insertScheduleTrackingSchema>;
 
+// Assessment history (rating changes over time)
+export const assessmentHistory = sqliteTable("assessment_history", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  projectId: integer("project_id").notNull().references(() => projects.id),
+  domain: text("domain").notNull(),
+  previousRating: text("previous_rating").notNull(),
+  newRating: text("new_rating").notNull(),
+  changedBy: text("changed_by"),
+  createdAt: text("created_at").notNull(),
+});
+
+export type AssessmentHistory = typeof assessmentHistory.$inferSelect;
+
 // ==================== PROJECT BASELINE (CONTRACT/SOW) ====================
 
 export const projectBaselines = sqliteTable("project_baselines", {
