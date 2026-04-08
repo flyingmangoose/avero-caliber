@@ -18,6 +18,17 @@ export const users = sqliteTable("users", {
 
 export type User = typeof users.$inferSelect;
 
+// ==================== INVITED EMAILS ====================
+
+export const invitedEmails = sqliteTable("invited_emails", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  email: text("email").notNull().unique(),
+  invitedBy: integer("invited_by"),
+  createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
+});
+
+export type InvitedEmail = typeof invitedEmails.$inferSelect;
+
 // ==================== PROJECT MEMBERS (RBAC) ====================
 
 export const projectMembers = sqliteTable("project_members", {

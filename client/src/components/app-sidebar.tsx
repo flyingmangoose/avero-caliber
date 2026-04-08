@@ -205,6 +205,16 @@ export function AppSidebar() {
         )}
       </SidebarContent>
       <SidebarFooter className="px-3 py-3 space-y-1">
+        {(() => {
+          const { data: me } = useQuery<any>({ queryKey: ["/auth/me"], queryFn: () => fetch("/auth/me").then(r => r.json()), retry: false, staleTime: 5 * 60 * 1000 });
+          return me?.role === "admin" ? (
+            <Link href="/admin">
+              <Button variant="ghost" size="sm" className="w-full justify-start gap-2 text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent">
+                <Shield className="w-4 h-4" /><span>Admin</span>
+              </Button>
+            </Link>
+          ) : null;
+        })()}
         <Link href="/about">
           <Button
             variant="ghost"

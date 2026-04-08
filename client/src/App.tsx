@@ -25,6 +25,7 @@ import WorkshopView from "@/pages/workshop";
 import Portfolio from "@/pages/portfolio";
 import VendorMonitoringPage from "@/pages/vendor-monitoring";
 import AboutPage from "@/pages/about";
+import AdminPage from "@/pages/admin";
 import LoginPage from "@/pages/login";
 
 const sidebarStyle = {
@@ -57,6 +58,7 @@ function AppLayout() {
               <Route path="/knowledge-base" component={KnowledgeBasePage} />
               <Route path="/vendor-monitoring" component={VendorMonitoringPage} />
               <Route path="/about" component={AboutPage} />
+              <Route path="/admin" component={AdminPage} />
               <Route component={NotFound} />
             </Switch>
           </main>

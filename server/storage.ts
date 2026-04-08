@@ -40,6 +40,7 @@ import {
   type AssessmentHistory, assessmentHistory,
   type User, users,
   type ProjectMember, projectMembers,
+  type InvitedEmail, invitedEmails,
 } from "@shared/schema";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import Database from "better-sqlite3";
@@ -64,6 +65,13 @@ sqlite.exec(`
     role TEXT DEFAULT 'viewer',
     is_active INTEGER DEFAULT 1,
     last_login_at TEXT,
+    created_at TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS invited_emails (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT NOT NULL UNIQUE,
+    invited_by INTEGER,
     created_at TEXT NOT NULL
   );
 
@@ -631,6 +639,12 @@ export interface IStorage {
   getUserByGoogleId(googleId: string): User | undefined;
   getAllUsers(): User[];
 
+  // Invited Emails
+  isEmailAllowed(email: string): boolean;
+  getInvitedEmails(): InvitedEmail[];
+  addInvitedEmail(email: string, invitedBy?: number): InvitedEmail;
+  removeInvitedEmail(id: number): void;
+
   // Project Members (RBAC)
   addProjectMember(projectId: number, userId: number, role: string, addedBy?: number): ProjectMember;
   getProjectMembers(projectId: number): (ProjectMember & { userName?: string; userEmail?: string; userPicture?: string })[];
@@ -990,6 +1004,31 @@ export class DatabaseStorage implements IStorage {
 
   getAllUsers(): User[] {
     return db.select().from(users).where(eq(users.isActive, 1)).all();
+  }
+
+  // ==================== Invited Emails ====================
+
+  isEmailAllowed(email: string): boolean {
+    const domain = email.split("@")[1]?.toLowerCase();
+    if (domain === "averoadvisors.com") return true;
+    const invited = db.select().from(invitedEmails).where(eq(invitedEmails.email, email.toLowerCase())).get();
+    return !!invited;
+  }
+
+  getInvitedEmails(): InvitedEmail[] {
+    return db.select().from(invitedEmails).all();
+  }
+
+  addInvitedEmail(email: string, invitedBy?: number): InvitedEmail {
+    return db.insert(invitedEmails).values({
+      email: email.toLowerCase(),
+      invitedBy: invitedBy || null,
+      createdAt: new Date().toISOString(),
+    }).returning().get();
+  }
+
+  removeInvitedEmail(id: number): void {
+    db.delete(invitedEmails).where(eq(invitedEmails.id, id)).run();
   }
 
   // ==================== Project Members (RBAC) ====================

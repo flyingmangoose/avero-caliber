@@ -100,6 +100,48 @@ export async function registerRoutes(
     res.json(users.map(u => ({ id: u.id, name: u.name, email: u.email, picture: u.picture, role: u.role })));
   });
 
+  // Admin: update user system role
+  app.patch("/api/users/:id/role", (req, res) => {
+    const user = getUserFromReq(req);
+    if (!user || user.role !== "admin") return res.status(403).json({ error: "Admin access required" });
+    const { role } = req.body;
+    if (!["admin", "editor", "viewer"].includes(role)) return res.status(400).json({ error: "Invalid role" });
+    const targetUser = storage.getUser(parseInt(req.params.id));
+    if (!targetUser) return res.status(404).json({ error: "User not found" });
+    // Use raw SQL since we don't have a dedicated updateUser method
+    const db = require("better-sqlite3")("data.db");
+    db.prepare("UPDATE users SET role = ? WHERE id = ?").run(role, targetUser.id);
+    db.close();
+    res.json({ ...targetUser, role });
+  });
+
+  // Admin: invited emails management
+  app.get("/api/admin/invited-emails", (req, res) => {
+    const user = getUserFromReq(req);
+    if (!user || user.role !== "admin") return res.status(403).json({ error: "Admin access required" });
+    res.json(storage.getInvitedEmails());
+  });
+
+  app.post("/api/admin/invited-emails", (req, res) => {
+    const user = getUserFromReq(req);
+    if (!user || user.role !== "admin") return res.status(403).json({ error: "Admin access required" });
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: "Email required" });
+    try {
+      const invited = storage.addInvitedEmail(email, user.id);
+      res.json(invited);
+    } catch (e: any) {
+      res.status(409).json({ error: "Email already invited" });
+    }
+  });
+
+  app.delete("/api/admin/invited-emails/:id", (req, res) => {
+    const user = getUserFromReq(req);
+    if (!user || user.role !== "admin") return res.status(403).json({ error: "Admin access required" });
+    storage.removeInvitedEmail(parseInt(req.params.id));
+    res.json({ success: true });
+  });
+
   // ==================== DOMAIN RESEARCH ====================
 
   function stripHtml(html: string): string {

@@ -78,6 +78,10 @@ if (googleClientId && googleClientSecret) {
   }, (_accessToken, _refreshToken, profile, done) => {
     const email = profile.emails?.[0]?.value;
     if (!email) return done(new Error("No email from Google"), undefined);
+    // Check if email is allowed (domain or invited)
+    if (!storage.isEmailAllowed(email)) {
+      return done(new Error("Access denied. Your email is not authorized. Contact your administrator."), undefined);
+    }
     const user = storage.findOrCreateUser({
       googleId: profile.id,
       email,
