@@ -394,6 +394,7 @@ export function DocumentsTab({ projectId }: { projectId: number }) {
   const [documentType, setDocumentType] = useState("status_report");
   const [period, setPeriod]             = useState("");
   const [showPasteArea, setShowPasteArea] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   // ── Queries ─────────────────────────────────────────────────────────────────
   const { data: documents = [], isLoading } = useQuery<ProjectDocument[]>({
@@ -412,19 +413,37 @@ export function DocumentsTab({ projectId }: { projectId: number }) {
 
   const createAndAnalyze = useMutation({
     mutationFn: async () => {
-      if (!pastedContent.trim() && !fileName) {
-        throw new Error("Please provide document content or select a file.");
-      }
-      // 1. Create document
-      const createRes = await apiRequest("POST", `/api/projects/${projectId}/documents`, {
-        fileName: fileName || "Pasted Document",
-        documentType,
-        rawText: pastedContent,
-        period: period || null,
-      });
-      const created: ProjectDocument = await createRes.json();
+      let created: ProjectDocument;
 
-      // 2. Trigger analysis
+      if (selectedFile) {
+        // Upload actual file — server extracts text from PDF, DOCX, XLSX, PPTX, etc.
+        const fd = new FormData();
+        fd.append("file", selectedFile);
+        fd.append("documentType", documentType);
+        if (period) fd.append("period", period);
+        const uploadRes = await fetch(`__PORT_5000__/api/projects/${projectId}/documents/upload`.replace(/__PORT_5000__/g, ""), {
+          method: "POST",
+          body: fd,
+        });
+        if (!uploadRes.ok) {
+          const err = await uploadRes.json().catch(() => ({ error: "Upload failed" }));
+          throw new Error(err.error || "Upload failed");
+        }
+        created = await uploadRes.json();
+      } else if (pastedContent.trim()) {
+        // Pasted text content
+        const createRes = await apiRequest("POST", `/api/projects/${projectId}/documents`, {
+          fileName: fileName || "Pasted Document",
+          documentType,
+          rawText: pastedContent,
+          period: period || null,
+        });
+        created = await createRes.json();
+      } else {
+        throw new Error("Please select a file or paste document content.");
+      }
+
+      // Trigger AI analysis
       await apiRequest("POST", `/api/projects/${projectId}/documents/${created.id}/analyze`);
 
       return created;
@@ -436,6 +455,7 @@ export function DocumentsTab({ projectId }: { projectId: number }) {
       setPastedContent("");
       setPeriod("");
       setShowPasteArea(false);
+      setSelectedFile(null);
       toast({ title: "Document uploaded", description: "AI analysis started. Results will appear shortly." });
     },
     onError: (e: any) => toast({ title: "Upload failed", description: e.message, variant: "destructive" }),
@@ -454,24 +474,21 @@ export function DocumentsTab({ projectId }: { projectId: number }) {
 
   const handleFile = useCallback((file: File) => {
     setFileName(file.name);
+    setSelectedFile(file);
     const ext = file.name.split(".").pop()?.toLowerCase();
 
     if (ext === "txt" || ext === "csv" || ext === "md" || ext === "json") {
+      // Also read text for preview in paste area
       const reader = new FileReader();
       reader.onload = (e) => {
         setPastedContent((e.target?.result as string) ?? "");
         setShowPasteArea(true);
       };
       reader.readAsText(file);
-    } else {
-      // PDF, DOCX, etc. — show paste area so user can paste extracted text
-      setShowPasteArea(true);
-      toast({
-        title: "Paste document text",
-        description: `For ${ext?.toUpperCase() ?? "binary"} files, please paste or copy the document text into the content area below.`,
-      });
     }
-  }, [toast]);
+    // For PDF, DOCX, XLSX, PPTX — file will be uploaded directly to server for extraction
+    // No need to ask user to paste text
+  }, []);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -517,7 +534,7 @@ export function DocumentsTab({ projectId }: { projectId: number }) {
               ref={fileInputRef}
               type="file"
               className="hidden"
-              accept=".txt,.csv,.md,.json,.pdf,.docx,.xlsx"
+              accept=".txt,.csv,.md,.json,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
               onChange={handleFileInput}
               data-testid="file-input"
             />
@@ -526,7 +543,7 @@ export function DocumentsTab({ projectId }: { projectId: number }) {
               {fileName ? fileName : "Drop files here or click to browse"}
             </p>
             <p className="text-[11px] text-muted-foreground/60 mt-1">
-              Supports .txt, .csv, .md, .json — for PDFs paste content below
+              Supports PDF, Word, Excel, PowerPoint, CSV, and text files
             </p>
           </div>
 
@@ -590,7 +607,7 @@ export function DocumentsTab({ projectId }: { projectId: number }) {
               size="sm"
               className="bg-[#d4a853] hover:bg-[#c49843] text-white text-xs gap-1.5 shrink-0"
               onClick={() => createAndAnalyze.mutate()}
-              disabled={createAndAnalyze.isPending || (!pastedContent.trim() && !fileName)}
+              disabled={createAndAnalyze.isPending || (!selectedFile && !pastedContent.trim())}
               data-testid="button-upload-analyze"
             >
               {createAndAnalyze.isPending

@@ -378,7 +378,7 @@ Only include fields that are clearly present in the document. Return ONLY valid 
   });
 
   app.post("/api/projects", (req, res) => {
-    const { name, description, status } = req.body;
+    const { name, description, status, clientId, engagementModules, engagementMode } = req.body;
     if (!name) {
       return res.status(400).json({ error: "Project name is required" });
     }
@@ -386,6 +386,9 @@ Only include fields that are clearly present in the document. Return ONLY valid 
       name,
       description: description || "",
       status: status || "draft",
+      clientId: clientId || null,
+      engagementModules: engagementModules || '["selection"]',
+      engagementMode: engagementMode || "consulting",
     });
     res.status(201).json(project);
   });
@@ -3676,6 +3679,8 @@ Write in professional consulting tone covering: overall posture assessment, key 
 
   // ==================== HEALTH CHECK DOCUMENT UPLOAD & ANALYSIS ====================
 
+  const docUploadMulter = multer({ dest: os.tmpdir(), limits: { fileSize: 50 * 1024 * 1024 } });
+
   // Get all documents for a project
   app.get("/api/projects/:id/documents", (req, res) => {
     const projectId = parseInt(req.params.id);
@@ -3683,7 +3688,86 @@ Write in professional consulting tone covering: overall posture assessment, key 
     res.json(storage.getProjectDocuments(projectId, documentType));
   });
 
-  // Upload a document (text extracted client-side or from file)
+  // Upload a document with server-side text extraction (supports PDF, DOCX, XLSX, PPTX, CSV, TXT)
+  app.post("/api/projects/:id/documents/upload", docUploadMulter.single("file"), async (req, res) => {
+    const projectId = parseInt(req.params.id);
+    const file = req.file;
+    const documentType = req.body.documentType || "other";
+    const period = req.body.period || null;
+
+    if (!file) return res.status(400).json({ error: "No file uploaded" });
+
+    let rawText = "";
+    const ext = file.originalname.split(".").pop()?.toLowerCase();
+
+    try {
+      const filePath = file.path;
+      const fileBuffer = fs.readFileSync(filePath);
+
+      if (ext === "txt" || ext === "csv" || ext === "md" || ext === "json") {
+        rawText = fileBuffer.toString("utf-8");
+      } else if (ext === "pdf") {
+        const pdfParse = (await import("pdf-parse")).default;
+        const pdfData = await pdfParse(fileBuffer);
+        rawText = pdfData.text;
+      } else if (ext === "docx" || ext === "doc") {
+        const mammoth = await import("mammoth");
+        const result = await mammoth.extractRawText({ buffer: fileBuffer });
+        rawText = result.value;
+      } else if (ext === "xlsx" || ext === "xls") {
+        const XLSX = await import("xlsx");
+        const workbook = XLSX.read(fileBuffer, { type: "buffer" });
+        const sheets: string[] = [];
+        for (const sheetName of workbook.SheetNames) {
+          const sheet = workbook.Sheets[sheetName];
+          sheets.push(`=== Sheet: ${sheetName} ===\n` + XLSX.utils.sheet_to_csv(sheet));
+        }
+        rawText = sheets.join("\n\n");
+      } else if (ext === "pptx" || ext === "ppt") {
+        // Extract text from PPTX using xml parsing
+        try {
+          const JSZip = (await import("jszip")).default;
+          const zip = await JSZip.loadAsync(fileBuffer);
+          const slideTexts: string[] = [];
+          const slideFiles = Object.keys(zip.files).filter(f => f.match(/ppt\/slides\/slide\d+\.xml/)).sort();
+          for (const slidePath of slideFiles) {
+            const xml = await zip.files[slidePath].async("text");
+            const textMatches = xml.match(/<a:t>([^<]*)<\/a:t>/g) || [];
+            const slideText = textMatches.map(m => m.replace(/<[^>]+>/g, "")).join(" ");
+            if (slideText.trim()) slideTexts.push(slideText);
+          }
+          rawText = slideTexts.join("\n\n");
+        } catch {
+          rawText = "Unable to parse PPTX content";
+        }
+      } else {
+        rawText = fileBuffer.toString("utf-8").substring(0, 50000);
+      }
+
+      // Clean up temp file
+      try { fs.unlinkSync(filePath); } catch {}
+
+      const doc = storage.createProjectDocument({
+        projectId,
+        fileName: file.originalname,
+        fileSize: file.size,
+        mimeType: file.mimetype,
+        documentType,
+        rawText: rawText.substring(0, 100000),
+        period,
+        source: "upload",
+        analysisStatus: "pending",
+      });
+
+      res.json(doc);
+    } catch (err: any) {
+      console.error("File extraction error:", err);
+      try { if (file?.path) fs.unlinkSync(file.path); } catch {}
+      res.status(500).json({ error: `Failed to extract text from ${ext} file: ${err.message}` });
+    }
+  });
+
+  // Upload a document (text provided directly — for pasted content)
   app.post("/api/projects/:id/documents", (req, res) => {
     const projectId = parseInt(req.params.id);
     const { fileName, fileSize, mimeType, documentType, rawText, period, uploadedBy } = req.body;
