@@ -99,6 +99,10 @@ app.get("/auth/me", (req, res) => {
     const user = req.user as User;
     return res.json({ id: user.id, name: user.name, email: user.email, picture: user.picture, role: user.role });
   }
+  // If Google OAuth is not configured, return a flag so frontend skips login
+  if (!googleClientId) {
+    return res.json({ authRequired: false });
+  }
   res.json(null);
 });
 

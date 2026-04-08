@@ -67,7 +67,7 @@ function AppLayout() {
 }
 
 function AuthGate() {
-  const { data: user, isLoading } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ["/auth/me"],
     queryFn: () => fetch("/auth/me").then(r => r.json()),
     retry: false,
@@ -82,9 +82,11 @@ function AuthGate() {
     );
   }
 
-  // If user is null, show login (but only if auth is configured — null means not authed)
-  // If user is an object, they're logged in
-  if (!user) {
+  // data is null when no user is logged in
+  // data is { authRequired: false } when Google OAuth is not configured (dev mode)
+  // data is { id, name, ... } when user is logged in
+  // Show login only if data is null (auth configured but not logged in)
+  if (data === null) {
     return <LoginPage />;
   }
 
