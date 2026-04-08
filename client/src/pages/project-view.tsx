@@ -278,6 +278,11 @@ export default function ProjectView() {
   const [wsExpiresAt, setWsExpiresAt] = useState("");
   const [wsAllModules, setWsAllModules] = useState(false);
 
+  // Team management
+  const [showTeamDialog, setShowTeamDialog] = useState(false);
+  const [addMemberEmail, setAddMemberEmail] = useState("");
+  const [addMemberRole, setAddMemberRole] = useState("editor");
+
   // Import dialog state
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [importStep, setImportStep] = useState<1 | 2 | 3>(1);
@@ -365,6 +370,55 @@ export default function ProjectView() {
       toast({ title: "Workshop link created" });
     },
     onError: () => toast({ title: "Failed to create workshop link", variant: "destructive" }),
+  });
+
+  // Team management queries
+  const { data: teamMembers = [], refetch: refetchMembers } = useQuery<any[]>({
+    queryKey: ["/api/projects", projectId, "members"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/projects/${projectId}/members`);
+      return res.json();
+    },
+    enabled: !!projectId,
+  });
+
+  const { data: allUsers = [] } = useQuery<any[]>({
+    queryKey: ["/api/users"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/users");
+      return res.json();
+    },
+    enabled: showTeamDialog,
+  });
+
+  const addMemberMutation = useMutation({
+    mutationFn: async ({ userId, role }: { userId: number; role: string }) => {
+      const res = await apiRequest("POST", `/api/projects/${projectId}/members`, { userId, role });
+      return res.json();
+    },
+    onSuccess: () => {
+      refetchMembers();
+      setAddMemberEmail("");
+      toast({ title: "Member added" });
+    },
+    onError: (e: any) => toast({ title: "Failed", description: e.message, variant: "destructive" }),
+  });
+
+  const updateMemberRoleMutation = useMutation({
+    mutationFn: async ({ userId, role }: { userId: number; role: string }) => {
+      const res = await apiRequest("PATCH", `/api/projects/${projectId}/members/${userId}`, { role });
+      return res.json();
+    },
+    onSuccess: () => { refetchMembers(); toast({ title: "Role updated" }); },
+    onError: (e: any) => toast({ title: "Failed", description: e.message, variant: "destructive" }),
+  });
+
+  const removeMemberMutation = useMutation({
+    mutationFn: async (userId: number) => {
+      await apiRequest("DELETE", `/api/projects/${projectId}/members/${userId}`);
+    },
+    onSuccess: () => { refetchMembers(); toast({ title: "Member removed" }); },
+    onError: (e: any) => toast({ title: "Failed", description: e.message, variant: "destructive" }),
   });
 
   const deactivateWorkshopLinkMutation = useMutation({
@@ -747,6 +801,9 @@ export default function ProjectView() {
               ) : null;
             } catch { return null; }
           })()}
+          <Button variant="ghost" size="sm" className="h-7 text-[11px] gap-1.5 mt-2 w-full justify-start text-muted-foreground" onClick={() => setShowTeamDialog(true)}>
+            <Users className="w-3.5 h-3.5" />Team
+          </Button>
         </div>
         <ScrollArea className="flex-1">
           <div className="p-2">
@@ -1399,6 +1456,104 @@ export default function ProjectView() {
             >
               {bulkAddMutation.isPending ? "Loading..." : `Load ${selectedTemplates.size} Module${selectedTemplates.size !== 1 ? "s" : ""}`}
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ==================== TEAM MANAGEMENT DIALOG ==================== */}
+      <Dialog open={showTeamDialog} onOpenChange={setShowTeamDialog}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-sm">
+              <Users className="w-4 h-4" />
+              Project Team
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Add member */}
+            <div className="flex gap-2">
+              <Select value={addMemberEmail} onValueChange={setAddMemberEmail}>
+                <SelectTrigger className="flex-1 h-8 text-xs">
+                  <SelectValue placeholder="Select a user to add..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {allUsers
+                    .filter((u: any) => !teamMembers.some((m: any) => m.userId === u.id))
+                    .map((u: any) => (
+                      <SelectItem key={u.id} value={String(u.id)} className="text-xs">
+                        <div className="flex items-center gap-2">
+                          {u.picture && <img src={u.picture} alt="" className="w-4 h-4 rounded-full" referrerPolicy="no-referrer" />}
+                          {u.name} <span className="text-muted-foreground">({u.email})</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+              <Select value={addMemberRole} onValueChange={setAddMemberRole}>
+                <SelectTrigger className="w-24 h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="editor" className="text-xs">Editor</SelectItem>
+                  <SelectItem value="viewer" className="text-xs">Viewer</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button
+                size="sm"
+                className="h-8 text-xs gap-1"
+                disabled={!addMemberEmail || addMemberMutation.isPending}
+                onClick={() => addMemberMutation.mutate({ userId: parseInt(addMemberEmail), role: addMemberRole })}
+              >
+                <Plus className="w-3 h-3" />Add
+              </Button>
+            </div>
+
+            {/* Members list */}
+            {teamMembers.length === 0 ? (
+              <p className="text-xs text-muted-foreground text-center py-4">No team members yet. Add users above to control access.</p>
+            ) : (
+              <div className="space-y-1.5">
+                {teamMembers.map((member: any) => (
+                  <div key={member.id} className="flex items-center gap-3 p-2 rounded-lg bg-muted/30">
+                    {member.userPicture ? (
+                      <img src={member.userPicture} alt="" className="w-7 h-7 rounded-full" referrerPolicy="no-referrer" />
+                    ) : (
+                      <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center text-xs font-medium">
+                        {member.userName?.[0]?.toUpperCase() || "?"}
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium truncate">{member.userName || "Unknown"}</p>
+                      <p className="text-[10px] text-muted-foreground truncate">{member.userEmail}</p>
+                    </div>
+                    {member.role === "owner" ? (
+                      <Badge variant="outline" className="text-[10px] shrink-0">Owner</Badge>
+                    ) : (
+                      <Select value={member.role} onValueChange={(role) => updateMemberRoleMutation.mutate({ userId: member.userId, role })}>
+                        <SelectTrigger className="w-20 h-7 text-[10px]"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="editor" className="text-xs">Editor</SelectItem>
+                          <SelectItem value="viewer" className="text-xs">Viewer</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
+                    {member.role !== "owner" && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                        onClick={() => removeMemberMutation.mutate(member.userId)}
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <p className="text-[10px] text-muted-foreground">
+              Owners have full control. Editors can modify data. Viewers have read-only access.
+            </p>
           </div>
         </DialogContent>
       </Dialog>
