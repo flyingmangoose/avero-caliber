@@ -28,10 +28,10 @@ const navItems = [
 
 function AveroLogo() {
   return (
-    <div className="w-8 h-8 shrink-0 rounded-lg bg-gradient-to-br from-[hsl(38,65%,56%)] to-[hsl(38,65%,44%)] flex items-center justify-center shadow-sm">
-      <svg viewBox="0 0 20 20" fill="none" className="w-5 h-5" aria-label="Caliber logo">
-        <path d="M6 16L10 4L14 16" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-        <line x1="7.5" y1="12" x2="12.5" y2="12" stroke="white" strokeWidth="1.8" strokeLinecap="round" />
+    <div className="w-7 h-7 shrink-0 rounded-lg bg-foreground dark:bg-foreground flex items-center justify-center">
+      <svg viewBox="0 0 20 20" fill="none" className="w-4 h-4" aria-label="Caliber logo">
+        <path d="M6 16L10 4L14 16" stroke="hsl(var(--background))" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+        <line x1="7.5" y1="12" x2="12.5" y2="12" stroke="hsl(var(--background))" strokeWidth="1.8" strokeLinecap="round" />
       </svg>
     </div>
   );
@@ -69,13 +69,10 @@ export function AppSidebar() {
 
   return (
     <Sidebar data-testid="sidebar-nav">
-      <SidebarHeader className="px-4 py-5">
-        <Link href="/" className="flex items-center gap-3 no-underline">
+      <SidebarHeader className="px-4 py-4">
+        <Link href="/" className="flex items-center gap-2.5 no-underline">
           <AveroLogo />
-          <div className="flex flex-col leading-tight">
-            <span className="text-[13px] font-semibold tracking-tight text-sidebar-foreground">Caliber</span>
-            <span className="text-[10px] text-sidebar-foreground/50 font-medium tracking-wide uppercase">Avero Advisors</span>
-          </div>
+          <span className="text-sm font-semibold tracking-tight text-sidebar-foreground/90">Caliber</span>
         </Link>
       </SidebarHeader>
       <SidebarContent>

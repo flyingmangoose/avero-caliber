@@ -328,40 +328,19 @@ export default function Dashboard() {
       </div>
 
       {/* Stats Row */}
-      <div className="grid grid-cols-3 gap-4">
-        <Card className="border-border/50">
-          <CardContent className="p-5 flex items-center gap-4">
-            <div className="p-2.5 rounded-xl bg-primary/8 dark:bg-primary/15">
-              <Building2 className="w-5 h-5 text-primary dark:text-accent" />
-            </div>
-            <div>
-              <p className="text-2xl font-semibold tracking-tight">{isLoading ? "—" : totalClients}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Total Clients</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-border/50">
-          <CardContent className="p-5 flex items-center gap-4">
-            <div className="p-2.5 rounded-xl bg-emerald-500/8 dark:bg-emerald-500/15">
-              <BarChart3 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-            </div>
-            <div>
-              <p className="text-2xl font-semibold tracking-tight">{isLoading ? "—" : activeProjects}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Active Projects</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-border/50">
-          <CardContent className="p-5 flex items-center gap-4">
-            <div className="p-2.5 rounded-xl bg-accent/10 dark:bg-accent/15">
-              <Briefcase className="w-5 h-5 text-accent" />
-            </div>
-            <div>
-              <p className="text-2xl font-semibold tracking-tight">{isLoading ? "—" : totalProjects}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Total Projects</p>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-3 gap-3">
+        <div className="px-4 py-3 rounded-lg bg-muted/50">
+          <p className="text-xs text-muted-foreground mb-0.5">Clients</p>
+          <p className="text-xl font-semibold tracking-tight">{isLoading ? "—" : totalClients}</p>
+        </div>
+        <div className="px-4 py-3 rounded-lg bg-muted/50">
+          <p className="text-xs text-muted-foreground mb-0.5">Active Projects</p>
+          <p className="text-xl font-semibold tracking-tight">{isLoading ? "—" : activeProjects}</p>
+        </div>
+        <div className="px-4 py-3 rounded-lg bg-muted/50">
+          <p className="text-xs text-muted-foreground mb-0.5">Total Projects</p>
+          <p className="text-xl font-semibold tracking-tight">{isLoading ? "—" : totalProjects}</p>
+        </div>
       </div>
 
       {/* Search */}

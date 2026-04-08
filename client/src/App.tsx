@@ -27,7 +27,7 @@ import VendorMonitoringPage from "@/pages/vendor-monitoring";
 import AboutPage from "@/pages/about";
 
 const sidebarStyle = {
-  "--sidebar-width": "18rem",
+  "--sidebar-width": "15rem",
   "--sidebar-width-icon": "3.5rem",
 };
 
