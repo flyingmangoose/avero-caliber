@@ -291,8 +291,21 @@ Return ONLY the JSON.`);
       const prompt = `Analyze this government entity's website and your knowledge to create a comprehensive profile.\n\nDomain: ${domain}\nWebsite content: ${websiteText || "(unable to fetch)"}\n\nReturn JSON with: entityType, entityName, state, population, employeeCount, annualBudget, description, painSummary, currentSystems (array of {name, module, vendor, yearsInUse}), departments (array of {name, headcount, keyProcesses}), leadership (array of {name, title}).\n\nReturn ONLY valid JSON.`;
       const text = await llmCall(prompt);
       const jsonStr = text.replace(/\`\`\`json\n?/g, "").replace(/\`\`\`\n?/g, "").trim();
-      const data = JSON.parse(jsonStr);
-      const updated = storage.updateClient(clientId, { ...data, domain });
+      const raw = JSON.parse(jsonStr);
+      // Map and sanitize to valid client columns only
+      const data: any = { domain };
+      if (raw.entityName) data.name = raw.entityName;
+      if (raw.entityType) data.entityType = raw.entityType;
+      if (raw.state) data.state = raw.state;
+      if (raw.population) data.population = typeof raw.population === "number" ? raw.population : parseInt(String(raw.population).replace(/\D/g, "")) || null;
+      if (raw.employeeCount) data.employeeCount = typeof raw.employeeCount === "number" ? raw.employeeCount : parseInt(String(raw.employeeCount).replace(/\D/g, "")) || null;
+      if (raw.annualBudget) data.annualBudget = String(raw.annualBudget);
+      if (raw.description) data.description = raw.description;
+      if (raw.painSummary) data.painSummary = raw.painSummary;
+      if (raw.currentSystems) data.currentSystems = raw.currentSystems;
+      if (raw.departments) data.departments = raw.departments;
+      if (raw.leadership) data.leadership = raw.leadership;
+      const updated = storage.updateClient(clientId, data);
       res.json({ success: true, data: updated });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
@@ -3170,6 +3183,12 @@ Write in professional consulting tone covering: overall posture assessment, key 
       const projectId = parseInt(req.params.id);
       const project = storage.getProject(projectId);
       if (!project) return res.status(404).json({ error: "Project not found" });
+
+      // Guard against duplicate seeding
+      const existingBaselines = storage.getContractBaselines(projectId);
+      if (existingBaselines.length > 0) {
+        return res.status(409).json({ error: "IV&V data already exists for this project." });
+      }
 
       // Create contract baseline
       const baseline = storage.createContractBaseline({

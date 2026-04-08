@@ -1829,7 +1829,7 @@ export default function VendorEvaluation() {
       const formData = new FormData();
       formData.append("file", proposalFile);
       formData.append("vendorId", proposalVendorId);
-      const API_BASE = "__PORT_5000__".startsWith("__") ? "" : "__PORT_5000__";
+      const API_BASE = "";
       const res = await fetch(`${API_BASE}/api/projects/${projectId}/analyze-proposal`, { method: "POST", body: formData });
       if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error((err as any).error || "Analysis failed"); }
       const result = await res.json();
@@ -1959,8 +1959,8 @@ export default function VendorEvaluation() {
                   className="gap-2 text-xs"
                   data-testid="button-regenerate-scores"
                 >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                  Regenerate
+                  {generateScoresMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RotateCcw className="w-3.5 h-3.5" />}
+                  {generateScoresMutation.isPending ? "Generating..." : "Regenerate"}
                 </Button>
               </>
             )}

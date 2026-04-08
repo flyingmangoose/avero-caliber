@@ -686,7 +686,7 @@ export default function Dashboard() {
                 onClick={() => createClientMutation.mutate({ enrich: false })}
                 data-testid="button-create-client"
               >
-                {createClientMutation.isPending && !clientDomain.trim() ? (
+                {createClientMutation.isPending ? (
                   <Loader2 className="w-4 h-4 animate-spin mr-2" />
                 ) : null}
                 Create

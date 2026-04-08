@@ -17,7 +17,7 @@ import { Compass, Plus, Trash2, Save, ArrowLeft, Send, Loader2, CheckCircle, Mes
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
-const API_BASE = "__PORT_5000__".startsWith("__") ? "" : "__PORT_5000__";
+const API_BASE = "";
 
 const ENTITY_TYPES = [
   { value: "city", label: "City" },
