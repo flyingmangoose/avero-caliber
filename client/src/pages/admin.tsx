@@ -8,11 +8,14 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Shield, UserPlus, Mail, Trash2, Users } from "lucide-react";
+import { Shield, UserPlus, Mail, Trash2, Users, FolderOpen, Plus, ChevronDown, ChevronRight, X } from "lucide-react";
 
 export default function AdminPage() {
   const { toast } = useToast();
   const [inviteEmail, setInviteEmail] = useState("");
+  const [expandedUser, setExpandedUser] = useState<number | null>(null);
+  const [assignProjectId, setAssignProjectId] = useState("");
+  const [assignRole, setAssignRole] = useState("editor");
 
   const { data: currentUser } = useQuery<any>({
     queryKey: ["/auth/me"],
@@ -29,6 +32,15 @@ export default function AdminPage() {
     queryKey: ["/api/admin/invited-emails"],
     queryFn: () => apiRequest("GET", "/api/admin/invited-emails").then(r => r.json()),
   });
+
+  const { data: clients = [] } = useQuery<any[]>({
+    queryKey: ["/api/clients"],
+  });
+
+  // Flatten all projects from clients
+  const allProjects = clients.flatMap((c: any) =>
+    (c.projects || []).map((p: any) => ({ ...p, clientName: c.name }))
+  );
 
   const inviteMutation = useMutation({
     mutationFn: (email: string) => apiRequest("POST", "/api/admin/invited-emails", { email }).then(r => r.json()),
@@ -54,6 +66,27 @@ export default function AdminPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
       toast({ title: "Role updated" });
+    },
+    onError: (e: any) => toast({ title: "Failed", description: e.message, variant: "destructive" }),
+  });
+
+  const addToProjectMutation = useMutation({
+    mutationFn: ({ projectId, userId, role }: { projectId: number; userId: number; role: string }) =>
+      apiRequest("POST", `/api/projects/${projectId}/members`, { userId, role }).then(r => r.json()),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+      setAssignProjectId("");
+      toast({ title: "Added to project" });
+    },
+    onError: (e: any) => toast({ title: "Failed", description: e.message, variant: "destructive" }),
+  });
+
+  const removeFromProjectMutation = useMutation({
+    mutationFn: ({ projectId, userId }: { projectId: number; userId: number }) =>
+      apiRequest("DELETE", `/api/projects/${projectId}/members/${userId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+      toast({ title: "Removed from project" });
     },
     onError: (e: any) => toast({ title: "Failed", description: e.message, variant: "destructive" }),
   });
@@ -127,49 +160,164 @@ export default function AdminPage() {
             </CardContent>
           </Card>
 
-          {/* Registered Users */}
+          {/* Registered Users + Project Access */}
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-sm flex items-center gap-2">
                 <Users className="w-4 h-4" />
-                Registered Users ({users.length})
+                Users & Project Access ({users.length})
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2">
-                {users.map((user: any) => (
-                  <div key={user.id} className="flex items-center gap-3 p-2 rounded-lg bg-muted/20">
-                    {user.picture ? (
-                      <img src={user.picture} alt="" className="w-8 h-8 rounded-full" referrerPolicy="no-referrer" />
-                    ) : (
-                      <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-xs font-medium">
-                        {user.name?.[0]?.toUpperCase() || "?"}
+              <div className="space-y-1">
+                {users.map((user: any) => {
+                  const isExpanded = expandedUser === user.id;
+                  return (
+                    <div key={user.id} className="rounded-lg border border-border/40 overflow-hidden">
+                      <div className="flex items-center gap-3 p-3 hover:bg-muted/20 transition-colors">
+                        <button className="shrink-0 text-muted-foreground" onClick={() => setExpandedUser(isExpanded ? null : user.id)}>
+                          {isExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                        </button>
+                        {user.picture ? (
+                          <img src={user.picture} alt="" className="w-7 h-7 rounded-full" referrerPolicy="no-referrer" />
+                        ) : (
+                          <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center text-xs font-medium">
+                            {user.name?.[0]?.toUpperCase() || "?"}
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{user.name}</p>
+                          <p className="text-[11px] text-muted-foreground truncate">{user.email}</p>
+                        </div>
+                        {user.id === currentUser?.id ? (
+                          <Badge className="text-[10px]">You</Badge>
+                        ) : (
+                          <Select value={user.role} onValueChange={(role) => updateRoleMutation.mutate({ userId: user.id, role })}>
+                            <SelectTrigger className="w-24 h-7 text-[10px]"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="admin" className="text-xs">Admin</SelectItem>
+                              <SelectItem value="editor" className="text-xs">Editor</SelectItem>
+                              <SelectItem value="viewer" className="text-xs">Viewer</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        )}
                       </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{user.name}</p>
-                      <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+
+                      {/* Expanded: project assignments */}
+                      {isExpanded && (
+                        <UserProjectAccess
+                          userId={user.id}
+                          allProjects={allProjects}
+                          assignProjectId={assignProjectId}
+                          setAssignProjectId={setAssignProjectId}
+                          assignRole={assignRole}
+                          setAssignRole={setAssignRole}
+                          onAdd={(projectId, role) => addToProjectMutation.mutate({ projectId, userId: user.id, role })}
+                          onRemove={(projectId) => removeFromProjectMutation.mutate({ projectId, userId: user.id })}
+                          isAdding={addToProjectMutation.isPending}
+                        />
+                      )}
                     </div>
-                    {user.id === currentUser?.id ? (
-                      <Badge className="text-[10px]">You</Badge>
-                    ) : (
-                      <Select value={user.role} onValueChange={(role) => updateRoleMutation.mutate({ userId: user.id, role })}>
-                        <SelectTrigger className="w-24 h-7 text-[10px]"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="admin" className="text-xs">Admin</SelectItem>
-                          <SelectItem value="editor" className="text-xs">Editor</SelectItem>
-                          <SelectItem value="viewer" className="text-xs">Viewer</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
 
         </div>
       </ScrollArea>
+    </div>
+  );
+}
+
+function UserProjectAccess({ userId, allProjects, assignProjectId, setAssignProjectId, assignRole, setAssignRole, onAdd, onRemove, isAdding }: {
+  userId: number;
+  allProjects: any[];
+  assignProjectId: string;
+  setAssignProjectId: (v: string) => void;
+  assignRole: string;
+  setAssignRole: (v: string) => void;
+  onAdd: (projectId: number, role: string) => void;
+  onRemove: (projectId: number) => void;
+  isAdding: boolean;
+}) {
+  // Fetch this user's project memberships
+  const { data: memberProjects = [] } = useQuery<any[]>({
+    queryKey: ["/api/admin/user-projects", userId],
+    queryFn: async () => {
+      // Fetch memberships for each project
+      const results: any[] = [];
+      for (const p of allProjects) {
+        try {
+          const res = await fetch(`/api/projects/${p.id}/members`);
+          if (res.ok) {
+            const members = await res.json();
+            const membership = members.find((m: any) => m.userId === userId);
+            if (membership) results.push({ ...p, memberRole: membership.role });
+          }
+        } catch {}
+      }
+      return results;
+    },
+    staleTime: 10000,
+  });
+
+  const unassignedProjects = allProjects.filter(
+    p => !memberProjects.some((mp: any) => mp.id === p.id)
+  );
+
+  return (
+    <div className="border-t border-border/30 bg-muted/10 p-3 space-y-3">
+      <p className="text-[11px] font-medium text-muted-foreground flex items-center gap-1.5">
+        <FolderOpen className="w-3 h-3" />Project Access
+      </p>
+
+      {/* Current project assignments */}
+      {memberProjects.length > 0 ? (
+        <div className="space-y-1">
+          {memberProjects.map((p: any) => (
+            <div key={p.id} className="flex items-center gap-2 text-xs p-1.5 rounded bg-background">
+              <span className="flex-1 truncate">{p.clientName} / {p.name}</span>
+              <Badge variant="outline" className="text-[9px]">{p.memberRole}</Badge>
+              <Button variant="ghost" size="sm" className="h-5 w-5 p-0 text-muted-foreground hover:text-destructive" onClick={() => onRemove(p.id)}>
+                <X className="w-3 h-3" />
+              </Button>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-[11px] text-muted-foreground italic">No project access assigned</p>
+      )}
+
+      {/* Add to project */}
+      {unassignedProjects.length > 0 && (
+        <div className="flex gap-1.5">
+          <Select value={assignProjectId} onValueChange={setAssignProjectId}>
+            <SelectTrigger className="flex-1 h-7 text-[10px]">
+              <SelectValue placeholder="Add to project..." />
+            </SelectTrigger>
+            <SelectContent>
+              {unassignedProjects.map((p: any) => (
+                <SelectItem key={p.id} value={String(p.id)} className="text-xs">
+                  {p.clientName} / {p.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={assignRole} onValueChange={setAssignRole}>
+            <SelectTrigger className="w-20 h-7 text-[10px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="owner" className="text-xs">Owner</SelectItem>
+              <SelectItem value="editor" className="text-xs">Editor</SelectItem>
+              <SelectItem value="viewer" className="text-xs">Viewer</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button size="sm" className="h-7 text-[10px] gap-1 px-2" disabled={!assignProjectId || isAdding}
+            onClick={() => { onAdd(parseInt(assignProjectId), assignRole); }}>
+            <Plus className="w-3 h-3" />
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
