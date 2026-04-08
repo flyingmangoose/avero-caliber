@@ -145,6 +145,16 @@ export default function ClientProfilePage() {
   const fileRef = useRef<HTMLInputElement>(null);
   const uploadMutation = useMutation({
     mutationFn: async (file: File) => {
+      if (isClientRoute) {
+        // For client route: read file text and send to extract-document-text endpoint
+        const text = await file.text();
+        const res = await apiRequest("POST", `/api/clients/${projectId}/extract-document`, {
+          fileName: file.name,
+          documentText: text.substring(0, 30000),
+        });
+        return res.json();
+      }
+      // For project route: use FormData upload
       const fd = new FormData();
       fd.append("file", file);
       const res = await fetch(`${API_BASE}/api/extract-document`, { method: "POST", body: fd });
@@ -152,15 +162,20 @@ export default function ClientProfilePage() {
     },
     onSuccess: (result) => {
       if (!result.success) { toast({ title: "Extraction failed", variant: "destructive" }); return; }
+      if (isClientRoute) {
+        // Backend already merged data and saved to client — just refresh
+        qc.invalidateQueries({ queryKey: ["/api/clients", projectId] });
+        qc.invalidateQueries({ queryKey: ["/api/clients"] });
+        toast({ title: "Document processed", description: `Extracted ${result.extractedFields || 0} fields` });
+        return;
+      }
       const d = result.data;
       const current = profile || {} as any;
       const merged: any = {};
-      // Document data fills nulls only
       if (d.entityName && !current.entityName) merged.entityName = d.entityName;
       if (d.entityType && !current.entityType) merged.entityType = d.entityType;
       if (d.state && !current.state) merged.state = d.state;
       if (d.annualBudget && !current.annualBudget) merged.annualBudget = d.annualBudget;
-      // Append to documents list
       const docs = parseJSON<any[]>(current.documents, []);
       docs.push({ filename: (fileRef.current?.files?.[0]?.name) || "document", uploadedAt: new Date().toISOString(), extractedFields: Object.keys(d).filter(k => d[k]) });
       merged.documents = docs;

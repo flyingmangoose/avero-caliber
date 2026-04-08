@@ -299,6 +299,51 @@ Return ONLY the JSON.`);
     }
   });
 
+  // Extract data from uploaded document for client profile
+  app.post("/api/clients/:id/extract-document", async (req, res) => {
+    const clientId = parseInt(req.params.id);
+    const client = storage.getClient(clientId);
+    if (!client) return res.status(404).json({ error: "Client not found" });
+    const { fileName, documentText } = req.body;
+    if (!documentText) return res.status(400).json({ error: "Document text required" });
+    try {
+      const { llmCall } = await import("./ai");
+      const prompt = `Extract government entity profile information from this document. The document is "${fileName || "uploaded document"}".
+
+Existing client data (fill gaps only):
+- Name: ${client.name}
+- Type: ${client.entityType || "unknown"}
+- State: ${client.state || "unknown"}
+
+Document text:
+${documentText.substring(0, 20000)}
+
+Return JSON with any fields you can extract: entityType, entityName, state, population, employeeCount, annualBudget, description, painSummary, currentSystems (array of {name, module, vendor, yearsInUse}), departments (array of {name, headcount, keyProcesses}), leadership (array of {name, title}), challenges.
+
+Only include fields that are clearly present in the document. Return ONLY valid JSON.`;
+      const text = await llmCall(prompt);
+      const jsonStr = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+      const data = JSON.parse(jsonStr);
+      // Map entityName to name for client table
+      if (data.entityName) { data.name = data.entityName; delete data.entityName; }
+      // Merge with existing client data (only fill nulls/empties)
+      const updates: any = {};
+      for (const [key, val] of Object.entries(data)) {
+        if (val != null && val !== "" && ((client as any)[key] == null || (client as any)[key] === "")) {
+          updates[key] = val;
+        }
+      }
+      // Track document in client's documents list
+      const docs = client.documents ? JSON.parse(client.documents) : [];
+      docs.push({ filename: fileName, uploadedAt: new Date().toISOString(), extractedFields: Object.keys(updates) });
+      updates.documents = JSON.stringify(docs);
+      const updated = storage.updateClient(clientId, updates);
+      res.json({ success: true, data: updated, extractedFields: Object.keys(updates).length });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // ==================== PROJECTS ====================
 
   app.get("/api/projects", (_req, res) => {
