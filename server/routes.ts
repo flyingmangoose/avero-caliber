@@ -349,18 +349,37 @@ Return ONLY the JSON.`);
 
   // ==================== CLIENTS ====================
 
-  app.get("/api/clients", (_req, res) => {
+  app.get("/api/clients", (req, res) => {
     const clientsList = storage.getClients();
     const allProjects = storage.getProjects();
-    const enriched = clientsList.map(c => ({
-      ...c,
-      projects: allProjects.filter(p => p.clientId === c.id).map(p => ({
-        id: p.id, name: p.name, status: p.status, engagementModules: p.engagementModules,
-      })),
-      projectCount: allProjects.filter(p => p.clientId === c.id).length,
-    }));
+
+    // Filter projects by user access
+    const user = getUserFromReq(req);
+    const isAdmin = !user || user.role === "admin"; // no auth or admin = see all
+    const userProjectIds = user ? storage.getUserProjects(user.id) : [];
+
+    const filterProject = (p: any) => {
+      if (isAdmin) return true;
+      if (userProjectIds.includes(p.id)) return true;
+      if (p.createdBy === user?.id) return true;
+      // Allow access to projects with no members (legacy)
+      const members = storage.getProjectMembers(p.id);
+      return members.length === 0;
+    };
+
+    const enriched = clientsList.map(c => {
+      const clientProjects = allProjects.filter(p => p.clientId === c.id && filterProject(p));
+      return {
+        ...c,
+        projects: clientProjects.map(p => ({
+          id: p.id, name: p.name, status: p.status, engagementModules: p.engagementModules,
+        })),
+        projectCount: clientProjects.length,
+      };
+    }).filter(c => isAdmin || c.projectCount > 0); // Hide clients with no accessible projects
+
     // Also include orphan projects (no client) as a virtual "Unassigned" group
-    const orphans = allProjects.filter(p => !p.clientId);
+    const orphans = allProjects.filter(p => !p.clientId && filterProject(p));
     if (orphans.length > 0) {
       enriched.push({
         id: 0, name: "Unassigned Projects", domain: null, entityType: null, state: null,
