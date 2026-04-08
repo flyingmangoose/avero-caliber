@@ -278,6 +278,15 @@ export default function ProjectView() {
   const [wsExpiresAt, setWsExpiresAt] = useState("");
   const [wsAllModules, setWsAllModules] = useState(false);
 
+  // Current user
+  const { data: currentUser } = useQuery<any>({
+    queryKey: ["/auth/me"],
+    queryFn: () => fetch("/auth/me").then(r => r.json()),
+    retry: false,
+    staleTime: 5 * 60 * 1000,
+  });
+  const isAdmin = currentUser?.role === "admin";
+
   // Team management
   const [showTeamDialog, setShowTeamDialog] = useState(false);
   const [addMemberEmail, setAddMemberEmail] = useState("");
@@ -1493,6 +1502,7 @@ export default function ProjectView() {
               <Select value={addMemberRole} onValueChange={setAddMemberRole}>
                 <SelectTrigger className="w-24 h-8 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
+                  {isAdmin && <SelectItem value="owner" className="text-xs">Owner</SelectItem>}
                   <SelectItem value="editor" className="text-xs">Editor</SelectItem>
                   <SelectItem value="viewer" className="text-xs">Viewer</SelectItem>
                 </SelectContent>
@@ -1525,18 +1535,19 @@ export default function ProjectView() {
                       <p className="text-xs font-medium truncate">{member.userName || "Unknown"}</p>
                       <p className="text-[10px] text-muted-foreground truncate">{member.userEmail}</p>
                     </div>
-                    {member.role === "owner" ? (
+                    {member.role === "owner" && !isAdmin ? (
                       <Badge variant="outline" className="text-[10px] shrink-0">Owner</Badge>
                     ) : (
                       <Select value={member.role} onValueChange={(role) => updateMemberRoleMutation.mutate({ userId: member.userId, role })}>
                         <SelectTrigger className="w-20 h-7 text-[10px]"><SelectValue /></SelectTrigger>
                         <SelectContent>
+                          {isAdmin && <SelectItem value="owner" className="text-xs">Owner</SelectItem>}
                           <SelectItem value="editor" className="text-xs">Editor</SelectItem>
                           <SelectItem value="viewer" className="text-xs">Viewer</SelectItem>
                         </SelectContent>
                       </Select>
                     )}
-                    {member.role !== "owner" && (
+                    {(member.role !== "owner" || isAdmin) && (
                       <Button
                         variant="ghost"
                         size="sm"
