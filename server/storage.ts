@@ -53,6 +53,25 @@ export const db = drizzle(sqlite);
 
 // Create tables if not exist
 sqlite.exec(`
+  CREATE TABLE IF NOT EXISTS clients (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    domain TEXT,
+    entity_type TEXT,
+    state TEXT,
+    population INTEGER,
+    employee_count INTEGER,
+    annual_budget TEXT,
+    current_systems TEXT,
+    departments TEXT,
+    pain_summary TEXT,
+    leadership TEXT,
+    documents TEXT,
+    description TEXT DEFAULT '',
+    created_at TEXT NOT NULL,
+    updated_at TEXT
+  );
+
   CREATE TABLE IF NOT EXISTS projects (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
@@ -460,6 +479,81 @@ sqlite.exec(`
     improvements TEXT,
     eliminated_steps TEXT,
     new_capabilities TEXT,
+    created_at TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS project_documents (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER,
+    client_id INTEGER,
+    file_name TEXT NOT NULL,
+    file_size INTEGER,
+    mime_type TEXT,
+    document_type TEXT NOT NULL,
+    source TEXT DEFAULT 'upload',
+    raw_text TEXT,
+    ai_analysis TEXT,
+    analysis_status TEXT DEFAULT 'pending',
+    extracted_items TEXT,
+    applied_at TEXT,
+    period TEXT,
+    uploaded_by TEXT,
+    created_at TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS monitoring_sources (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    vendor_platform TEXT NOT NULL,
+    source_type TEXT NOT NULL,
+    name TEXT NOT NULL,
+    url TEXT NOT NULL,
+    is_active INTEGER DEFAULT 1,
+    check_frequency TEXT DEFAULT 'daily',
+    last_checked_at TEXT,
+    last_content_hash TEXT,
+    created_at TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS monitoring_runs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    source_id INTEGER NOT NULL,
+    status TEXT NOT NULL,
+    content_hash TEXT,
+    raw_content_preview TEXT,
+    changes_detected INTEGER DEFAULT 0,
+    error_message TEXT,
+    duration_ms INTEGER,
+    created_at TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS vendor_changes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    run_id INTEGER NOT NULL,
+    vendor_platform TEXT NOT NULL,
+    change_type TEXT NOT NULL,
+    severity TEXT DEFAULT 'medium',
+    title TEXT NOT NULL,
+    summary TEXT,
+    details TEXT,
+    affected_modules TEXT,
+    source_url TEXT,
+    raw_excerpt TEXT,
+    reviewed INTEGER DEFAULT 0,
+    reviewed_by TEXT,
+    reviewed_at TEXT,
+    created_at TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS monitoring_alerts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    change_id INTEGER NOT NULL,
+    alert_type TEXT NOT NULL,
+    priority TEXT DEFAULT 'medium',
+    title TEXT NOT NULL,
+    message TEXT,
+    is_dismissed INTEGER DEFAULT 0,
+    dismissed_by TEXT,
+    dismissed_at TEXT,
     created_at TEXT NOT NULL
   );
 `);
