@@ -14,7 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Stethoscope, ChevronLeft, Plus, Trash2, Edit2, Loader2, AlertTriangle, DollarSign, Calendar, Sparkles, FileText } from "lucide-react";
+import { Stethoscope, ChevronLeft, Plus, Trash2, Edit2, Loader2, AlertTriangle, DollarSign, Calendar, Sparkles, FileText, Activity, TrendingUp, TrendingDown, ShieldAlert, CheckCircle2, RefreshCw, ArrowRight } from "lucide-react";
 import { DocumentsTab } from "./health-check-documents";
 
 const DOMAINS = [
@@ -71,6 +71,239 @@ function renderFindings(findings: string | null | undefined): string {
   }
 }
 
+const HEALTH_ICONS: Record<string, typeof CheckCircle2> = {
+  critical: ShieldAlert,
+  high: AlertTriangle,
+  medium: TrendingDown,
+  low: TrendingUp,
+  satisfactory: CheckCircle2,
+};
+
+const HEALTH_BG: Record<string, string> = {
+  critical: "bg-red-50 border-red-200 dark:bg-red-950/30 dark:border-red-900",
+  high: "bg-red-50/50 border-red-100 dark:bg-red-950/20 dark:border-red-900/50",
+  medium: "bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-900",
+  low: "bg-blue-50 border-blue-200 dark:bg-blue-950/30 dark:border-blue-900",
+  satisfactory: "bg-emerald-50 border-emerald-200 dark:bg-emerald-950/30 dark:border-emerald-900",
+};
+
+function SynthesisSummary({ synthesis, assessmentMap, raidItems, budgetSummary, scheduleItems, isSynthesizing, onSynthesize }: {
+  synthesis: any;
+  assessmentMap: Record<string, any>;
+  raidItems: any[];
+  budgetSummary: any;
+  scheduleItems: any[];
+  isSynthesizing: boolean;
+  onSynthesize: () => void;
+}) {
+  // Quick stats from current data
+  const openRisks = raidItems.filter(r => r.status === "open" && r.type === "risk").length;
+  const openIssues = raidItems.filter(r => r.status === "open" && r.type === "issue").length;
+  const criticalItems = raidItems.filter(r => r.status === "open" && r.severity === "critical").length;
+  const delayedMilestones = scheduleItems.filter(s => s.status === "delayed").length;
+  const atRiskMilestones = scheduleItems.filter(s => s.status === "at_risk").length;
+  const totalAuthorized = (budgetSummary.originalContract || 0) + (budgetSummary.totalChangeOrders || 0) + (budgetSummary.totalAdditionalFunding || 0);
+  const spendPct = totalAuthorized > 0 ? Math.round((budgetSummary.totalActualSpend || 0) / totalAuthorized * 100) : 0;
+
+  // Determine overall health from synthesis or assessments
+  const overallHealth = synthesis?.overallHealth || (() => {
+    const ratings = Object.values(assessmentMap).map((a: any) => a.overallRating).filter(Boolean);
+    if (ratings.length === 0) return null;
+    const order = ["critical", "high", "medium", "low", "satisfactory"];
+    return ratings.sort((a: string, b: string) => order.indexOf(a) - order.indexOf(b))[0];
+  })();
+
+  const HealthIcon = overallHealth ? HEALTH_ICONS[overallHealth] || Activity : Activity;
+
+  return (
+    <div className="space-y-4">
+      {/* Synthesize button + overall health banner */}
+      <div className={`rounded-lg border p-4 ${overallHealth ? HEALTH_BG[overallHealth] || "bg-muted/30 border-border" : "bg-muted/30 border-border"}`}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <HealthIcon className={`w-8 h-8 ${overallHealth === "critical" ? "text-red-600" : overallHealth === "high" ? "text-red-500" : overallHealth === "medium" ? "text-amber-600" : overallHealth === "low" ? "text-blue-500" : overallHealth === "satisfactory" ? "text-emerald-500" : "text-muted-foreground"}`} />
+            <div>
+              <h2 className="text-lg font-semibold">
+                {overallHealth
+                  ? <>Project Health: <span className="capitalize">{overallHealth === "satisfactory" ? "Satisfactory" : `${overallHealth.toUpperCase()} RISK`}</span></>
+                  : "No Health Assessment Yet"
+                }
+              </h2>
+              {synthesis?.executiveSummary && (
+                <p className="text-sm text-muted-foreground mt-1 max-w-2xl">{synthesis.executiveSummary}</p>
+              )}
+              {!synthesis && !overallHealth && (
+                <p className="text-sm text-muted-foreground mt-1">Upload documents and add data, then synthesize to get an AI-powered health assessment.</p>
+              )}
+            </div>
+          </div>
+          <Button
+            className="bg-[#1a2744] hover:bg-[#243460] text-white gap-2"
+            onClick={onSynthesize}
+            disabled={isSynthesizing}
+            data-testid="button-synthesize"
+          >
+            {isSynthesizing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+            {isSynthesizing ? "Synthesizing..." : synthesis ? "Re-Synthesize" : "Synthesize Assessment"}
+          </Button>
+        </div>
+      </div>
+
+      {/* Quick stats cards */}
+      <div className="grid grid-cols-4 gap-3">
+        <Card className="p-3">
+          <div className="flex items-center gap-2 mb-1">
+            <AlertTriangle className="w-4 h-4 text-amber-500" />
+            <span className="text-xs text-muted-foreground">Open Risks</span>
+          </div>
+          <p className="text-2xl font-bold">{openRisks}</p>
+          {criticalItems > 0 && <p className="text-[10px] text-red-500 font-medium">{criticalItems} critical</p>}
+        </Card>
+        <Card className="p-3">
+          <div className="flex items-center gap-2 mb-1">
+            <ShieldAlert className="w-4 h-4 text-red-500" />
+            <span className="text-xs text-muted-foreground">Open Issues</span>
+          </div>
+          <p className="text-2xl font-bold">{openIssues}</p>
+        </Card>
+        <Card className="p-3">
+          <div className="flex items-center gap-2 mb-1">
+            <DollarSign className="w-4 h-4 text-emerald-500" />
+            <span className="text-xs text-muted-foreground">Budget</span>
+          </div>
+          <p className="text-2xl font-bold">{spendPct}%</p>
+          <p className="text-[10px] text-muted-foreground">spent of ${totalAuthorized.toLocaleString()}</p>
+        </Card>
+        <Card className="p-3">
+          <div className="flex items-center gap-2 mb-1">
+            <Calendar className="w-4 h-4 text-blue-500" />
+            <span className="text-xs text-muted-foreground">Schedule</span>
+          </div>
+          <p className="text-2xl font-bold">{scheduleItems.length}</p>
+          <p className="text-[10px] text-muted-foreground">
+            {delayedMilestones > 0 ? <span className="text-red-500">{delayedMilestones} delayed</span> : null}
+            {delayedMilestones > 0 && atRiskMilestones > 0 ? ", " : null}
+            {atRiskMilestones > 0 ? <span className="text-amber-500">{atRiskMilestones} at risk</span> : null}
+            {delayedMilestones === 0 && atRiskMilestones === 0 ? "milestones" : null}
+          </p>
+        </Card>
+      </div>
+
+      {/* Domain assessment cards — show synthesis or existing assessments */}
+      <div className="grid grid-cols-2 gap-3">
+        {DOMAINS.map(d => {
+          const synDomain = synthesis?.domains?.find((sd: any) => sd.domain === d.key);
+          const existing = assessmentMap[d.key];
+          const rating = synDomain?.rating || existing?.overallRating;
+          const summary = synDomain?.summary || existing?.summary;
+          const findings = synDomain?.findings || (() => {
+            try { return existing?.findings ? JSON.parse(existing.findings) : []; } catch { return []; }
+          })();
+
+          return (
+            <Card key={d.key} className="overflow-hidden">
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm flex items-center gap-2"><span>{d.icon}</span>{d.label}</CardTitle>
+                  {rating && <Badge className={`text-[10px] ${RATING_COLORS[rating] || ""}`}>{rating.toUpperCase()}</Badge>}
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {summary ? (
+                  <p className="text-xs text-muted-foreground">{summary}</p>
+                ) : (
+                  <p className="text-xs text-muted-foreground italic">{d.desc}</p>
+                )}
+                {Array.isArray(findings) && findings.length > 0 && (
+                  <div className="space-y-1.5 pt-1 border-t">
+                    {findings.slice(0, 3).map((f: any, i: number) => (
+                      <div key={i} className="flex items-start gap-2 text-[11px]">
+                        <Badge className={`text-[9px] shrink-0 mt-0.5 ${RATING_COLORS[f.severity] || "bg-muted text-muted-foreground"}`}>{f.severity}</Badge>
+                        <span className="text-muted-foreground">{f.finding || f.recommendation || JSON.stringify(f)}</span>
+                      </div>
+                    ))}
+                    {findings.length > 3 && <p className="text-[10px] text-muted-foreground/60">+{findings.length - 3} more findings</p>}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+
+      {/* Synthesis-only sections: top risks + recommended actions */}
+      {synthesis && (
+        <div className="grid grid-cols-2 gap-4">
+          {/* Top Risks */}
+          {synthesis.topRisks?.length > 0 && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2"><AlertTriangle className="w-4 h-4 text-amber-500" />Top Risks</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {synthesis.topRisks.map((risk: any, i: number) => (
+                  <div key={i} className="flex items-start gap-2">
+                    <Badge className={`text-[9px] shrink-0 mt-0.5 ${RATING_COLORS[risk.severity] || ""}`}>{risk.severity}</Badge>
+                    <div>
+                      <p className="text-xs font-medium">{risk.title}</p>
+                      <p className="text-[11px] text-muted-foreground">{risk.impact}</p>
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Recommended Actions */}
+          {synthesis.recommendedActions?.length > 0 && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2"><ArrowRight className="w-4 h-4 text-[#d4a853]" />Recommended Actions</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ol className="space-y-1.5">
+                  {synthesis.recommendedActions.map((action: string, i: number) => (
+                    <li key={i} className="flex items-start gap-2 text-xs text-muted-foreground">
+                      <span className="text-[10px] font-bold text-foreground shrink-0 mt-0.5 bg-muted rounded-full w-4 h-4 flex items-center justify-center">{i + 1}</span>
+                      {action}
+                    </li>
+                  ))}
+                </ol>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
+
+      {/* Budget & Schedule status from synthesis */}
+      {synthesis && (synthesis.budgetStatus || synthesis.scheduleStatus) && (
+        <div className="grid grid-cols-2 gap-4">
+          {synthesis.budgetStatus && (
+            <Card className="p-3">
+              <div className="flex items-center gap-2 mb-1">
+                <DollarSign className="w-4 h-4 text-emerald-500" />
+                <span className="text-xs font-medium">Budget Status</span>
+                <Badge variant="outline" className="text-[9px] ml-auto">{synthesis.budgetStatus.health?.replace(/_/g, " ")}</Badge>
+              </div>
+              <p className="text-xs text-muted-foreground">{synthesis.budgetStatus.summary}</p>
+            </Card>
+          )}
+          {synthesis.scheduleStatus && (
+            <Card className="p-3">
+              <div className="flex items-center gap-2 mb-1">
+                <Calendar className="w-4 h-4 text-blue-500" />
+                <span className="text-xs font-medium">Schedule Status</span>
+                <Badge variant="outline" className="text-[9px] ml-auto">{synthesis.scheduleStatus.health?.replace(/_/g, " ")}</Badge>
+              </div>
+              <p className="text-xs text-muted-foreground">{synthesis.scheduleStatus.summary}</p>
+            </Card>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function HealthCheckPage() {
   const { id } = useParams<{ id: string }>();
   const projectId = parseInt(id || "0");
@@ -81,6 +314,7 @@ export default function HealthCheckPage() {
   const [budgetDialog, setBudgetDialog] = useState<{ open: boolean; editId?: number; form: BudgetForm }>({ open: false, form: emptyBudget() });
   const [scheduleDialog, setScheduleDialog] = useState<{ open: boolean; editId?: number; form: ScheduleForm }>({ open: false, form: emptySchedule() });
   const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; type: string; id: number; label: string }>({ open: false, type: "", id: 0, label: "" });
+  const [synthesis, setSynthesis] = useState<any>(null);
 
   const { data: project } = useQuery<any>({ queryKey: ["/api/projects", projectId], queryFn: () => apiRequest("GET", `/api/projects/${projectId}`).then(r => r.json()), enabled: !!projectId });
   const { data: assessments = [] } = useQuery<any[]>({ queryKey: ["/api/projects", projectId, "hc-assessments"], queryFn: () => apiRequest("GET", `/api/projects/${projectId}/health-check/assessments`).then(r => r.json()), enabled: !!projectId });
@@ -151,6 +385,16 @@ export default function HealthCheckPage() {
     onSuccess: () => { invalidateAll(); toast({ title: "Deleted" }); },
   });
 
+  const synthesize = useMutation({
+    mutationFn: () => apiRequest("POST", `/api/projects/${projectId}/health-check/synthesize`).then(r => r.json()),
+    onSuccess: (data: any) => {
+      setSynthesis(data);
+      invalidateAll();
+      toast({ title: "Health assessment synthesized" });
+    },
+    onError: (e: any) => toast({ title: "Synthesis failed", description: e.message, variant: "destructive" }),
+  });
+
   function confirmDelete(type: string, id: number, label: string) {
     setDeleteConfirm({ open: true, type, id, label });
   }
@@ -217,13 +461,27 @@ export default function HealthCheckPage() {
 
       <ScrollArea className="flex-1">
         <div className="p-6">
-          <Tabs defaultValue="assessment" data-testid="health-check-tabs">
+          <Tabs defaultValue="summary" data-testid="health-check-tabs">
             <TabsList className="mb-4">
+              <TabsTrigger value="summary" data-testid="tab-summary"><Activity className="w-4 h-4 mr-1 inline" />Summary</TabsTrigger>
               <TabsTrigger value="assessment" data-testid="tab-assessment">Assessment</TabsTrigger>
               <TabsTrigger value="raid" data-testid="tab-raid">RAID Log</TabsTrigger>
               <TabsTrigger value="budget" data-testid="tab-budget">Budget & Schedule</TabsTrigger>
               <TabsTrigger value="documents" data-testid="tab-documents"><FileText className="w-4 h-4 mr-1 inline" />Documents</TabsTrigger>
             </TabsList>
+
+            {/* TAB 0: Executive Summary */}
+            <TabsContent value="summary">
+              <SynthesisSummary
+                synthesis={synthesis}
+                assessmentMap={assessmentMap}
+                raidItems={raidItems}
+                budgetSummary={budgetSummary}
+                scheduleItems={scheduleItems}
+                isSynthesizing={synthesize.isPending}
+                onSynthesize={() => synthesize.mutate()}
+              />
+            </TabsContent>
 
             {/* TAB 1: Assessment Domains */}
             <TabsContent value="assessment">

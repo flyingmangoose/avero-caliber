@@ -925,4 +925,196 @@ ${documentText.substring(0, 30000)}`, undefined, 8192);
   }
 }
 
+// ==================== HEALTH CHECK SYNTHESIS ====================
+
+export interface SynthesisResult {
+  overallHealth: string;
+  executiveSummary: string;
+  domains: Array<{
+    domain: string;
+    rating: string;
+    summary: string;
+    findings: Array<{ severity: string; finding: string; evidence: string; recommendation: string }>;
+  }>;
+  topRisks: Array<{ title: string; severity: string; impact: string }>;
+  budgetStatus: { summary: string; health: string };
+  scheduleStatus: { summary: string; health: string };
+  recommendedActions: string[];
+}
+
+export async function synthesizeHealthCheck(data: {
+  projectContext: string;
+  raidItems: any[];
+  budgetEntries: any[];
+  budgetSummary: any;
+  scheduleItems: any[];
+  documents: any[];
+  existingAssessments: any[];
+}): Promise<SynthesisResult> {
+  // Build a comprehensive snapshot of all health check data
+  let snapshot = `${data.projectContext}\n\n`;
+
+  // RAID summary
+  snapshot += `CURRENT RAID LOG (${data.raidItems.length} items):\n`;
+  const raidByType: Record<string, number> = {};
+  const openCritical: any[] = [];
+  for (const r of data.raidItems) {
+    raidByType[r.type] = (raidByType[r.type] || 0) + 1;
+    if (r.status === "open" && (r.severity === "critical" || r.severity === "high")) {
+      openCritical.push(r);
+    }
+  }
+  snapshot += `Breakdown: ${Object.entries(raidByType).map(([t, c]) => `${c} ${t}s`).join(", ")}\n`;
+  if (openCritical.length > 0) {
+    snapshot += `Open Critical/High items:\n`;
+    for (const r of openCritical.slice(0, 15)) {
+      snapshot += `- [${r.type}/${r.severity}] ${r.title}: ${r.description || "No description"}${r.owner ? ` (Owner: ${r.owner})` : ""}\n`;
+    }
+  }
+  // Include all items for thoroughness (up to 50)
+  snapshot += `\nFull RAID items:\n`;
+  for (const r of data.raidItems.slice(0, 50)) {
+    snapshot += `- [${r.type}/${r.severity}/${r.status}] ${r.title}: ${(r.description || "").substring(0, 150)}${r.owner ? ` (Owner: ${r.owner})` : ""}${r.dueDate ? ` Due: ${r.dueDate}` : ""}\n`;
+  }
+
+  // Budget summary
+  snapshot += `\nBUDGET STATUS:\n`;
+  const bs = data.budgetSummary;
+  snapshot += `- Original Contract: $${(bs.originalContract || 0).toLocaleString()}\n`;
+  snapshot += `- Change Orders: $${(bs.totalChangeOrders || 0).toLocaleString()}\n`;
+  snapshot += `- Additional Funding: $${(bs.totalAdditionalFunding || 0).toLocaleString()}\n`;
+  snapshot += `- Total Authorized: $${((bs.originalContract || 0) + (bs.totalChangeOrders || 0) + (bs.totalAdditionalFunding || 0)).toLocaleString()}\n`;
+  snapshot += `- Actual Spend: $${(bs.totalActualSpend || 0).toLocaleString()}\n`;
+  snapshot += `- Variance: $${(bs.variance || 0).toLocaleString()}\n`;
+  if (data.budgetEntries.length > 0) {
+    snapshot += `Budget line items:\n`;
+    for (const b of data.budgetEntries.slice(0, 20)) {
+      snapshot += `- [${b.category}] ${b.description}: $${(b.amount || 0).toLocaleString()}${b.date ? ` (${b.date})` : ""}${b.notes ? ` — ${b.notes}` : ""}\n`;
+    }
+  }
+
+  // Schedule summary
+  snapshot += `\nSCHEDULE STATUS (${data.scheduleItems.length} milestones):\n`;
+  const schedByStatus: Record<string, number> = {};
+  for (const s of data.scheduleItems) {
+    schedByStatus[s.status || "on_track"] = (schedByStatus[s.status || "on_track"] || 0) + 1;
+  }
+  snapshot += `Status: ${Object.entries(schedByStatus).map(([s, c]) => `${c} ${s}`).join(", ")}\n`;
+  for (const s of data.scheduleItems.slice(0, 20)) {
+    snapshot += `- ${s.milestone}: ${s.status || "on_track"}`;
+    if (s.originalDate) snapshot += ` (baseline: ${s.originalDate}`;
+    if (s.currentDate) snapshot += ` → current: ${s.currentDate}`;
+    if (s.originalDate) snapshot += `)`;
+    if (s.varianceDays) snapshot += ` [${s.varianceDays > 0 ? "+" : ""}${s.varianceDays}d]`;
+    if (s.notes) snapshot += ` — ${s.notes}`;
+    snapshot += `\n`;
+  }
+
+  // Document analysis summaries
+  const analyzedDocs = data.documents.filter(d => d.analysisStatus === "completed" && d.aiAnalysis);
+  if (analyzedDocs.length > 0) {
+    snapshot += `\nANALYZED DOCUMENTS (${analyzedDocs.length}):\n`;
+    for (const doc of analyzedDocs.slice(0, 10)) {
+      try {
+        const analysis = JSON.parse(doc.aiAnalysis);
+        snapshot += `- ${doc.fileName} (${doc.documentType}${doc.period ? `, ${doc.period}` : ""}): ${analysis.summary || "No summary"}\n`;
+        if (analysis.overallHealth) snapshot += `  Health rating from this document: ${analysis.overallHealth}\n`;
+      } catch {
+        snapshot += `- ${doc.fileName} (${doc.documentType}): Analysis available but not parseable\n`;
+      }
+    }
+  }
+
+  // Existing assessments for context
+  if (data.existingAssessments.length > 0) {
+    snapshot += `\nEXISTING DOMAIN ASSESSMENTS:\n`;
+    for (const a of data.existingAssessments) {
+      snapshot += `- ${a.domain}: ${a.overallRating || "unrated"} — ${a.summary || "No summary"}`;
+      if (a.assessedBy) snapshot += ` (by ${a.assessedBy})`;
+      snapshot += `\n`;
+    }
+  }
+
+  const text = await llmCall(`You are a senior IV&V consultant synthesizing a comprehensive health check assessment for a government ERP/EAM implementation project.
+
+You have been given the full project context including client information, discovery findings, vendor evaluation data, and all current health check data (RAID log, budget, schedule, documents, prior assessments).
+
+Your job is to produce a UNIFIED health assessment that:
+1. Synthesizes across ALL data sources — don't just repeat individual findings
+2. Connects the dots between upstream data (discovery pain points, vendor evaluation gaps) and current project health
+3. Identifies patterns and systemic issues, not just individual items
+4. Provides actionable, specific recommendations
+5. Rates each domain honestly — don't sugarcoat problems
+
+HEALTH CHECK DATA:
+${snapshot}
+
+Return a JSON response with this exact structure:
+{
+  "overallHealth": "critical|high|medium|low|satisfactory",
+  "executiveSummary": "3-5 sentence executive summary of project health, highlighting the most important issues and trends",
+  "domains": [
+    {
+      "domain": "governance",
+      "rating": "critical|high|medium|low|satisfactory",
+      "summary": "2-3 sentence assessment of this domain",
+      "findings": [{"severity": "critical|high|medium|low", "finding": "What was found", "evidence": "Specific evidence from the data", "recommendation": "What to do about it"}]
+    },
+    {
+      "domain": "raid",
+      "rating": "...",
+      "summary": "...",
+      "findings": [...]
+    },
+    {
+      "domain": "technical",
+      "rating": "...",
+      "summary": "...",
+      "findings": [...]
+    },
+    {
+      "domain": "budget_schedule",
+      "rating": "...",
+      "summary": "...",
+      "findings": [...]
+    }
+  ],
+  "topRisks": [
+    {"title": "Risk title", "severity": "critical|high|medium|low", "impact": "Brief description of potential impact"}
+  ],
+  "budgetStatus": {"summary": "1-2 sentence budget health summary", "health": "on_track|at_risk|over_budget|under_budget"},
+  "scheduleStatus": {"summary": "1-2 sentence schedule health summary", "health": "on_track|at_risk|delayed|critical"},
+  "recommendedActions": ["Specific action 1", "Specific action 2", "...up to 5 prioritized actions"]
+}
+
+Keep topRisks to the 3-5 most important. Keep recommendedActions to 3-5 prioritized items. Each domain should have 2-5 findings.
+Return ONLY valid JSON.`, undefined, 8192);
+
+  const jsonMatch = text.match(/\{[\s\S]*"overallHealth"[\s\S]*\}/);
+  if (!jsonMatch) {
+    return {
+      overallHealth: "medium",
+      executiveSummary: "Unable to synthesize health assessment. Please ensure project has sufficient data.",
+      domains: [],
+      topRisks: [],
+      budgetStatus: { summary: "Insufficient data", health: "at_risk" },
+      scheduleStatus: { summary: "Insufficient data", health: "at_risk" },
+      recommendedActions: ["Upload project documents and run analysis to enable health synthesis"],
+    };
+  }
+  try {
+    return JSON.parse(jsonMatch[0]);
+  } catch {
+    return {
+      overallHealth: "medium",
+      executiveSummary: "Unable to parse synthesis results.",
+      domains: [],
+      topRisks: [],
+      budgetStatus: { summary: "Parse error", health: "at_risk" },
+      scheduleStatus: { summary: "Parse error", health: "at_risk" },
+      recommendedActions: ["Retry synthesis"],
+    };
+  }
+}
+
 export { xai, CHAT_SYSTEM_PROMPT, PROPOSAL_ANALYSIS_PROMPT, llmCall, llmStream };

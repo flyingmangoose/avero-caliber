@@ -3507,6 +3507,57 @@ Write in professional consulting tone covering: overall posture assessment, key 
     res.send(report);
   });
 
+  // Synthesize unified health assessment from all project data
+  app.post("/api/projects/:id/health-check/synthesize", async (req, res) => {
+    const projectId = parseInt(req.params.id);
+    const project = storage.getProject(projectId);
+    if (!project) return res.status(404).json({ error: "Project not found" });
+
+    try {
+      const { synthesizeHealthCheck, buildProjectContext } = await import("./ai");
+      const projectContext = buildProjectContext(projectId);
+
+      const raidItems = storage.getRaidItems(projectId);
+      const budgetEntries = storage.getBudgetEntries(projectId);
+      const budgetSummary = storage.getBudgetSummary(projectId);
+      const scheduleItems = storage.getScheduleEntries(projectId);
+      const documents = storage.getProjectDocuments(projectId);
+      const existingAssessments = storage.getHealthCheckAssessments(projectId);
+
+      const result = await synthesizeHealthCheck({
+        projectContext,
+        raidItems,
+        budgetEntries,
+        budgetSummary,
+        scheduleItems,
+        documents,
+        existingAssessments,
+      });
+
+      // Upsert assessments per domain from synthesis results
+      for (const domainResult of (result.domains || [])) {
+        const existing = existingAssessments.find(a => a.domain === domainResult.domain);
+        const assessmentData = {
+          domain: domainResult.domain,
+          overallRating: domainResult.rating,
+          findings: JSON.stringify(domainResult.findings || []),
+          summary: domainResult.summary,
+          assessedBy: "AI Synthesis",
+        };
+        if (existing) {
+          storage.updateHealthCheckAssessment(existing.id, assessmentData);
+        } else {
+          storage.createHealthCheckAssessment({ projectId, ...assessmentData });
+        }
+      }
+
+      res.json(result);
+    } catch (err: any) {
+      console.error("Health check synthesis error:", err);
+      res.status(500).json({ error: "Synthesis failed: " + (err.message || "Unknown error") });
+    }
+  });
+
   // ==================== RAID LOG ====================
 
   app.post("/api/projects/:id/raid", (req, res) => {
@@ -3840,7 +3891,7 @@ Write in professional consulting tone covering: overall posture assessment, key 
 
     // Apply budget items
     for (const budget of (items.budgetItems || [])) {
-      storage.createBudgetItem({
+      storage.createBudgetEntry({
         projectId,
         category: budget.category || "actual_spend",
         description: budget.description,
@@ -3853,7 +3904,7 @@ Write in professional consulting tone covering: overall posture assessment, key 
 
     // Apply schedule items
     for (const sched of (items.scheduleItems || [])) {
-      storage.createScheduleItem({
+      storage.createScheduleEntry({
         projectId,
         milestone: sched.milestone,
         originalDate: sched.originalDate || null,
