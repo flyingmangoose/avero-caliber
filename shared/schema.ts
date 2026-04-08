@@ -18,6 +18,19 @@ export const users = sqliteTable("users", {
 
 export type User = typeof users.$inferSelect;
 
+// ==================== PROJECT MEMBERS (RBAC) ====================
+
+export const projectMembers = sqliteTable("project_members", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  projectId: integer("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  role: text("role").notNull().default("viewer"), // owner, editor, viewer
+  addedBy: integer("added_by"),
+  createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
+});
+
+export type ProjectMember = typeof projectMembers.$inferSelect;
+
 // ==================== CLIENTS ====================
 
 export const clients = sqliteTable("clients", {
@@ -48,6 +61,7 @@ export type InsertClient = z.infer<typeof insertClientSchema>;
 export const projects = sqliteTable("projects", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   clientId: integer("client_id").references(() => clients.id, { onDelete: "cascade" }),
+  createdBy: integer("created_by"), // user ID of creator
   name: text("name").notNull(),
   description: text("description").notNull().default(""),
   status: text("status").notNull().default("draft"),

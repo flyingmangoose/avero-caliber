@@ -15,6 +15,91 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
 
+  // ==================== AUTHORIZATION HELPERS ====================
+
+  function getUserFromReq(req: any): { id: number; role: string } | null {
+    if (!req.isAuthenticated || !req.isAuthenticated()) return null;
+    return req.user as any;
+  }
+
+  function canAccessProject(req: any, projectId: number): boolean {
+    const user = getUserFromReq(req);
+    if (!user) return true; // No auth configured — allow all
+    if (user.role === "admin") return true;
+    const memberRole = storage.getProjectMemberRole(projectId, user.id);
+    if (memberRole) return true;
+    // Also allow if user created the project (legacy projects without members)
+    const project = storage.getProject(projectId);
+    if (project?.createdBy === user.id) return true;
+    // Allow access if no members exist yet (legacy/unassigned projects)
+    const members = storage.getProjectMembers(projectId);
+    if (members.length === 0) return true;
+    return false;
+  }
+
+  function canEditProject(req: any, projectId: number): boolean {
+    const user = getUserFromReq(req);
+    if (!user) return true; // No auth configured
+    if (user.role === "admin") return true;
+    const memberRole = storage.getProjectMemberRole(projectId, user.id);
+    if (memberRole === "owner" || memberRole === "editor") return true;
+    const project = storage.getProject(projectId);
+    if (project?.createdBy === user.id) return true;
+    // Allow edit if no members exist yet (legacy)
+    const members = storage.getProjectMembers(projectId);
+    if (members.length === 0) return true;
+    return false;
+  }
+
+  function isProjectOwner(req: any, projectId: number): boolean {
+    const user = getUserFromReq(req);
+    if (!user) return true;
+    if (user.role === "admin") return true;
+    const memberRole = storage.getProjectMemberRole(projectId, user.id);
+    return memberRole === "owner";
+  }
+
+  // ==================== PROJECT MEMBERS ====================
+
+  app.get("/api/projects/:id/members", (req, res) => {
+    const projectId = parseInt(req.params.id);
+    if (!canAccessProject(req, projectId)) return res.status(403).json({ error: "Access denied" });
+    const members = storage.getProjectMembers(projectId);
+    res.json(members);
+  });
+
+  app.post("/api/projects/:id/members", (req, res) => {
+    const projectId = parseInt(req.params.id);
+    if (!isProjectOwner(req, projectId)) return res.status(403).json({ error: "Only project owners can add members" });
+    const { userId, role } = req.body;
+    if (!userId) return res.status(400).json({ error: "userId required" });
+    const user = getUserFromReq(req);
+    const member = storage.addProjectMember(projectId, userId, role || "viewer", user?.id);
+    res.json(member);
+  });
+
+  app.patch("/api/projects/:id/members/:userId", (req, res) => {
+    const projectId = parseInt(req.params.id);
+    if (!isProjectOwner(req, projectId)) return res.status(403).json({ error: "Only project owners can change roles" });
+    const userId = parseInt(req.params.userId);
+    const { role } = req.body;
+    const updated = storage.updateProjectMemberRole(projectId, userId, role);
+    res.json(updated);
+  });
+
+  app.delete("/api/projects/:id/members/:userId", (req, res) => {
+    const projectId = parseInt(req.params.id);
+    if (!isProjectOwner(req, projectId)) return res.status(403).json({ error: "Only project owners can remove members" });
+    storage.removeProjectMember(projectId, parseInt(req.params.userId));
+    res.json({ success: true });
+  });
+
+  // Users list (for adding members)
+  app.get("/api/users", (req, res) => {
+    const users = storage.getAllUsers();
+    res.json(users.map(u => ({ id: u.id, name: u.name, email: u.email, picture: u.picture, role: u.role })));
+  });
+
   // ==================== DOMAIN RESEARCH ====================
 
   function stripHtml(html: string): string {
@@ -395,6 +480,7 @@ Only include fields that are clearly present in the document. Return ONLY valid 
     if (!name) {
       return res.status(400).json({ error: "Project name is required" });
     }
+    const user = getUserFromReq(req);
     const project = storage.createProject({
       name,
       description: description || "",
@@ -402,12 +488,18 @@ Only include fields that are clearly present in the document. Return ONLY valid 
       clientId: clientId || null,
       engagementModules: engagementModules || '["selection"]',
       engagementMode: engagementMode || "consulting",
+      createdBy: user?.id || null,
     });
+    // Auto-assign creator as project owner
+    if (user) {
+      try { storage.addProjectMember(project.id, user.id, "owner", user.id); } catch {}
+    }
     res.status(201).json(project);
   });
 
   app.get("/api/projects/:id", (req, res) => {
     const id = parseInt(req.params.id);
+    if (!canAccessProject(req, id)) return res.status(403).json({ error: "Access denied" });
     const project = storage.getProject(id);
     if (!project) {
       return res.status(404).json({ error: "Project not found" });
@@ -418,6 +510,7 @@ Only include fields that are clearly present in the document. Return ONLY valid 
 
   app.patch("/api/projects/:id", (req, res) => {
     const id = parseInt(req.params.id);
+    if (!canEditProject(req, id)) return res.status(403).json({ error: "Edit access denied" });
     const project = storage.updateProject(id, req.body);
     if (!project) {
       return res.status(404).json({ error: "Project not found" });
@@ -427,6 +520,7 @@ Only include fields that are clearly present in the document. Return ONLY valid 
 
   app.delete("/api/projects/:id", (req, res) => {
     const id = parseInt(req.params.id);
+    if (!isProjectOwner(req, id)) return res.status(403).json({ error: "Only project owners can delete projects" });
     const project = storage.getProject(id);
     if (!project) {
       return res.status(404).json({ error: "Project not found" });

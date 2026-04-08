@@ -39,6 +39,7 @@ import {
   type ProjectBaseline, projectBaselines,
   type AssessmentHistory, assessmentHistory,
   type User, users,
+  type ProjectMember, projectMembers,
 } from "@shared/schema";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import Database from "better-sqlite3";
@@ -64,6 +65,16 @@ sqlite.exec(`
     is_active INTEGER DEFAULT 1,
     last_login_at TEXT,
     created_at TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS project_members (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    role TEXT NOT NULL DEFAULT 'viewer',
+    added_by INTEGER,
+    created_at TEXT NOT NULL,
+    UNIQUE(project_id, user_id)
   );
 
   CREATE TABLE IF NOT EXISTS clients (
@@ -573,6 +584,7 @@ sqlite.exec(`
 
 // Safe column additions (ignored if already exists)
 try { sqlite.exec(`ALTER TABLE projects ADD COLUMN engagement_mode TEXT DEFAULT 'consulting'`); } catch {}
+try { sqlite.exec(`ALTER TABLE projects ADD COLUMN created_by INTEGER`); } catch {}
 
 // Enable foreign keys
 sqlite.pragma("foreign_keys = ON");
@@ -617,6 +629,15 @@ export interface IStorage {
   findOrCreateUser(profile: { googleId: string; email: string; name: string; picture?: string }): User;
   getUser(id: number): User | undefined;
   getUserByGoogleId(googleId: string): User | undefined;
+  getAllUsers(): User[];
+
+  // Project Members (RBAC)
+  addProjectMember(projectId: number, userId: number, role: string, addedBy?: number): ProjectMember;
+  getProjectMembers(projectId: number): (ProjectMember & { userName?: string; userEmail?: string; userPicture?: string })[];
+  getProjectMemberRole(projectId: number, userId: number): string | null;
+  getUserProjects(userId: number): number[];
+  updateProjectMemberRole(projectId: number, userId: number, role: string): ProjectMember | undefined;
+  removeProjectMember(projectId: number, userId: number): void;
 
   // Clients
   createClient(data: any): Client;
@@ -965,6 +986,56 @@ export class DatabaseStorage implements IStorage {
 
   getUserByGoogleId(googleId: string): User | undefined {
     return db.select().from(users).where(eq(users.googleId, googleId)).get();
+  }
+
+  getAllUsers(): User[] {
+    return db.select().from(users).where(eq(users.isActive, 1)).all();
+  }
+
+  // ==================== Project Members (RBAC) ====================
+
+  addProjectMember(projectId: number, userId: number, role: string, addedBy?: number): ProjectMember {
+    return db.insert(projectMembers).values({
+      projectId,
+      userId,
+      role,
+      addedBy: addedBy || null,
+      createdAt: new Date().toISOString(),
+    }).returning().get();
+  }
+
+  getProjectMembers(projectId: number): (ProjectMember & { userName?: string; userEmail?: string; userPicture?: string })[] {
+    const members = db.select().from(projectMembers).where(eq(projectMembers.projectId, projectId)).all();
+    return members.map(m => {
+      const user = this.getUser(m.userId);
+      return { ...m, userName: user?.name, userEmail: user?.email, userPicture: user?.picture };
+    });
+  }
+
+  getProjectMemberRole(projectId: number, userId: number): string | null {
+    const member = db.select().from(projectMembers)
+      .where(and(eq(projectMembers.projectId, projectId), eq(projectMembers.userId, userId)))
+      .get();
+    return member?.role || null;
+  }
+
+  getUserProjects(userId: number): number[] {
+    return db.select({ projectId: projectMembers.projectId }).from(projectMembers)
+      .where(eq(projectMembers.userId, userId))
+      .all()
+      .map(r => r.projectId);
+  }
+
+  updateProjectMemberRole(projectId: number, userId: number, role: string): ProjectMember | undefined {
+    return db.update(projectMembers).set({ role })
+      .where(and(eq(projectMembers.projectId, projectId), eq(projectMembers.userId, userId)))
+      .returning().get();
+  }
+
+  removeProjectMember(projectId: number, userId: number): void {
+    db.delete(projectMembers)
+      .where(and(eq(projectMembers.projectId, projectId), eq(projectMembers.userId, userId)))
+      .run();
   }
 
   // ==================== Clients ====================
