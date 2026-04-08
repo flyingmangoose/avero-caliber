@@ -306,20 +306,20 @@ export default function Dashboard() {
   // ── Render ──
 
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-6" data-testid="page-dashboard">
+    <div className="p-8 max-w-5xl mx-auto space-y-8" data-testid="page-dashboard">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-[#1a2744] dark:text-white">
-            Clients &amp; Projects
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+            Clients & Projects
           </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
+          <p className="text-sm text-muted-foreground mt-1">
             Manage your client engagements
           </p>
         </div>
         <Button
           onClick={openNewClient}
-          className="gap-1.5 bg-[#d4a853] hover:bg-[#c49843] text-white"
+          className="gap-2 bg-accent hover:bg-accent/90 text-accent-foreground shadow-sm"
           data-testid="button-new-client"
         >
           <Plus className="w-4 h-4" />
@@ -329,36 +329,36 @@ export default function Dashboard() {
 
       {/* Stats Row */}
       <div className="grid grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-[#1a2744]/10 dark:bg-[#1a2744]/40">
-              <Building2 className="w-5 h-5 text-[#1a2744] dark:text-[#d4a853]" />
+        <Card className="border-border/50">
+          <CardContent className="p-5 flex items-center gap-4">
+            <div className="p-2.5 rounded-xl bg-primary/8 dark:bg-primary/15">
+              <Building2 className="w-5 h-5 text-primary dark:text-accent" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{isLoading ? "—" : totalClients}</p>
-              <p className="text-xs text-muted-foreground">Total Clients</p>
+              <p className="text-2xl font-semibold tracking-tight">{isLoading ? "—" : totalClients}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Total Clients</p>
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-green-50 dark:bg-green-900/20">
-              <BarChart3 className="w-5 h-5 text-green-600 dark:text-green-400" />
+        <Card className="border-border/50">
+          <CardContent className="p-5 flex items-center gap-4">
+            <div className="p-2.5 rounded-xl bg-emerald-500/8 dark:bg-emerald-500/15">
+              <BarChart3 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{isLoading ? "—" : activeProjects}</p>
-              <p className="text-xs text-muted-foreground">Active Projects</p>
+              <p className="text-2xl font-semibold tracking-tight">{isLoading ? "—" : activeProjects}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Active Projects</p>
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-[#d4a853]/15">
-              <Briefcase className="w-5 h-5 text-[#d4a853]" />
+        <Card className="border-border/50">
+          <CardContent className="p-5 flex items-center gap-4">
+            <div className="p-2.5 rounded-xl bg-accent/10 dark:bg-accent/15">
+              <Briefcase className="w-5 h-5 text-accent" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{isLoading ? "—" : totalProjects}</p>
-              <p className="text-xs text-muted-foreground">Total Projects</p>
+              <p className="text-2xl font-semibold tracking-tight">{isLoading ? "—" : totalProjects}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Total Projects</p>
             </div>
           </CardContent>
         </Card>
@@ -421,7 +421,7 @@ export default function Dashboard() {
                         {/* Client name + badges */}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-bold text-sm text-[#1a2744] dark:text-white truncate">
+                            <span className="font-bold text-sm text-foreground truncate">
                               {client.name}
                             </span>
                             <EntityTypeBadge type={client.entityType} />
@@ -473,7 +473,7 @@ export default function Dashboard() {
                                 href={`https://${client.domain}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="flex items-center gap-1 hover:text-[#d4a853] transition-colors"
+                                className="flex items-center gap-1 hover:text-accent transition-colors"
                                 data-testid={`link-domain-${client.id}`}
                                 onClick={(e) => e.stopPropagation()}
                               >
@@ -505,7 +505,7 @@ export default function Dashboard() {
                             </Link>
                             <Button
                               size="sm"
-                              className="h-7 text-xs bg-[#d4a853] hover:bg-[#c49843] text-white gap-1"
+                              className="h-7 text-xs bg-accent hover:bg-accent/90 text-accent-foreground gap-1"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 openNewProject(client.id, client.name);
@@ -550,7 +550,7 @@ export default function Dashboard() {
                                   className="flex-1 min-w-0 flex items-center gap-2 no-underline"
                                   data-testid={`link-project-${project.id}`}
                                 >
-                                  <span className="text-sm font-medium truncate text-[#1a2744] dark:text-white group-hover:text-[#d4a853] transition-colors">
+                                  <span className="text-sm font-medium truncate text-foreground group-hover:text-accent transition-colors">
                                     {project.name}
                                   </span>
                                   <StatusBadge status={project.status} />
@@ -580,7 +580,7 @@ export default function Dashboard() {
                           <div className="text-center py-4 text-xs text-muted-foreground">
                             No projects yet.{" "}
                             <button
-                              className="underline text-[#d4a853] hover:text-[#c49843]"
+                              className="underline text-accent hover:text-accent/80"
                               onClick={() => openNewProject(client.id, client.name)}
                               data-testid={`button-first-project-${client.id}`}
                             >
@@ -624,7 +624,7 @@ export default function Dashboard() {
         <DialogContent className="max-w-md" data-testid="dialog-new-client">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Building2 className="w-5 h-5 text-[#d4a853]" />
+              <Building2 className="w-5 h-5 text-accent" />
               New Client
             </DialogTitle>
           </DialogHeader>
@@ -664,7 +664,7 @@ export default function Dashboard() {
             <div className="flex gap-2 pt-1">
               {clientDomain.trim() && (
                 <Button
-                  className="flex-1 bg-[#d4a853] hover:bg-[#c49843] text-white gap-2"
+                  className="flex-1 bg-accent hover:bg-accent/90 text-accent-foreground gap-2"
                   disabled={!clientName.trim() || createClientMutation.isPending}
                   onClick={() => createClientMutation.mutate({ enrich: true })}
                   data-testid="button-create-enrich"
@@ -682,7 +682,7 @@ export default function Dashboard() {
                 className={
                   clientDomain.trim()
                     ? "flex-1"
-                    : "flex-1 bg-[#d4a853] hover:bg-[#c49843] text-white"
+                    : "flex-1 bg-accent hover:bg-accent/90 text-accent-foreground"
                 }
                 disabled={!clientName.trim() || createClientMutation.isPending}
                 onClick={() => createClientMutation.mutate({ enrich: false })}
@@ -703,7 +703,7 @@ export default function Dashboard() {
         <DialogContent className="max-w-md" data-testid="dialog-new-project">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Briefcase className="w-5 h-5 text-[#d4a853]" />
+              <Briefcase className="w-5 h-5 text-accent" />
               New Project
               {newProjectClientName && (
                 <span className="text-sm font-normal text-muted-foreground">
@@ -782,7 +782,7 @@ export default function Dashboard() {
               </div>
             </div>
             <Button
-              className="w-full bg-[#d4a853] hover:bg-[#c49843] text-white gap-2"
+              className="w-full bg-accent hover:bg-accent/90 text-accent-foreground gap-2"
               disabled={!projectName.trim() || createProjectMutation.isPending}
               onClick={() => createProjectMutation.mutate()}
               data-testid="button-submit-project"

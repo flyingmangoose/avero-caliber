@@ -173,7 +173,7 @@ export default function StakeholderFeedback() {
           </Link>
           <span className="text-muted-foreground/40">/</span>
           <h1 className="text-lg font-semibold text-foreground flex items-center gap-2">
-            <MessageSquare className="w-5 h-5 text-[#d4a853]" />
+            <MessageSquare className="w-5 h-5 text-accent" />
             Stakeholder Feedback
           </h1>
         </div>
@@ -255,7 +255,7 @@ export default function StakeholderFeedback() {
               <Card data-testid="card-stakeholder-activity">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
-                    <Users className="w-4 h-4 text-[#d4a853]" />
+                    <Users className="w-4 h-4 text-accent" />
                     Stakeholder Activity
                     <Badge variant="outline" className="ml-auto text-[11px]">{summary.links.length} links</Badge>
                   </CardTitle>
@@ -407,7 +407,7 @@ export default function StakeholderFeedback() {
                               <div className="border-t border-border/50 px-4 py-3 space-y-2 bg-muted/10">
                                 {concern.comments.map((c, i) => (
                                   <div key={i} className="flex gap-2">
-                                    <span className="text-[11px] font-semibold text-[#d4a853] shrink-0">{c.stakeholder}:</span>
+                                    <span className="text-[11px] font-semibold text-accent shrink-0">{c.stakeholder}:</span>
                                     <span className="text-[11px] text-foreground/80">{c.comment}</span>
                                   </div>
                                 ))}
@@ -471,7 +471,7 @@ export default function StakeholderFeedback() {
                 <Card data-testid="card-module-chart">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
-                      <MessageSquare className="w-4 h-4 text-[#d4a853]" />
+                      <MessageSquare className="w-4 h-4 text-accent" />
                       Module-Level Feedback
                     </CardTitle>
                   </CardHeader>

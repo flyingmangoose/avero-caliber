@@ -28,11 +28,12 @@ const navItems = [
 
 function AveroLogo() {
   return (
-    <svg viewBox="0 0 32 32" fill="none" className="w-8 h-8 shrink-0" aria-label="Avero Caliber logo">
-      <rect x="2" y="6" width="28" height="20" rx="3" stroke="currentColor" strokeWidth="2" fill="none" />
-      <path d="M10 22L16 10L22 22" stroke="hsl(40,60%,58%)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-      <line x1="12" y1="18" x2="20" y2="18" stroke="hsl(40,60%,58%)" strokeWidth="2" strokeLinecap="round" />
-    </svg>
+    <div className="w-8 h-8 shrink-0 rounded-lg bg-gradient-to-br from-[hsl(38,65%,56%)] to-[hsl(38,65%,44%)] flex items-center justify-center shadow-sm">
+      <svg viewBox="0 0 20 20" fill="none" className="w-5 h-5" aria-label="Caliber logo">
+        <path d="M6 16L10 4L14 16" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+        <line x1="7.5" y1="12" x2="12.5" y2="12" stroke="white" strokeWidth="1.8" strokeLinecap="round" />
+      </svg>
+    </div>
   );
 }
 
@@ -68,12 +69,12 @@ export function AppSidebar() {
 
   return (
     <Sidebar data-testid="sidebar-nav">
-      <SidebarHeader className="px-4 py-4">
-        <Link href="/" className="flex items-center gap-2.5 no-underline">
+      <SidebarHeader className="px-4 py-5">
+        <Link href="/" className="flex items-center gap-3 no-underline">
           <AveroLogo />
           <div className="flex flex-col leading-tight">
-            <span className="text-sm font-semibold tracking-tight text-sidebar-foreground">Avero Caliber</span>
-            <span className="text-[11px] text-sidebar-foreground/60 font-medium">Vendor Evaluation Platform</span>
+            <span className="text-[13px] font-semibold tracking-tight text-sidebar-foreground">Caliber</span>
+            <span className="text-[10px] text-sidebar-foreground/50 font-medium tracking-wide uppercase">Avero Advisors</span>
           </div>
         </Link>
       </SidebarHeader>
@@ -104,7 +105,7 @@ export function AppSidebar() {
           <SidebarGroup>
             {client && (
               <div className="px-3 pb-1">
-                <Link href={`/clients/${clientId}/profile`} className="text-xs font-semibold text-[#d4a853] hover:underline truncate block">
+                <Link href={`/clients/${clientId}/profile`} className="text-xs font-semibold text-accent hover:underline truncate block">
                   {client.name}
                 </Link>
               </div>

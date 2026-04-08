@@ -202,7 +202,7 @@ export default function ClientProfilePage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Building2 className="w-7 h-7 text-[#d4a853]" />
+          <Building2 className="w-7 h-7 text-accent" />
           <h1 className="text-2xl font-bold">Client Profile</h1>
         </div>
         <div className="flex gap-2">
@@ -254,7 +254,7 @@ export default function ClientProfilePage() {
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <span className="text-xs text-muted-foreground">Mode:</span>
-                <Badge className="bg-[#d4a853]/20 text-[#d4a853] border-[#d4a853]/30">{project?.engagementMode === "self_service" ? "Self-Service" : "Consulting"}</Badge>
+                <Badge className="bg-accent/20 text-accent border-accent/30">{project?.engagementMode === "self_service" ? "Self-Service" : "Consulting"}</Badge>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-xs text-muted-foreground">Status:</span>

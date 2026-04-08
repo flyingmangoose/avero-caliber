@@ -245,7 +245,7 @@ export function ChatPanel({ projectId, projectName }: ChatPanelProps) {
       {!open && (
         <button
           onClick={() => setOpen(true)}
-          className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-[#d4a853] hover:bg-[#c49843] text-white shadow-lg flex items-center justify-center transition-all hover:scale-105"
+          className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg flex items-center justify-center transition-all hover:scale-105"
           title="Caliber AI"
           data-testid="chat-toggle-button"
         >
@@ -262,7 +262,7 @@ export function ChatPanel({ projectId, projectName }: ChatPanelProps) {
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-border/50 bg-card/50 shrink-0">
             <div className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-[#d4a853]" />
+              <Sparkles className="w-5 h-5 text-accent" />
               <div>
                 <h2 className="text-sm font-semibold">Caliber AI</h2>
                 <p className="text-[11px] text-muted-foreground truncate max-w-[200px]">{projectName}</p>
@@ -296,8 +296,8 @@ export function ChatPanel({ projectId, projectName }: ChatPanelProps) {
             {messages.length === 0 && !isStreaming && (
               <div className="space-y-4 pt-8">
                 <div className="text-center">
-                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#d4a853]/10 mb-3">
-                    <Sparkles className="w-6 h-6 text-[#d4a853]" />
+                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-accent/10 mb-3">
+                    <Sparkles className="w-6 h-6 text-accent" />
                   </div>
                   <h3 className="text-sm font-semibold text-foreground">How can I help?</h3>
                   <p className="text-xs text-muted-foreground mt-1">Ask me anything about your vendor evaluation</p>
@@ -307,7 +307,7 @@ export function ChatPanel({ projectId, projectName }: ChatPanelProps) {
                     <button
                       key={i}
                       onClick={() => handleSend(s)}
-                      className="text-xs px-3 py-1.5 rounded-full border border-[#d4a853]/30 text-[#d4a853] dark:text-[#d4a853] hover:bg-[#d4a853]/10 transition-colors text-left"
+                      className="text-xs px-3 py-1.5 rounded-full border border-accent/30 text-accent dark:text-accent hover:bg-accent/10 transition-colors text-left"
                       data-testid={`chat-suggestion-${i}`}
                     >
                       {s}
@@ -322,7 +322,7 @@ export function ChatPanel({ projectId, projectName }: ChatPanelProps) {
                 <div
                   className={`max-w-[85%] px-3 py-2 rounded-lg ${
                     msg.role === "user"
-                      ? "bg-[#1a2744] text-white rounded-br-sm"
+                      ? "bg-primary text-primary-foreground rounded-br-sm"
                       : "bg-gray-100 dark:bg-gray-800 text-foreground rounded-bl-sm"
                   }`}
                 >
@@ -339,9 +339,9 @@ export function ChatPanel({ projectId, projectName }: ChatPanelProps) {
               <div className="flex justify-start">
                 <div className="bg-gray-100 dark:bg-gray-800 rounded-lg rounded-bl-sm px-3 py-2">
                   <div className="flex gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#d4a853] animate-bounce" style={{ animationDelay: "0ms" }} />
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#d4a853] animate-bounce" style={{ animationDelay: "150ms" }} />
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#d4a853] animate-bounce" style={{ animationDelay: "300ms" }} />
+                    <span className="w-1.5 h-1.5 rounded-full bg-accent animate-bounce" style={{ animationDelay: "0ms" }} />
+                    <span className="w-1.5 h-1.5 rounded-full bg-accent animate-bounce" style={{ animationDelay: "150ms" }} />
+                    <span className="w-1.5 h-1.5 rounded-full bg-accent animate-bounce" style={{ animationDelay: "300ms" }} />
                   </div>
                 </div>
               </div>
@@ -358,13 +358,13 @@ export function ChatPanel({ projectId, projectName }: ChatPanelProps) {
                 onKeyDown={handleKeyDown}
                 placeholder="Ask about vendors, requirements, gaps..."
                 rows={1}
-                className="flex-1 resize-none rounded-lg border border-border/60 bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#d4a853]/50 placeholder:text-muted-foreground"
+                className="flex-1 resize-none rounded-lg border border-border/60 bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-accent/50 placeholder:text-muted-foreground"
                 disabled={isStreaming}
                 data-testid="chat-input"
               />
               <Button
                 size="icon"
-                className="h-9 w-9 shrink-0 bg-[#d4a853] hover:bg-[#c49843] text-white"
+                className="h-9 w-9 shrink-0 bg-accent hover:bg-accent/90 text-accent-foreground"
                 onClick={() => handleSend()}
                 disabled={!input.trim() || isStreaming}
                 data-testid="chat-send-button"

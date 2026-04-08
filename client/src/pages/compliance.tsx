@@ -358,7 +358,7 @@ function PulseReportCard({ contractId }: { contractId: number }) {
       <CardContent className="pt-4 pb-4">
         <div className="flex items-center justify-between mb-2">
           <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Latest Pulse</h4>
-          <Button size="sm" className="gap-1.5 bg-[#d4a853] hover:bg-[#c49843] text-white text-xs h-7" disabled={generateMutation.isPending}
+          <Button size="sm" className="gap-1.5 bg-accent hover:bg-accent/90 text-accent-foreground text-xs h-7" disabled={generateMutation.isPending}
             onClick={() => generateMutation.mutate()} data-testid="button-generate-pulse">
             {generateMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
             {latest ? "Generate New" : "Generate First Report"}
@@ -380,7 +380,7 @@ function PulseReportCard({ contractId }: { contractId: number }) {
                 {expanded ? latest.narrative : (latest.narrative?.slice(0, 200) + (latest.narrative?.length > 200 ? "..." : ""))}
               </p>
               {latest.narrative?.length > 200 && (
-                <button className="text-[11px] text-[#d4a853] mt-1 hover:underline" onClick={() => setExpanded(!expanded)}>
+                <button className="text-[11px] text-accent mt-1 hover:underline" onClick={() => setExpanded(!expanded)}>
                   {expanded ? "Show less" : "Read more"}
                 </button>
               )}
@@ -541,7 +541,7 @@ function ContractBaselineTab({ projectId, contracts, vendors }: { projectId: num
       <div className="flex flex-col items-center py-12 gap-4">
         <Shield className="w-12 h-12 text-muted-foreground/30" />
         <p className="text-sm text-muted-foreground">No contracts added yet</p>
-        <Button className="bg-[#d4a853] hover:bg-[#c49843] text-white gap-2" onClick={() => setContractDialogOpen(true)} data-testid="button-add-contract-empty">
+        <Button className="bg-accent hover:bg-accent/90 text-accent-foreground gap-2" onClick={() => setContractDialogOpen(true)} data-testid="button-add-contract-empty">
           <Plus className="w-4 h-4" /> Add Contract
         </Button>
         <Button variant="outline" className="gap-2" data-testid="button-seed-ivv" onClick={() => {
@@ -616,7 +616,7 @@ function ContractBaselineTab({ projectId, contracts, vendors }: { projectId: num
           </SelectContent>
         </Select>
         <div className="flex-1" />
-        <Button size="sm" className="gap-1.5 bg-[#d4a853] hover:bg-[#c49843] text-white text-xs" onClick={() => setDeliverableDialogOpen(true)} data-testid="button-add-deliverable">
+        <Button size="sm" className="gap-1.5 bg-accent hover:bg-accent/90 text-accent-foreground text-xs" onClick={() => setDeliverableDialogOpen(true)} data-testid="button-add-deliverable">
           <Plus className="w-3.5 h-3.5" /> Add Deliverable
         </Button>
       </div>
@@ -712,7 +712,7 @@ function ContractBaselineTab({ projectId, contracts, vendors }: { projectId: num
             </div>
             <Input placeholder="Contract Reference (section/page)" value={deliverableForm.contractReference} onChange={e => setDeliverableForm(p => ({ ...p, contractReference: e.target.value }))} data-testid="input-deliverable-ref" />
             <Textarea placeholder="Notes" value={deliverableForm.notes} onChange={e => setDeliverableForm(p => ({ ...p, notes: e.target.value }))} data-testid="input-deliverable-notes" />
-            <Button className="w-full bg-[#d4a853] hover:bg-[#c49843] text-white" disabled={!deliverableForm.name || createDeliverableMutation.isPending} onClick={() => createDeliverableMutation.mutate(deliverableForm)} data-testid="button-save-deliverable">
+            <Button className="w-full bg-accent hover:bg-accent/90 text-accent-foreground" disabled={!deliverableForm.name || createDeliverableMutation.isPending} onClick={() => createDeliverableMutation.mutate(deliverableForm)} data-testid="button-save-deliverable">
               {createDeliverableMutation.isPending ? "Creating..." : "Add Deliverable"}
             </Button>
           </div>
@@ -784,7 +784,7 @@ function DeliverableEvidence({ deliverableId, projectId }: { deliverableId: numb
             </SelectContent>
           </Select>
           <Input placeholder="Description" value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} className="h-7 text-xs" />
-          <Button size="sm" className="h-7 text-xs bg-[#d4a853] hover:bg-[#c49843] text-white" disabled={!form.title} onClick={() => uploadMutation.mutate(form)} data-testid={`save-evidence-${deliverableId}`}>Save</Button>
+          <Button size="sm" className="h-7 text-xs bg-accent hover:bg-accent/90 text-accent-foreground" disabled={!form.title} onClick={() => uploadMutation.mutate(form)} data-testid={`save-evidence-${deliverableId}`}>Save</Button>
         </div>
       )}
     </div>
@@ -819,7 +819,7 @@ function ContractDialog({ open, onOpenChange, form, setForm, onSubmit, isPending
             <div><label className="text-xs text-muted-foreground">End Date</label><Input type="date" value={form.endDate} onChange={e => setForm((p: any) => ({ ...p, endDate: e.target.value }))} data-testid="input-contract-end" /></div>
           </div>
           <Textarea placeholder="Notes" value={form.notes} onChange={e => setForm((p: any) => ({ ...p, notes: e.target.value }))} data-testid="input-contract-notes" />
-          <Button className="w-full bg-[#d4a853] hover:bg-[#c49843] text-white" disabled={!form.contractName || isPending} onClick={onSubmit} data-testid="button-save-contract">
+          <Button className="w-full bg-accent hover:bg-accent/90 text-accent-foreground" disabled={!form.contractName || isPending} onClick={onSubmit} data-testid="button-save-contract">
             {isPending ? "Creating..." : "Add Contract"}
           </Button>
         </div>
@@ -954,7 +954,7 @@ function CheckpointsTab({ contractId, projectId }: { contractId: number | null; 
   return (
     <div className="space-y-3">
       <div className="flex justify-end">
-        <Button size="sm" className="gap-1.5 bg-[#d4a853] hover:bg-[#c49843] text-white text-xs" onClick={() => { resetForm(); setEditingId(null); setDialogOpen(true); }} data-testid="button-add-checkpoint">
+        <Button size="sm" className="gap-1.5 bg-accent hover:bg-accent/90 text-accent-foreground text-xs" onClick={() => { resetForm(); setEditingId(null); setDialogOpen(true); }} data-testid="button-add-checkpoint">
           <Plus className="w-3.5 h-3.5" /> Add Checkpoint
         </Button>
       </div>
@@ -987,7 +987,7 @@ function CheckpointsTab({ contractId, projectId }: { contractId: number | null; 
                 </div>
                 <Collapsible open={expandedId === cp.id} onOpenChange={(open) => setExpandedId(open ? cp.id : null)}>
                   <CollapsibleTrigger asChild>
-                    <button className="text-[11px] text-[#d4a853] mt-1 flex items-center gap-1 hover:underline" data-testid={`expand-checkpoint-${cp.id}`}>
+                    <button className="text-[11px] text-accent mt-1 flex items-center gap-1 hover:underline" data-testid={`expand-checkpoint-${cp.id}`}>
                       <ChevronRight className={`w-3 h-3 transition-transform ${expandedId === cp.id ? "rotate-90" : ""}`} />
                       Details
                     </button>
@@ -1114,7 +1114,7 @@ function CheckpointsTab({ contractId, projectId }: { contractId: number | null; 
               </div>
             )}
 
-            <Button className="w-full bg-[#d4a853] hover:bg-[#c49843] text-white" disabled={!form.name || !form.phase}
+            <Button className="w-full bg-accent hover:bg-accent/90 text-accent-foreground" disabled={!form.name || !form.phase}
               onClick={() => {
                 const payload: any = {
                   name: form.name, phase: form.phase, scheduledDate: form.scheduledDate || null, status: form.status,
@@ -1273,7 +1273,7 @@ function DeviationsTab({ contractId, projectId }: { contractId: number | null; p
           </SelectContent>
         </Select>
         <div className="flex-1" />
-        <Button size="sm" className="gap-1.5 bg-[#d4a853] hover:bg-[#c49843] text-white text-xs" onClick={openCreate} data-testid="button-log-deviation">
+        <Button size="sm" className="gap-1.5 bg-accent hover:bg-accent/90 text-accent-foreground text-xs" onClick={openCreate} data-testid="button-log-deviation">
           <Plus className="w-3.5 h-3.5" /> Log Deviation
         </Button>
       </div>
@@ -1392,7 +1392,7 @@ function DeviationsTab({ contractId, projectId }: { contractId: number | null; p
               </>
             )}
             <Button
-              className="w-full bg-[#d4a853] hover:bg-[#c49843] text-white"
+              className="w-full bg-accent hover:bg-accent/90 text-accent-foreground"
               disabled={!form.title || !form.description || createMutation.isPending || updateMutation.isPending}
               onClick={() => {
                 if (editingDeviation) {
@@ -1545,7 +1545,7 @@ function EvidenceLogTab({ contractId, projectId }: { contractId: number | null; 
           </SelectContent>
         </Select>
         <div className="flex-1" />
-        <Button size="sm" className="gap-1.5 bg-[#d4a853] hover:bg-[#c49843] text-white text-xs" onClick={() => setUploadOpen(true)} data-testid="button-upload-evidence">
+        <Button size="sm" className="gap-1.5 bg-accent hover:bg-accent/90 text-accent-foreground text-xs" onClick={() => setUploadOpen(true)} data-testid="button-upload-evidence">
           <Upload className="w-3.5 h-3.5" /> Upload Evidence
         </Button>
       </div>
@@ -1628,7 +1628,7 @@ function EvidenceLogTab({ contractId, projectId }: { contractId: number | null; 
             </Select>
             <Textarea placeholder="Assessor Notes" value={evidenceForm.assessorNotes} onChange={e => setEvidenceForm(p => ({ ...p, assessorNotes: e.target.value }))} data-testid="input-evidence-assessor-notes" />
             <Button
-              className="w-full bg-[#d4a853] hover:bg-[#c49843] text-white"
+              className="w-full bg-accent hover:bg-accent/90 text-accent-foreground"
               disabled={!evidenceForm.deliverableId || !evidenceForm.title || uploadMutation.isPending}
               onClick={() => uploadMutation.mutate({ ...evidenceForm, file })}
               data-testid="button-save-evidence"
@@ -1820,7 +1820,7 @@ function IntegrationsTab({ projectId, contractId }: { projectId: number; contrac
       {/* Header with Add button */}
       {hasConnections && (
         <div className="flex justify-end">
-          <Button size="sm" className="gap-1.5 bg-[#d4a853] hover:bg-[#c49843] text-white text-xs" onClick={() => { resetDialog(); setDialogOpen(true); }} data-testid="button-add-integration">
+          <Button size="sm" className="gap-1.5 bg-accent hover:bg-accent/90 text-accent-foreground text-xs" onClick={() => { resetDialog(); setDialogOpen(true); }} data-testid="button-add-integration">
             <Plus className="w-3.5 h-3.5" /> Add Integration
           </Button>
         </div>
@@ -1903,7 +1903,7 @@ function IntegrationsTab({ projectId, contractId }: { projectId: number; contrac
                     {PLATFORM_COLORS[platform].label}
                   </Badge>
                   <p className="text-xs text-muted-foreground mt-2">{PLATFORM_DESCRIPTIONS[platform]}</p>
-                  <Button size="sm" className="mt-3 gap-1.5 bg-[#d4a853] hover:bg-[#c49843] text-white text-xs w-full" data-testid={`button-connect-${platform}`}>
+                  <Button size="sm" className="mt-3 gap-1.5 bg-accent hover:bg-accent/90 text-accent-foreground text-xs w-full" data-testid={`button-connect-${platform}`}>
                     <Plus className="w-3 h-3" /> Connect
                   </Button>
                 </CardContent>
@@ -1946,7 +1946,7 @@ function IntegrationsTab({ projectId, contractId }: { projectId: number; contrac
                 ))}
               </div>
               <Button
-                className="w-full bg-[#d4a853] hover:bg-[#c49843] text-white"
+                className="w-full bg-accent hover:bg-accent/90 text-accent-foreground"
                 disabled={!selectedPlatform}
                 onClick={() => setDialogStep(2)}
                 data-testid="button-next-step1"
@@ -2003,7 +2003,7 @@ function IntegrationsTab({ projectId, contractId }: { projectId: number; contrac
                   Back
                 </Button>
                 <Button
-                  className="flex-1 bg-[#d4a853] hover:bg-[#c49843] text-white"
+                  className="flex-1 bg-accent hover:bg-accent/90 text-accent-foreground"
                   disabled={!isFormValid() || createMutation.isPending}
                   onClick={handleTestAndCreate}
                   data-testid="button-test-connect"
@@ -2045,7 +2045,7 @@ function IntegrationsTab({ projectId, contractId }: { projectId: number; contrac
               )}
 
               <Button
-                className="w-full bg-[#d4a853] hover:bg-[#c49843] text-white"
+                className="w-full bg-accent hover:bg-accent/90 text-accent-foreground"
                 onClick={() => setDialogStep(4)}
                 data-testid="button-next-step3"
               >
@@ -2067,7 +2067,7 @@ function IntegrationsTab({ projectId, contractId }: { projectId: number; contrac
                 <p className="text-xs text-muted-foreground mt-1">Click "Sync Now" to pull items into your compliance tracker.</p>
               </div>
               <Button
-                className="w-full bg-[#d4a853] hover:bg-[#c49843] text-white"
+                className="w-full bg-accent hover:bg-accent/90 text-accent-foreground"
                 onClick={() => {
                   setDialogOpen(false);
                   resetDialog();
@@ -2169,7 +2169,7 @@ function GoLiveReadinessTab({ contractId }: { contractId: number | null }) {
       <div className="flex flex-col items-center py-12 gap-4">
         <Target className="w-12 h-12 text-muted-foreground/30" />
         <p className="text-sm text-muted-foreground">No go-live scorecard yet</p>
-        <Button className="bg-[#d4a853] hover:bg-[#c49843] text-white gap-2"
+        <Button className="bg-accent hover:bg-accent/90 text-accent-foreground gap-2"
           onClick={() => {
             const init: Record<string, { score: number; notes: string }> = {};
             allItems.forEach(i => { init[i.key] = { score: 0, notes: "" }; });
@@ -2196,7 +2196,7 @@ function GoLiveReadinessTab({ contractId }: { contractId: number | null }) {
           <p className="text-xs text-muted-foreground mt-1">Overall Go-Live Readiness Score</p>
         </div>
         <div className="ml-auto">
-          <Button size="sm" className="bg-[#d4a853] hover:bg-[#c49843] text-white text-xs gap-1.5" onClick={handleSave} disabled={saveMutation.isPending} data-testid="button-save-scorecard">
+          <Button size="sm" className="bg-accent hover:bg-accent/90 text-accent-foreground text-xs gap-1.5" onClick={handleSave} disabled={saveMutation.isPending} data-testid="button-save-scorecard">
             {saveMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />} Save
           </Button>
         </div>
@@ -2225,7 +2225,7 @@ function GoLiveReadinessTab({ contractId }: { contractId: number | null }) {
                       <TableCell className="text-xs py-1.5">{item.label}</TableCell>
                       <TableCell className="text-xs text-center py-1.5">{item.weight}</TableCell>
                       <TableCell className="py-1.5">
-                        <input type="range" min="0" max="10" step="1" className="w-20 h-1.5 accent-[#d4a853]"
+                        <input type="range" min="0" max="10" step="1" className="w-20 h-1.5 accent-amber-500"
                           value={scores[item.key]?.score ?? 0}
                           onChange={e => setScores(prev => ({ ...prev, [item.key]: { ...prev[item.key], score: parseInt(e.target.value), notes: prev[item.key]?.notes ?? "" } }))}
                           data-testid={`score-${item.key}`}
@@ -2314,7 +2314,7 @@ export default function CompliancePage() {
           </Link>
           <span className="text-muted-foreground/40">/</span>
           <h1 className="text-lg font-semibold text-foreground flex items-center gap-2">
-            <Shield className="w-5 h-5 text-[#d4a853]" />
+            <Shield className="w-5 h-5 text-accent" />
             Contract Compliance
           </h1>
         </div>

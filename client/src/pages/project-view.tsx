@@ -148,7 +148,7 @@ interface StatusStage {
 const STATUS_COLORS: Record<string, string> = {
   draft: "text-muted-foreground",
   requirements_review: "text-blue-500",
-  stakeholder_workshop: "text-[#d4a853]",
+  stakeholder_workshop: "text-accent",
   vendor_evaluation: "text-purple-500",
   final_report: "text-teal-500",
   complete: "text-green-500",
@@ -185,13 +185,13 @@ function StatusStepper({ projectId }: { projectId: number }) {
     <div className="flex items-center gap-1 px-3 py-2 border-b bg-muted/20 shrink-0 overflow-x-auto" data-testid="status-stepper">
       {stages.map((stage, i) => (
         <div key={stage.key} className="flex items-center">
-          {i > 0 && <div className={`w-4 h-px mx-0.5 ${i <= currentIndex ? "bg-[#d4a853]" : "bg-border"}`} />}
+          {i > 0 && <div className={`w-4 h-px mx-0.5 ${i <= currentIndex ? "bg-accent" : "bg-border"}`} />}
           <Tooltip>
             <TooltipTrigger asChild>
               <button
                 className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium transition-colors whitespace-nowrap ${
                   stage.active
-                    ? "bg-[#d4a853]/15 text-[#d4a853] border border-[#d4a853]/30"
+                    ? "bg-accent/15 text-accent border border-accent/30"
                     : stage.completed
                     ? "text-green-600 dark:text-green-400"
                     : "text-muted-foreground"
@@ -237,7 +237,7 @@ function StatusStepper({ projectId }: { projectId: number }) {
         {nextStage && (
           <Button
             size="sm"
-            className="h-6 text-[10px] px-2 bg-[#d4a853] hover:bg-[#c49843] text-white"
+            className="h-6 text-[10px] px-2 bg-accent hover:bg-accent/90 text-accent-foreground"
             disabled={!currentStage?.allDone || advanceMutation.isPending}
             onClick={() => advanceMutation.mutate(nextStage.key)}
             data-testid="button-advance-status"
@@ -865,7 +865,7 @@ export default function ProjectView() {
             <Link href={`/projects/${projectId}/evaluation`}>
               <Button
                 size="sm"
-                className="h-8 text-xs gap-1 bg-[#d4a853] hover:bg-[#c49843] text-white"
+                className="h-8 text-xs gap-1 bg-accent hover:bg-accent/90 text-accent-foreground"
                 data-testid="button-evaluate-vendors"
               >
                 <BarChart3 className="w-3.5 h-3.5" />

@@ -149,7 +149,7 @@ function SynthesisSummary({ synthesis, assessmentMap, raidItems, budgetSummary, 
             </div>
           </div>
           <Button
-            className="bg-[#1a2744] hover:bg-[#243460] text-white gap-2"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2"
             onClick={onSynthesize}
             disabled={isSynthesizing}
             data-testid="button-synthesize"
@@ -203,7 +203,7 @@ function SynthesisSummary({ synthesis, assessmentMap, raidItems, budgetSummary, 
       {/* Contract/SOW Baseline */}
       <Card className="p-4">
         <div className="flex items-center justify-between mb-2">
-          <h3 className="text-sm font-semibold flex items-center gap-2"><FileText className="w-4 h-4 text-[#d4a853]" />Contract Baseline</h3>
+          <h3 className="text-sm font-semibold flex items-center gap-2"><FileText className="w-4 h-4 text-accent" />Contract Baseline</h3>
           <Button variant="outline" size="sm" className="text-xs h-7 gap-1" onClick={onEditBaseline}>
             <Edit2 className="w-3 h-3" />{baseline ? "Edit" : "Set Baseline"}
           </Button>
@@ -325,7 +325,7 @@ function SynthesisSummary({ synthesis, assessmentMap, raidItems, budgetSummary, 
           {synthesis.recommendedActions?.length > 0 && (
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm flex items-center gap-2"><ArrowRight className="w-4 h-4 text-[#d4a853]" />Recommended Actions</CardTitle>
+                <CardTitle className="text-sm flex items-center gap-2"><ArrowRight className="w-4 h-4 text-accent" />Recommended Actions</CardTitle>
               </CardHeader>
               <CardContent>
                 <ol className="space-y-1.5">
@@ -556,7 +556,7 @@ export default function HealthCheckPage() {
           </Link>
           <span className="text-muted-foreground/40">/</span>
           <h1 className="text-lg font-semibold text-foreground flex items-center gap-2">
-            <Stethoscope className="w-5 h-5 text-[#d4a853]" />Health Check & Rescue
+            <Stethoscope className="w-5 h-5 text-accent" />Health Check & Rescue
           </h1>
           <div className="ml-auto">
             <Button variant="outline" className="gap-2 text-xs" data-testid="button-seed-health-check" onClick={() => {
@@ -604,7 +604,7 @@ export default function HealthCheckPage() {
                 {DOMAINS.map(d => {
                   const a = assessmentMap[d.key];
                   return (
-                    <Card key={d.key} className="cursor-pointer hover:border-[#d4a853]/50 transition-colors" onClick={() => openAssessDialog(d.key)} data-testid={`domain-card-${d.key}`}>
+                    <Card key={d.key} className="cursor-pointer hover:border-accent/50 transition-colors" onClick={() => openAssessDialog(d.key)} data-testid={`domain-card-${d.key}`}>
                       <CardHeader className="pb-2">
                         <div className="flex items-center justify-between">
                           <CardTitle className="text-sm flex items-center gap-2"><span>{d.icon}</span>{d.label}</CardTitle>
@@ -625,7 +625,7 @@ export default function HealthCheckPage() {
             <TabsContent value="raid">
               <div className="flex justify-between items-center mb-3">
                 <h3 className="text-sm font-semibold flex items-center gap-2"><AlertTriangle className="w-4 h-4 text-amber-500" />RAID Log ({raidItems.length})</h3>
-                <Button size="sm" className="bg-[#d4a853] hover:bg-[#c49843] text-white text-xs gap-1" onClick={() => setRaidDialog({ open: true, form: emptyRaid() })} data-testid="button-add-raid">
+                <Button size="sm" className="bg-accent hover:bg-accent/90 text-accent-foreground text-xs gap-1" onClick={() => setRaidDialog({ open: true, form: emptyRaid() })} data-testid="button-add-raid">
                   <Plus className="w-3 h-3" />Add Item
                 </Button>
               </div>
@@ -713,7 +713,7 @@ export default function HealthCheckPage() {
                 <div>
                   <div className="flex justify-between items-center mb-3">
                     <h3 className="text-sm font-semibold flex items-center gap-2"><DollarSign className="w-4 h-4 text-emerald-500" />Budget</h3>
-                    <Button size="sm" className="bg-[#d4a853] hover:bg-[#c49843] text-white text-xs gap-1" onClick={() => setBudgetDialog({ open: true, form: emptyBudget() })} data-testid="button-add-budget">
+                    <Button size="sm" className="bg-accent hover:bg-accent/90 text-accent-foreground text-xs gap-1" onClick={() => setBudgetDialog({ open: true, form: emptyBudget() })} data-testid="button-add-budget">
                       <Plus className="w-3 h-3" />Add Entry
                     </Button>
                   </div>
@@ -765,7 +765,7 @@ export default function HealthCheckPage() {
                 <div>
                   <div className="flex justify-between items-center mb-3">
                     <h3 className="text-sm font-semibold flex items-center gap-2"><Calendar className="w-4 h-4 text-blue-500" />Schedule Milestones</h3>
-                    <Button size="sm" className="bg-[#d4a853] hover:bg-[#c49843] text-white text-xs gap-1" onClick={() => setScheduleDialog({ open: true, form: emptySchedule() })} data-testid="button-add-schedule">
+                    <Button size="sm" className="bg-accent hover:bg-accent/90 text-accent-foreground text-xs gap-1" onClick={() => setScheduleDialog({ open: true, form: emptySchedule() })} data-testid="button-add-schedule">
                       <Plus className="w-3 h-3" />Add Milestone
                     </Button>
                   </div>
@@ -866,7 +866,7 @@ export default function HealthCheckPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button size="sm" className="bg-[#d4a853] hover:bg-[#c49843] text-white text-xs" disabled={saveAssessment.isPending}
+            <Button size="sm" className="bg-accent hover:bg-accent/90 text-accent-foreground text-xs" disabled={saveAssessment.isPending}
               onClick={() => saveAssessment.mutate({
                 ...assessDialog.form,
                 findings: findingsEntries.length > 0 ? JSON.stringify(findingsEntries.filter(e => e.finding.trim())) : null,
@@ -921,7 +921,7 @@ export default function HealthCheckPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button size="sm" className="bg-[#d4a853] hover:bg-[#c49843] text-white text-xs" disabled={saveRaid.isPending}
+            <Button size="sm" className="bg-accent hover:bg-accent/90 text-accent-foreground text-xs" disabled={saveRaid.isPending}
               onClick={() => saveRaid.mutate(raidDialog.form)} data-testid="button-save-raid">
               {saveRaid.isPending ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}Save
             </Button>
@@ -961,7 +961,7 @@ export default function HealthCheckPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button size="sm" className="bg-[#d4a853] hover:bg-[#c49843] text-white text-xs" disabled={saveBudget.isPending}
+            <Button size="sm" className="bg-accent hover:bg-accent/90 text-accent-foreground text-xs" disabled={saveBudget.isPending}
               onClick={() => saveBudget.mutate({ ...budgetDialog.form, amount: parseFloat(budgetDialog.form.amount) || 0 })} data-testid="button-save-budget">
               {saveBudget.isPending ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}Save
             </Button>
@@ -1001,7 +1001,7 @@ export default function HealthCheckPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button size="sm" className="bg-[#d4a853] hover:bg-[#c49843] text-white text-xs" disabled={saveSchedule.isPending}
+            <Button size="sm" className="bg-accent hover:bg-accent/90 text-accent-foreground text-xs" disabled={saveSchedule.isPending}
               onClick={() => saveSchedule.mutate(scheduleDialog.form)} data-testid="button-save-schedule">
               {saveSchedule.isPending ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}Save
             </Button>
@@ -1056,7 +1056,7 @@ export default function HealthCheckPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button size="sm" className="bg-[#d4a853] hover:bg-[#c49843] text-white text-xs" disabled={saveBaseline.isPending}
+            <Button size="sm" className="bg-accent hover:bg-accent/90 text-accent-foreground text-xs" disabled={saveBaseline.isPending}
               onClick={() => saveBaseline.mutate({
                 contractedAmount: baselineDialog.form.contractedAmount ? parseInt(baselineDialog.form.contractedAmount) : null,
                 goLiveDate: baselineDialog.form.goLiveDate || null,

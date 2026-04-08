@@ -137,10 +137,10 @@ export default function KnowledgeBasePage() {
       <div className="px-6 py-4 border-b border-border/50 bg-card/50 backdrop-blur-sm shrink-0">
         <div className="flex items-center gap-3">
           <h1 className="text-lg font-semibold text-foreground flex items-center gap-2">
-            <BookOpen className="w-5 h-5 text-[#d4a853]" />Vendor Knowledge Base
+            <BookOpen className="w-5 h-5 text-accent" />Vendor Knowledge Base
           </h1>
           <div className="ml-auto">
-            <Button className="bg-[#d4a853] hover:bg-[#c49843] text-white text-xs gap-1.5" onClick={handleSeed} disabled={seeding} data-testid="button-seed-kb">
+            <Button className="bg-accent hover:bg-accent/90 text-accent-foreground text-xs gap-1.5" onClick={handleSeed} disabled={seeding} data-testid="button-seed-kb">
               {seeding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
               Seed from Proposals
             </Button>
@@ -280,7 +280,7 @@ export default function KnowledgeBasePage() {
                 <div className="flex items-center gap-2 flex-wrap">
                   {PLATFORMS.filter(p => p.value).map(p => (
                     <label key={p.value} className="flex items-center gap-1.5 cursor-pointer text-xs">
-                      <input type="checkbox" className="accent-[#d4a853]" checked={!!comparePlatforms[p.value]}
+                      <input type="checkbox" className="accent-amber-500" checked={!!comparePlatforms[p.value]}
                         onChange={e => setComparePlatforms(prev => ({ ...prev, [p.value]: e.target.checked }))}
                         data-testid={`compare-platform-${p.value}`} />
                       {p.label}

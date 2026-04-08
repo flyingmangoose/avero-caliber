@@ -28,7 +28,7 @@ export default function AboutPage() {
           {/* AI Data Processing Disclosure */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-sm flex items-center gap-2"><Shield className="w-4 h-4 text-[#d4a853]" />AI & Data Processing</CardTitle>
+              <CardTitle className="text-sm flex items-center gap-2"><Shield className="w-4 h-4 text-accent" />AI & Data Processing</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex gap-3">
@@ -56,7 +56,7 @@ export default function AboutPage() {
               </div>
 
               <div className="flex gap-3">
-                <Shield className="w-5 h-5 text-[#d4a853] shrink-0 mt-0.5" />
+                <Shield className="w-5 h-5 text-accent shrink-0 mt-0.5" />
                 <p className="text-sm text-muted-foreground leading-relaxed">
                   Caliber does not sell, share, or transfer client data to any third party outside of these processing agreements.
                 </p>

@@ -62,7 +62,7 @@ export default function DiscoveryPage() {
     <div className="flex flex-col h-full">
       <div className="px-6 py-4 border-b border-border/50 bg-card/50 backdrop-blur-sm shrink-0">
         <h1 className="text-lg font-semibold text-foreground flex items-center gap-2">
-          <Compass className="w-5 h-5 text-[#d4a853]" />Discovery Wizard
+          <Compass className="w-5 h-5 text-accent" />Discovery Wizard
         </h1>
         <p className="text-xs text-muted-foreground mt-0.5">Guided organizational analysis to generate tailored requirements</p>
       </div>
@@ -267,7 +267,7 @@ function OrgProfileTab({ projectId }: { projectId: string }) {
         </CardContent>
       </Card>
 
-      <Button className="bg-[#d4a853] hover:bg-[#c49843] text-white gap-1.5" onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending} data-testid="btn-save-profile">
+      <Button className="bg-accent hover:bg-accent/90 text-accent-foreground gap-1.5" onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending} data-testid="btn-save-profile">
         {saveMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
         Save Profile
       </Button>
@@ -386,7 +386,7 @@ function QuestionCard({ question, index, answer, readOnly, onSave }: QuestionCar
       <CardContent className="p-4 space-y-3">
         {/* Question header */}
         <div className="flex items-start gap-3">
-          <span className="shrink-0 w-6 h-6 rounded-full bg-[#1a2744] text-white flex items-center justify-center text-[10px] font-bold mt-0.5">
+          <span className="shrink-0 w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-[10px] font-bold mt-0.5">
             {index + 1}
           </span>
           <div className="flex-1 min-w-0">
@@ -419,7 +419,7 @@ function QuestionCard({ question, index, answer, readOnly, onSave }: QuestionCar
                 <ul className="space-y-0.5">
                   {question.probes.map((p, pi) => (
                     <li key={pi} className="text-xs text-foreground/80 flex gap-1.5">
-                      <span className="text-[#d4a853] mt-0.5">›</span>
+                      <span className="text-accent mt-0.5">›</span>
                       {p}
                     </li>
                   ))}
@@ -427,7 +427,7 @@ function QuestionCard({ question, index, answer, readOnly, onSave }: QuestionCar
               </div>
             )}
             {question.whatToListenFor && (
-              <p className="text-[11px] italic text-muted-foreground border-l-2 border-[#d4a853]/40 pl-2">
+              <p className="text-[11px] italic text-muted-foreground border-l-2 border-accent/40 pl-2">
                 {question.whatToListenFor}
               </p>
             )}
@@ -481,7 +481,7 @@ function QuestionCard({ question, index, answer, readOnly, onSave }: QuestionCar
             </div>
           ) : !readOnly ? (
             <Textarea
-              className="text-xs min-h-[80px] resize-none focus:ring-[#d4a853]/50"
+              className="text-xs min-h-[80px] resize-none focus:ring-accent/50"
               placeholder="Type the client's response or key notes…"
               value={localAnswer}
               onChange={e => setLocalAnswer(e.target.value)}
@@ -522,7 +522,7 @@ function QuestionCard({ question, index, answer, readOnly, onSave }: QuestionCar
             {editing && localAnswer.trim() && (
               <Button
                 size="sm"
-                className="h-7 text-[10px] bg-[#1a2744] hover:bg-[#1a2744]/90 text-white"
+                className="h-7 text-[10px] bg-primary hover:bg-primary/90 text-white"
                 onClick={handleSave}
                 data-testid={`btn-save-${question.id}`}
               >
@@ -593,7 +593,7 @@ function ImportTranscriptDialog({
       <DialogContent className="max-w-2xl w-full" data-testid="dialog-import-transcript">
         <DialogHeader>
           <DialogTitle className="text-base font-semibold flex items-center gap-2">
-            <Upload className="w-4 h-4 text-[#d4a853]" />
+            <Upload className="w-4 h-4 text-accent" />
             Import Meeting Notes
           </DialogTitle>
           <p className="text-xs text-muted-foreground mt-1">
@@ -632,7 +632,7 @@ function ImportTranscriptDialog({
             </Button>
             <Button
               size="sm"
-              className="h-8 text-xs bg-[#d4a853] hover:bg-[#c49843] text-white"
+              className="h-8 text-xs bg-accent hover:bg-accent/90 text-accent-foreground"
               onClick={handleProcess}
               disabled={!transcript.trim() || processing}
               data-testid="btn-process-transcript"
@@ -751,7 +751,7 @@ function InterviewList({
               {status === "not_started" ? (
                 <Button
                   size="sm"
-                  className="h-7 text-xs bg-[#d4a853] hover:bg-[#c49843] text-white gap-1"
+                  className="h-7 text-xs bg-accent hover:bg-accent/90 text-accent-foreground gap-1"
                   onClick={() => createMutation.mutate(area)}
                   disabled={createMutation.isPending}
                   data-testid={`btn-generate-guide-${slugArea}`}
@@ -917,7 +917,7 @@ function GuidedInterview({
             {editingName ? (
               <input
                 autoFocus
-                className="text-[10px] border-b border-[#d4a853] outline-none bg-transparent"
+                className="text-[10px] border-b border-accent outline-none bg-transparent"
                 value={intervieweeName}
                 onChange={e => setIntervieweeName(e.target.value)}
                 onBlur={() => setEditingName(false)}
@@ -941,7 +941,7 @@ function GuidedInterview({
                 {editingRole ? (
                   <input
                     autoFocus
-                    className="text-[10px] border-b border-[#d4a853] outline-none bg-transparent"
+                    className="text-[10px] border-b border-accent outline-none bg-transparent"
                     value={intervieweeRole}
                     onChange={e => setIntervieweeRole(e.target.value)}
                     onBlur={() => setEditingRole(false)}
@@ -1018,8 +1018,8 @@ function GuidedInterview({
       {/* ── No guide yet → Generate prompt ── */}
       {guide.length === 0 && !generatingGuide && (
         <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
-          <div className="w-14 h-14 rounded-full bg-[#d4a853]/10 flex items-center justify-center">
-            <Sparkles className="w-7 h-7 text-[#d4a853]" />
+          <div className="w-14 h-14 rounded-full bg-accent/10 flex items-center justify-center">
+            <Sparkles className="w-7 h-7 text-accent" />
           </div>
           <div>
             <h4 className="text-sm font-semibold mb-1">No interview guide yet</h4>
@@ -1030,7 +1030,7 @@ function GuidedInterview({
           </div>
           <Button
             size="sm"
-            className="gap-1.5 bg-[#d4a853] hover:bg-[#c49843] text-white"
+            className="gap-1.5 bg-accent hover:bg-accent/90 text-accent-foreground"
             onClick={handleGenerateGuide}
             data-testid="btn-generate-guide"
           >
@@ -1043,7 +1043,7 @@ function GuidedInterview({
       {/* ── Guide generating spinner ── */}
       {generatingGuide && (
         <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-[#d4a853]" />
+          <Loader2 className="w-8 h-8 animate-spin text-accent" />
           <p className="text-sm text-muted-foreground">Generating interview guide…</p>
           <p className="text-[10px] text-muted-foreground">This may take 5–10 seconds</p>
         </div>
@@ -1059,7 +1059,7 @@ function GuidedInterview({
                 <div className="flex items-center gap-1 overflow-x-auto pb-2">
                   {processSteps.map((s: any, i: number) => (
                     <div key={i} className="flex items-center gap-1 shrink-0">
-                      <div className="w-7 h-7 rounded-full bg-[#d4a853]/20 text-[#d4a853] flex items-center justify-center text-[10px] font-bold">
+                      <div className="w-7 h-7 rounded-full bg-accent/20 text-accent flex items-center justify-center text-[10px] font-bold">
                         {s.step || i + 1}
                       </div>
                       <div className="text-[10px] max-w-[120px]">
@@ -1119,7 +1119,7 @@ function GuidedInterview({
               <ul className="space-y-1">
                 {additionalFindings.map((f, i) => (
                   <li key={i} className="text-xs flex gap-1.5">
-                    <span className="text-[#d4a853] mt-0.5">›</span>
+                    <span className="text-accent mt-0.5">›</span>
                     {f}
                   </li>
                 ))}
@@ -1234,7 +1234,7 @@ function PainPointsTab({ projectId }: { projectId: string }) {
           <span className="font-semibold text-foreground">{areas.length}</span> functional areas.{" "}
           <span className="font-semibold text-red-600 dark:text-red-400">{critHigh}</span> rated critical or high.
         </p>
-        <Button size="sm" className="h-7 text-xs bg-[#d4a853] hover:bg-[#c49843] text-white gap-1" onClick={() => saveMutation.mutate()}
+        <Button size="sm" className="h-7 text-xs bg-accent hover:bg-accent/90 text-accent-foreground gap-1" onClick={() => saveMutation.mutate()}
           disabled={!dirty || saveMutation.isPending} data-testid="btn-save-priorities">
           {saveMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
           Save Priorities
@@ -1425,7 +1425,7 @@ function GenerateRequirementsTab({ projectId }: { projectId: string }) {
       {/* Generate button */}
       {interviewsCompleted > 0 && genReqCount === 0 && !generateMutation.isPending && (
         <div className="text-center py-12">
-          <Button size="lg" className="bg-[#d4a853] hover:bg-[#c49843] text-white gap-2 text-base px-8 py-6" onClick={() => generateMutation.mutate()}
+          <Button size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground gap-2 text-base px-8 py-6" onClick={() => generateMutation.mutate()}
             data-testid="btn-generate-requirements">
             <Sparkles className="w-5 h-5" />Generate Requirements
           </Button>
@@ -1438,7 +1438,7 @@ function GenerateRequirementsTab({ projectId }: { projectId: string }) {
       {/* Loading state */}
       {generateMutation.isPending && (
         <div className="text-center py-12">
-          <Loader2 className="w-10 h-10 mx-auto text-[#d4a853] animate-spin mb-4" />
+          <Loader2 className="w-10 h-10 mx-auto text-accent animate-spin mb-4" />
           <p className="text-sm font-medium text-foreground animate-pulse">{LOADING_MESSAGES[loadingMsgIdx]}</p>
         </div>
       )}
@@ -1450,7 +1450,7 @@ function GenerateRequirementsTab({ projectId }: { projectId: string }) {
             <Card key={mod}>
               <CardContent className="p-4">
                 <div className="flex items-center gap-2 mb-3">
-                  <Target className="w-4 h-4 text-[#d4a853]" />
+                  <Target className="w-4 h-4 text-accent" />
                   <h4 className="text-sm font-semibold">{mod}</h4>
                   <Badge variant="outline" className="text-[10px]">{items.length}</Badge>
                 </div>

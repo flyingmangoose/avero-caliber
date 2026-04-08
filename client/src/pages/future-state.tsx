@@ -80,7 +80,7 @@ export default function FutureStatePage() {
     <div className="flex flex-col h-full">
       <div className="px-6 py-4 border-b border-border/50 bg-card/50 backdrop-blur-sm shrink-0">
         <h1 className="text-lg font-semibold text-foreground flex items-center gap-2">
-          <ArrowRightLeft className="w-5 h-5 text-[#d4a853]" />Current vs. Future State
+          <ArrowRightLeft className="w-5 h-5 text-accent" />Current vs. Future State
         </h1>
         <p className="text-xs text-muted-foreground mt-0.5">See how vendor platforms would transform your operations</p>
       </div>
@@ -98,7 +98,7 @@ export default function FutureStatePage() {
                 </Button>
               ))}
             </div>
-            <Button size="sm" className="h-8 text-xs bg-[#d4a853] hover:bg-[#c49843] text-white gap-1.5"
+            <Button size="sm" className="h-8 text-xs bg-accent hover:bg-accent/90 text-accent-foreground gap-1.5"
               onClick={() => genMutation.mutate()} disabled={genMutation.isPending} data-testid="btn-generate-analysis">
               {genMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
               Generate Analysis

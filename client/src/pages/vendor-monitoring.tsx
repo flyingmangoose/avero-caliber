@@ -245,7 +245,7 @@ function StatCard({
   loading?: boolean;
 }) {
   return (
-    <Card className="border-[#1a2744]/20 dark:border-white/10">
+    <Card className="border-border/40">
       <CardContent className="p-4">
         <div className="flex items-center justify-between mb-2">
           <span className="text-xs text-muted-foreground font-medium">{label}</span>
@@ -280,7 +280,7 @@ function ChangeCard({
 
   return (
     <Card
-      className={`border-[#1a2744]/20 dark:border-white/10 transition-colors ${
+      className={`border-border/40 transition-colors ${
         Boolean(change.isReviewed) ? "opacity-70" : ""
       }`}
       data-testid={`change-card-${change.id}`}
@@ -315,7 +315,7 @@ function ChangeCard({
                     href={change.sourceUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-0.5 text-xs text-[#d4a853] hover:underline"
+                    className="inline-flex items-center gap-0.5 text-xs text-accent hover:underline"
                     data-testid={`change-source-${change.id}`}
                   >
                     Source <ExternalLink className="w-3 h-3" />
@@ -344,7 +344,7 @@ function ChangeCard({
                 <Button
                   size="sm"
                   variant="ghost"
-                  className="h-7 px-2 text-xs hover:text-[#d4a853]"
+                  className="h-7 px-2 text-xs hover:text-accent"
                   onClick={() => onApply(change.id)}
                   disabled={applyingId === change.id}
                   data-testid={`apply-btn-${change.id}`}
@@ -372,7 +372,7 @@ function ChangeCard({
           </div>
         </div>
         <CollapsibleContent>
-          <div className="px-4 pb-4 pt-0 border-t border-[#1a2744]/10 dark:border-white/10 mt-2 space-y-3">
+          <div className="px-4 pb-4 pt-0 border-t border-border/30 mt-2 space-y-3">
             {change.details && (
               <div>
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
@@ -425,7 +425,7 @@ function AlertCard({
 }) {
   return (
     <Card
-      className="border-[#1a2744]/20 dark:border-white/10"
+      className="border-border/40"
       data-testid={`alert-card-${alert.id}`}
     >
       <CardContent className="p-4">
@@ -496,7 +496,7 @@ function AddSourceDialog({ onAdded }: { onAdded: () => void }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm" className="bg-[#d4a853] hover:bg-[#c49540] text-[#1a2744]" data-testid="add-source-btn">
+        <Button size="sm" className="bg-accent hover:bg-[#c49540] text-foreground" data-testid="add-source-btn">
           <Plus className="w-3.5 h-3.5 mr-1" />
           Add Source
         </Button>
@@ -580,7 +580,7 @@ function AddSourceDialog({ onAdded }: { onAdded: () => void }) {
             </Button>
             <Button
               size="sm"
-              className="bg-[#d4a853] hover:bg-[#c49540] text-[#1a2744]"
+              className="bg-accent hover:bg-[#c49540] text-foreground"
               disabled={!isValid || addMutation.isPending}
               onClick={() => addMutation.mutate(form)}
               data-testid="add-source-submit"
@@ -803,8 +803,8 @@ export default function VendorMonitoring() {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-[#1a2744] flex items-center justify-center shrink-0">
-            <Radar className="w-5 h-5 text-[#d4a853]" />
+          <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center shrink-0">
+            <Radar className="w-5 h-5 text-accent" />
           </div>
           <div>
             <h1 className="text-xl font-bold text-foreground">Vendor Intelligence Monitor</h1>
@@ -838,7 +838,7 @@ export default function VendorMonitoring() {
 
       {/* Tabs */}
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="bg-muted/50 border border-[#1a2744]/10 dark:border-white/10">
+        <TabsList className="bg-muted/50 border border-border/30">
           <TabsTrigger value="overview" className="text-xs" data-testid="tab-overview">
             <Activity className="w-3.5 h-3.5 mr-1.5" />
             Overview
@@ -943,7 +943,7 @@ export default function VendorMonitoring() {
           <div>
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-                <Activity className="w-4 h-4 text-[#d4a853]" />
+                <Activity className="w-4 h-4 text-accent" />
                 Recent Changes
               </h2>
               <span className="text-xs text-muted-foreground">
@@ -958,7 +958,7 @@ export default function VendorMonitoring() {
                 ))}
               </div>
             ) : recentChanges.length === 0 ? (
-              <Card className="border-dashed border-[#1a2744]/20 dark:border-white/10">
+              <Card className="border-dashed border-border/40">
                 <CardContent className="py-12 text-center">
                   <Radar className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
                   <p className="text-sm text-muted-foreground">No changes detected yet</p>
@@ -1023,7 +1023,7 @@ export default function VendorMonitoring() {
               ))}
             </div>
           ) : sources.length === 0 ? (
-            <Card className="border-dashed border-[#1a2744]/20 dark:border-white/10">
+            <Card className="border-dashed border-border/40">
               <CardContent className="py-12 text-center">
                 <Radio className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
                 <p className="text-sm text-muted-foreground">No sources configured</p>
@@ -1042,7 +1042,7 @@ export default function VendorMonitoring() {
                       {platformSources.length} source{platformSources.length !== 1 ? "s" : ""}
                     </span>
                   </div>
-                  <Card className="border-[#1a2744]/20 dark:border-white/10 overflow-hidden">
+                  <Card className="border-border/40 overflow-hidden">
                     <Table>
                       <TableHeader>
                         <TableRow className="bg-muted/30 hover:bg-muted/30">
@@ -1064,7 +1064,7 @@ export default function VendorMonitoring() {
                                 href={src.url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-[#d4a853] hover:underline inline-flex items-center gap-0.5 max-w-[200px] truncate"
+                                className="text-accent hover:underline inline-flex items-center gap-0.5 max-w-[200px] truncate"
                                 title={src.url}
                               >
                                 <span className="truncate">{src.url}</span>
@@ -1102,7 +1102,7 @@ export default function VendorMonitoring() {
                                 <Button
                                   size="icon"
                                   variant="ghost"
-                                  className="h-6 w-6 hover:text-[#d4a853]"
+                                  className="h-6 w-6 hover:text-accent"
                                   onClick={() => scanSourceMutation.mutate(src.id)}
                                   disabled={scanningSourceId === src.id}
                                   title="Scan now"
@@ -1211,7 +1211,7 @@ export default function VendorMonitoring() {
                   key={val}
                   className={`px-3 text-xs font-medium transition-colors ${
                     changeFilter.isReviewed === val
-                      ? "bg-[#1a2744] text-white dark:bg-[#d4a853] dark:text-[#1a2744]"
+                      ? "bg-primary text-white dark:bg-accent dark:text-foreground"
                       : "text-muted-foreground hover:bg-muted/50"
                   }`}
                   onClick={() => setChangeFilter((f) => ({ ...f, isReviewed: val }))}
@@ -1235,7 +1235,7 @@ export default function VendorMonitoring() {
               ))}
             </div>
           ) : changes.length === 0 ? (
-            <Card className="border-dashed border-[#1a2744]/20 dark:border-white/10">
+            <Card className="border-dashed border-border/40">
               <CardContent className="py-12 text-center">
                 <Eye className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
                 <p className="text-sm text-muted-foreground">No changes match your filters</p>
@@ -1266,7 +1266,7 @@ export default function VendorMonitoring() {
           <div>
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-                <Bell className="w-4 h-4 text-[#d4a853]" />
+                <Bell className="w-4 h-4 text-accent" />
                 Active Alerts
               </h2>
               <span className="text-xs text-muted-foreground">
@@ -1281,7 +1281,7 @@ export default function VendorMonitoring() {
                 ))}
               </div>
             ) : activeAlerts.length === 0 ? (
-              <Card className="border-dashed border-[#1a2744]/20 dark:border-white/10">
+              <Card className="border-dashed border-border/40">
                 <CardContent className="py-10 text-center">
                   <Bell className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
                   <p className="text-sm text-muted-foreground">No active alerts</p>
@@ -1310,7 +1310,7 @@ export default function VendorMonitoring() {
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-xs text-muted-foreground w-full justify-between border border-[#1a2744]/10 dark:border-white/10 rounded-lg px-4 h-9"
+                className="text-xs text-muted-foreground w-full justify-between border border-border/30 rounded-lg px-4 h-9"
                 data-testid="dismissed-collapsible-trigger"
               >
                 <span className="flex items-center gap-1.5">

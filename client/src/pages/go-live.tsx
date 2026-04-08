@@ -134,7 +134,7 @@ export default function GoLivePage() {
           </Link>
           <span className="text-muted-foreground/40">/</span>
           <h1 className="text-lg font-semibold text-foreground flex items-center gap-2">
-            <Rocket className="w-5 h-5 text-[#d4a853]" />
+            <Rocket className="w-5 h-5 text-accent" />
             Go-Live Readiness Scorecard
           </h1>
         </div>
@@ -150,7 +150,7 @@ export default function GoLivePage() {
             <div className="flex flex-col items-center py-12 gap-4">
               <Rocket className="w-12 h-12 text-muted-foreground/30" />
               <p className="text-sm text-muted-foreground">No go-live scorecard yet</p>
-              <Button className="bg-[#d4a853] hover:bg-[#c49843] text-white gap-2" onClick={() => setInitialized(true)} data-testid="button-create-scorecard">
+              <Button className="bg-accent hover:bg-accent/90 text-accent-foreground gap-2" onClick={() => setInitialized(true)} data-testid="button-create-scorecard">
                 <Plus className="w-4 h-4" /> Create Scorecard
               </Button>
             </div>
@@ -167,7 +167,7 @@ export default function GoLivePage() {
                   {READINESS_LABELS[readiness]}
                 </Badge>
                 <div className="ml-auto">
-                  <Button size="sm" className="bg-[#d4a853] hover:bg-[#c49843] text-white text-xs gap-1.5" onClick={handleSave}
+                  <Button size="sm" className="bg-accent hover:bg-accent/90 text-accent-foreground text-xs gap-1.5" onClick={handleSave}
                     disabled={saveMutation.isPending} data-testid="button-save-scorecard">
                     {saveMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />} Save Scorecard
                   </Button>
@@ -200,7 +200,7 @@ export default function GoLivePage() {
                               </TableCell>
                               <TableCell className="py-1.5">
                                 <div className="flex items-center gap-1.5">
-                                  <input type="range" min="0" max="10" step="1" className="w-20 h-1.5 accent-[#d4a853]"
+                                  <input type="range" min="0" max="10" step="1" className="w-20 h-1.5 accent-amber-500"
                                     value={item.score} onChange={e => updateCriterion(item.key, "score", parseInt(e.target.value))}
                                     data-testid={`score-${item.key}`} />
                                   <span className="text-[11px] font-mono w-4">{item.score}</span>

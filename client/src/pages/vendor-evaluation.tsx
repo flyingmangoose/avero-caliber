@@ -232,7 +232,7 @@ function CostBarChart({ data, dataKey, label }: { data: { name: string; value: n
                   return (
                     <div className="bg-popover border border-border rounded-lg px-3 py-2 shadow-lg">
                       <p className="text-sm font-semibold text-foreground">{d.name}</p>
-                      <p className="text-sm font-bold text-[#d4a853]">{formatCurrency(d.value)}</p>
+                      <p className="text-sm font-bold text-accent">{formatCurrency(d.value)}</p>
                     </div>
                   );
                 }
@@ -276,7 +276,7 @@ function CostComparisonCard({ vendors, totalRequirements }: { vendors: VendorInf
     <Card data-testid="card-cost-comparison">
       <CardHeader className="pb-3">
         <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
-          <DollarSign className="w-4 h-4 text-[#d4a853]" />
+          <DollarSign className="w-4 h-4 text-accent" />
           Cost Comparison
           <span className="text-xs text-muted-foreground font-normal ml-1">From vendor proposals</span>
         </CardTitle>
@@ -319,30 +319,30 @@ function CostComparisonCard({ vendors, totalRequirements }: { vendors: VendorInf
                       <span className="text-xs text-muted-foreground">{v.costs!.platform}</span>
                     </td>
                     <td className="py-3 pr-2 text-right">
-                      <span className={`text-xs font-semibold ${v.costs!.implementationTotal === minImpl ? "text-[#d4a853]" : "text-foreground"}`} data-testid={`impl-cost-${v.shortName}`}>
+                      <span className={`text-xs font-semibold ${v.costs!.implementationTotal === minImpl ? "text-accent" : "text-foreground"}`} data-testid={`impl-cost-${v.shortName}`}>
                         {v.costs!.implementationTotal === minImpl && <span className="mr-1 text-[10px]">★</span>}
                         {formatCurrency(v.costs!.implementationTotal)}
                       </span>
                     </td>
                     <td className="py-3 pr-2 text-right">
-                      <span className={`text-xs font-semibold ${v.costs!.ongoingAnnual === minAnnual ? "text-[#d4a853]" : "text-foreground"}`} data-testid={`annual-cost-${v.shortName}`}>
+                      <span className={`text-xs font-semibold ${v.costs!.ongoingAnnual === minAnnual ? "text-accent" : "text-foreground"}`} data-testid={`annual-cost-${v.shortName}`}>
                         {v.costs!.ongoingAnnual === minAnnual && <span className="mr-1 text-[10px]">★</span>}
                         {formatCurrency(v.costs!.ongoingAnnual)}
                       </span>
                     </td>
                     <td className="py-3 pr-2 text-right">
-                      <span className={`text-xs font-semibold ${v.costs!.sevenYearTotal === minTco ? "text-[#d4a853]" : "text-foreground"}`} data-testid={`tco-cost-${v.shortName}`}>
+                      <span className={`text-xs font-semibold ${v.costs!.sevenYearTotal === minTco ? "text-accent" : "text-foreground"}`} data-testid={`tco-cost-${v.shortName}`}>
                         {v.costs!.sevenYearTotal === minTco && <span className="mr-1 text-[10px]">★</span>}
                         {formatCurrency(v.costs!.sevenYearTotal)}
                       </span>
                     </td>
                     <td className="py-3 pr-2 text-right">
-                      <span className={`text-xs ${tcoDiff === 0 ? "text-[#d4a853] font-semibold" : "text-muted-foreground"}`}>
+                      <span className={`text-xs ${tcoDiff === 0 ? "text-accent font-semibold" : "text-muted-foreground"}`}>
                         {tcoDiff === 0 ? "—" : `+${formatCurrency(tcoDiff)}`}
                       </span>
                     </td>
                     <td className="py-3 text-right">
-                      <span className={`text-xs ${tcoDiff === 0 ? "text-[#d4a853] font-semibold" : "text-muted-foreground"}`}>
+                      <span className={`text-xs ${tcoDiff === 0 ? "text-accent font-semibold" : "text-muted-foreground"}`}>
                         {tcoDiff === 0 ? "Lowest" : `+${tcoPct.toFixed(1)}%`}
                       </span>
                     </td>
@@ -395,7 +395,7 @@ function CostComparisonCard({ vendors, totalRequirements }: { vendors: VendorInf
                 <div key={v.id} className="flex items-center gap-1.5">
                   <div className="w-2 h-2 rounded-full" style={{ backgroundColor: v.color }} />
                   <span className="text-xs font-medium text-foreground">{v.shortName}:</span>
-                  <span className={`text-xs font-semibold ${v.costs!.sevenYearTotal === minTco ? "text-[#d4a853]" : "text-foreground"}`}>
+                  <span className={`text-xs font-semibold ${v.costs!.sevenYearTotal === minTco ? "text-accent" : "text-foreground"}`}>
                     {formatCurrency(Math.round(v.costs!.sevenYearTotal / totalRequirements))}
                   </span>
                 </div>
@@ -427,12 +427,12 @@ function VendorCard({
       onClick={onToggle}
       className={`relative flex flex-col items-start gap-1.5 p-3 rounded-lg border-2 text-left transition-all min-w-[160px] max-w-[200px] flex-shrink-0 ${
         isSelected
-          ? "border-[#d4a853] bg-[#d4a853]/8 shadow-md"
+          ? "border-accent bg-accent/8 shadow-md"
           : "border-border/50 bg-card/60 hover:border-border hover:bg-card"
       }`}
     >
       {isSelected && (
-        <CheckCircle2 className="absolute top-2 right-2 w-4 h-4 text-[#d4a853]" />
+        <CheckCircle2 className="absolute top-2 right-2 w-4 h-4 text-accent" />
       )}
       <div
         className="w-8 h-8 rounded-md flex items-center justify-center text-white text-xs font-bold shrink-0"
@@ -578,7 +578,7 @@ function ScoringWeightsCard({
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
-              <SlidersHorizontal className="w-4 h-4 text-[#d4a853]" />
+              <SlidersHorizontal className="w-4 h-4 text-accent" />
               Scoring Weights
               {isSaving && (
                 <span className="flex items-center gap-1 text-[11px] font-normal text-muted-foreground ml-2">
@@ -635,7 +635,7 @@ function ScoringWeightsCard({
             <div key={category}>
               <div className="flex items-center justify-between mb-2 pb-1 border-b border-border/40">
                 <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{category}</span>
-                <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-semibold text-[#d4a853] border-[#d4a853]/30">
+                <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-semibold text-accent border-accent/30">
                   {getCategoryPercent(modules)}
                 </Badge>
               </div>
@@ -652,7 +652,7 @@ function ScoringWeightsCard({
                       className="flex-1 min-w-[80px]"
                       data-testid={`slider-weight-${module.replace(/\s+/g, '-').toLowerCase()}`}
                     />
-                    <span className="text-[11px] font-semibold text-[#d4a853] w-7 text-right shrink-0">{weights[module] ?? 5}</span>
+                    <span className="text-[11px] font-semibold text-accent w-7 text-right shrink-0">{weights[module] ?? 5}</span>
                     <span className="text-[10px] text-muted-foreground w-10 text-right shrink-0">{getEffectivePercent(module)}</span>
                   </div>
                 ))}
@@ -742,7 +742,7 @@ function ModuleScoresTab({
                 <TableRow key={module} className="hover:bg-muted/30">
                   <TableCell className="py-2 text-xs font-medium text-foreground/90">{module}</TableCell>
                   <TableCell className="py-2 text-center">
-                    <span className="text-xs font-semibold text-[#d4a853]">{weights[module] ?? 5}</span>
+                    <span className="text-xs font-semibold text-accent">{weights[module] ?? 5}</span>
                   </TableCell>
                   {filteredVendors.map(v => {
                     const ms = v.moduleScores[module];
@@ -908,7 +908,7 @@ function GapAnalysisTab({
                   return next;
                 });
               }} data-testid={`filter-module-${m.replace(/\s+/g, '-').toLowerCase()}`}>
-                <span className={moduleFilter.has(m) ? "font-semibold text-[#d4a853]" : ""}>{moduleFilter.has(m) ? "✓ " : ""}{m}</span>
+                <span className={moduleFilter.has(m) ? "font-semibold text-accent" : ""}>{moduleFilter.has(m) ? "✓ " : ""}{m}</span>
               </DropdownMenuItem>
             ))}
           </DropdownMenuContent>
@@ -966,7 +966,7 @@ function GapAnalysisTab({
                 });
               }} data-testid={`filter-vendor-${v.vendorShortName}`}>
                 <div className="w-2 h-2 rounded-full mr-2 shrink-0" style={{ backgroundColor: v.color }} />
-                <span className={vendorFilter.has(v.vendorId) ? "font-semibold text-[#d4a853]" : ""}>{vendorFilter.has(v.vendorId) ? "✓ " : ""}{v.vendorName}</span>
+                <span className={vendorFilter.has(v.vendorId) ? "font-semibold text-accent" : ""}>{vendorFilter.has(v.vendorId) ? "✓ " : ""}{v.vendorName}</span>
               </DropdownMenuItem>
             ))}
           </DropdownMenuContent>
@@ -1484,7 +1484,7 @@ function VendorIntelligenceDimension({ dim, label, score, scoreColor }: { dim: a
               <span className="text-[10px] font-semibold text-muted-foreground uppercase">Evidence</span>
               <ul className="mt-0.5 space-y-0.5">
                 {evidence.map((e: string, i: number) => (
-                  <li key={i} className="text-[11px] text-muted-foreground pl-2 border-l-2 border-[#d4a853]/30">{e}</li>
+                  <li key={i} className="text-[11px] text-muted-foreground pl-2 border-l-2 border-accent/30">{e}</li>
                 ))}
               </ul>
             </div>
@@ -1524,7 +1524,7 @@ function ProposalResultCard({ dimLabel, score, scoreColor, summary, evidence, co
       {evidence.length > 0 && (
         <Collapsible open={showEvidence} onOpenChange={setShowEvidence}>
           <CollapsibleTrigger asChild>
-            <button className="text-[11px] font-medium text-[#d4a853] hover:underline flex items-center gap-1" data-testid={`proposal-evidence-toggle-${dimLabel.toLowerCase().replace(/\s+/g, "-")}`}>
+            <button className="text-[11px] font-medium text-accent hover:underline flex items-center gap-1" data-testid={`proposal-evidence-toggle-${dimLabel.toLowerCase().replace(/\s+/g, "-")}`}>
               <ChevronRight className={`w-3 h-3 transition-transform ${showEvidence ? "rotate-90" : ""}`} />
               Evidence ({evidence.length})
             </button>
@@ -1532,7 +1532,7 @@ function ProposalResultCard({ dimLabel, score, scoreColor, summary, evidence, co
           <CollapsibleContent>
             <ul className="mt-1 space-y-1">
               {evidence.map((e, i) => (
-                <li key={i} className="text-[11px] text-muted-foreground pl-2 border-l-2 border-[#d4a853]/30 italic">{e}</li>
+                <li key={i} className="text-[11px] text-muted-foreground pl-2 border-l-2 border-accent/30 italic">{e}</li>
               ))}
             </ul>
           </CollapsibleContent>
@@ -1890,7 +1890,7 @@ export default function VendorEvaluation() {
             </Link>
             <span className="text-muted-foreground/40">/</span>
             <h1 className="text-lg font-semibold text-foreground flex items-center gap-2">
-              <BarChart3 className="w-5 h-5 text-[#d4a853]" />
+              <BarChart3 className="w-5 h-5 text-accent" />
               Vendor Evaluation
             </h1>
           </div>
@@ -1899,7 +1899,7 @@ export default function VendorEvaluation() {
               <Button
                 onClick={() => loadSampleRfpMutation.mutate()}
                 disabled={loadSampleRfpMutation.isPending || generateScoresMutation.isPending}
-                className="bg-[#d4a853] hover:bg-[#c49843] text-white gap-2"
+                className="bg-accent hover:bg-accent/90 text-accent-foreground gap-2"
                 data-testid="button-load-sample-rfp-header"
               >
                 <MapPin className="w-4 h-4" />
@@ -1948,7 +1948,7 @@ export default function VendorEvaluation() {
                   className="gap-2 text-xs"
                   data-testid="button-analyze-proposal"
                 >
-                  <Brain className="w-3.5 h-3.5 text-[#d4a853]" />
+                  <Brain className="w-3.5 h-3.5 text-accent" />
                   Analyze Proposal
                 </Button>
                 <Button
@@ -1973,10 +1973,10 @@ export default function VendorEvaluation() {
 
           {/* Generate Scores CTA (when no scores yet) */}
           {!hasScores && (
-            <Card className="border-[#d4a853]/30 bg-[#d4a853]/5" data-testid="card-no-scores">
+            <Card className="border-accent/30 bg-accent/5" data-testid="card-no-scores">
               <CardContent className="py-8 flex flex-col items-center text-center gap-4">
-                <div className="w-12 h-12 rounded-full bg-[#d4a853]/15 flex items-center justify-center">
-                  <MapPin className="w-6 h-6 text-[#d4a853]" />
+                <div className="w-12 h-12 rounded-full bg-accent/15 flex items-center justify-center">
+                  <MapPin className="w-6 h-6 text-accent" />
                 </div>
                 <div>
                   <p className="text-base font-semibold text-foreground">Load Real Vendor Proposal Data</p>
@@ -1989,7 +1989,7 @@ export default function VendorEvaluation() {
                   <Button
                     onClick={() => loadSampleRfpMutation.mutate()}
                     disabled={loadSampleRfpMutation.isPending || generateScoresMutation.isPending}
-                    className="bg-[#d4a853] hover:bg-[#c49843] text-white gap-2"
+                    className="bg-accent hover:bg-accent/90 text-accent-foreground gap-2"
                     data-testid="button-load-sample-rfp-data"
                   >
                     <MapPin className="w-4 h-4" />
@@ -2019,7 +2019,7 @@ export default function VendorEvaluation() {
           <Card data-testid="card-vendor-selection">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
-                <Building2 className="w-4 h-4 text-[#d4a853]" />
+                <Building2 className="w-4 h-4 text-accent" />
                 Select Vendors to Compare
                 <Badge variant="outline" className="ml-auto text-[11px]">
                   {selectedVendorIds.length} of {vendors.length} selected
@@ -2045,7 +2045,7 @@ export default function VendorEvaluation() {
             <Card data-testid="card-vendor-intelligence">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
-                  <Brain className="w-4 h-4 text-[#d4a853]" />
+                  <Brain className="w-4 h-4 text-accent" />
                   Vendor Intelligence
                   <Badge variant="outline" className="ml-auto text-[11px]">
                     {vendorsWithIntelligence.length} vendor{vendorsWithIntelligence.length !== 1 ? "s" : ""} analyzed
@@ -2122,7 +2122,7 @@ export default function VendorEvaluation() {
             <Card data-testid="card-score-overview">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-[#d4a853]" />
+                  <TrendingUp className="w-4 h-4 text-accent" />
                   Weighted Fit Score
                   <span className="text-xs text-muted-foreground font-normal ml-1">Scores reflect module weight configuration above</span>
                 </CardTitle>
@@ -2274,7 +2274,7 @@ export default function VendorEvaluation() {
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Brain className="w-5 h-5 text-[#d4a853]" />
+              <Brain className="w-5 h-5 text-accent" />
               Analyze Vendor Proposal
             </DialogTitle>
           </DialogHeader>
@@ -2299,7 +2299,7 @@ export default function VendorEvaluation() {
               <div className="space-y-2">
                 <label className="text-sm font-medium">Upload Proposal (PDF)</label>
                 <div
-                  className="border-2 border-dashed border-border/60 rounded-lg p-8 text-center cursor-pointer hover:border-[#d4a853]/50 hover:bg-[#d4a853]/5 transition-colors"
+                  className="border-2 border-dashed border-border/60 rounded-lg p-8 text-center cursor-pointer hover:border-accent/50 hover:bg-accent/5 transition-colors"
                   onClick={() => fileInputRef.current?.click()}
                   data-testid="proposal-drop-zone"
                 >
@@ -2327,7 +2327,7 @@ export default function VendorEvaluation() {
               </div>
 
               <Button
-                className="w-full bg-[#d4a853] hover:bg-[#c49843] text-white gap-2"
+                className="w-full bg-accent hover:bg-accent/90 text-accent-foreground gap-2"
                 disabled={!proposalVendorId || !proposalFile}
                 onClick={handleAnalyzeProposal}
                 data-testid="proposal-analyze-button"
@@ -2341,7 +2341,7 @@ export default function VendorEvaluation() {
           {/* Step 2: Processing */}
           {proposalStep === 2 && (
             <div className="flex flex-col items-center py-12 gap-4">
-              <Loader2 className="w-10 h-10 text-[#d4a853] animate-spin" />
+              <Loader2 className="w-10 h-10 text-accent animate-spin" />
               <p className="text-sm font-medium text-foreground">{analysisStatusText}</p>
               <p className="text-xs text-muted-foreground">This may take a minute for large documents</p>
             </div>
@@ -2375,15 +2375,15 @@ export default function VendorEvaluation() {
               </div>
 
               {proposalResult.overallAssessment && (
-                <div className="p-3 rounded-lg bg-[#d4a853]/5 border border-[#d4a853]/20">
-                  <p className="text-xs font-semibold text-[#d4a853] mb-1">Overall Assessment</p>
+                <div className="p-3 rounded-lg bg-accent/5 border border-accent/20">
+                  <p className="text-xs font-semibold text-accent mb-1">Overall Assessment</p>
                   <p className="text-sm text-foreground">{proposalResult.overallAssessment}</p>
                 </div>
               )}
 
               <div className="flex gap-3 pt-2">
                 <Button
-                  className="flex-1 bg-[#d4a853] hover:bg-[#c49843] text-white"
+                  className="flex-1 bg-accent hover:bg-accent/90 text-accent-foreground"
                   onClick={handleAcceptProposal}
                   data-testid="proposal-accept-button"
                 >

@@ -261,7 +261,7 @@ function DocumentRow({
           {hasItems && !doc.appliedAt && !applyResult && (
             <Button
               size="sm"
-              className="bg-[#1a2744] hover:bg-[#243460] text-white text-xs gap-1.5"
+              className="bg-primary hover:bg-primary/90 text-white text-xs gap-1.5"
               onClick={() => applyMutation.mutate()}
               disabled={applyMutation.isPending}
               data-testid={`apply-doc-${doc.id}`}
@@ -540,7 +540,7 @@ export function DocumentsTab({ projectId, onApplyComplete }: { projectId: number
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-sm flex items-center gap-2">
-            <Upload className="w-4 h-4 text-[#d4a853]" />
+            <Upload className="w-4 h-4 text-accent" />
             Upload Document
           </CardTitle>
         </CardHeader>
@@ -550,8 +550,8 @@ export function DocumentsTab({ projectId, onApplyComplete }: { projectId: number
           <div
             className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
               dragOver
-                ? "border-[#d4a853] bg-[#d4a853]/5"
-                : "border-border/60 hover:border-[#d4a853]/50 hover:bg-muted/30"
+                ? "border-accent bg-accent/5"
+                : "border-border/60 hover:border-accent/50 hover:bg-muted/30"
             }`}
             onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
             onDragLeave={() => setDragOver(false)}
@@ -606,7 +606,7 @@ export function DocumentsTab({ projectId, onApplyComplete }: { projectId: number
           {/* Toggle paste area */}
           <div>
             <button
-              className="text-xs text-[#d4a853] hover:underline flex items-center gap-1"
+              className="text-xs text-accent hover:underline flex items-center gap-1"
               onClick={() => setShowPasteArea(v => !v)}
               data-testid="toggle-paste"
               type="button"
@@ -634,7 +634,7 @@ export function DocumentsTab({ projectId, onApplyComplete }: { projectId: number
             </p>
             <Button
               size="sm"
-              className="bg-[#d4a853] hover:bg-[#c49843] text-white text-xs gap-1.5 shrink-0"
+              className="bg-accent hover:bg-accent/90 text-accent-foreground text-xs gap-1.5 shrink-0"
               onClick={() => createAndAnalyze.mutate()}
               disabled={createAndAnalyze.isPending || (!selectedFile && !pastedContent.trim())}
               data-testid="button-upload-analyze"
@@ -652,7 +652,7 @@ export function DocumentsTab({ projectId, onApplyComplete }: { projectId: number
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-sm flex items-center gap-2">
-            <FileText className="w-4 h-4 text-[#d4a853]" />
+            <FileText className="w-4 h-4 text-accent" />
             Document Library
             {documents.length > 0 && (
               <Badge variant="outline" className="text-[10px] ml-1">{documents.length}</Badge>
