@@ -14,7 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Stethoscope, ChevronLeft, Plus, Trash2, Edit2, Loader2, AlertTriangle, DollarSign, Calendar, Sparkles, FileText, Activity, TrendingUp, TrendingDown, ShieldAlert, CheckCircle2, RefreshCw, ArrowRight, Search } from "lucide-react";
+import { Stethoscope, ChevronLeft, Plus, Trash2, Edit2, Loader2, AlertTriangle, DollarSign, Calendar, Sparkles, FileText, Activity, TrendingUp, TrendingDown, ShieldAlert, CheckCircle2, RefreshCw, ArrowRight, Search, Download } from "lucide-react";
 import { DocumentsTab } from "./health-check-documents";
 
 const DOMAINS = [
@@ -95,7 +95,8 @@ const HEALTH_BG: Record<string, string> = {
   satisfactory: "bg-emerald-50 border-emerald-200 dark:bg-emerald-950/30 dark:border-emerald-900",
 };
 
-function SynthesisSummary({ synthesis, assessmentMap, raidItems, budgetSummary, scheduleItems, baseline, assessmentHistory, isSynthesizing, onSynthesize, onEditBaseline }: {
+function SynthesisSummary({ projectId, synthesis, assessmentMap, raidItems, budgetSummary, scheduleItems, baseline, assessmentHistory, isSynthesizing, onSynthesize, onEditBaseline }: {
+  projectId: number;
   synthesis: any;
   assessmentMap: Record<string, any>;
   raidItems: any[];
@@ -148,15 +149,29 @@ function SynthesisSummary({ synthesis, assessmentMap, raidItems, budgetSummary, 
               )}
             </div>
           </div>
-          <Button
-            className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2"
-            onClick={onSynthesize}
-            disabled={isSynthesizing}
-            data-testid="button-synthesize"
-          >
-            {isSynthesizing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-            {isSynthesizing ? "Synthesizing..." : synthesis ? "Re-Synthesize" : "Synthesize Assessment"}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => {
+                window.open(`/api/projects/${projectId}/health-check/report-pdf`, "_blank");
+              }}
+              data-testid="button-download-pdf"
+            >
+              <Download className="w-3.5 h-3.5" />
+              PDF
+            </Button>
+            <Button
+              className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2"
+              onClick={onSynthesize}
+              disabled={isSynthesizing}
+              data-testid="button-synthesize"
+            >
+              {isSynthesizing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+              {isSynthesizing ? "Synthesizing..." : synthesis ? "Re-Synthesize" : "Synthesize Assessment"}
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -585,6 +600,7 @@ export default function HealthCheckPage() {
             {/* TAB 0: Executive Summary */}
             <TabsContent value="summary">
               <SynthesisSummary
+                projectId={projectId}
                 synthesis={synthesis}
                 assessmentMap={assessmentMap}
                 raidItems={raidItems}

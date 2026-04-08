@@ -576,26 +576,52 @@ export default function Dashboard() {
           })}
         </div>
       ) : (
-        /* Empty state */
-        <Card>
-          <CardContent className="p-12 text-center">
-            <FolderOpen className="w-12 h-12 mx-auto text-muted-foreground/40 mb-3" />
-            <h3 className="text-sm font-semibold mb-1">No clients yet</h3>
-            <p className="text-xs text-muted-foreground mb-4">
-              Create your first client to get started.
-            </p>
-            <Button
-              onClick={openNewClient}
-              variant="outline"
-              size="sm"
-              className="gap-1.5"
-              data-testid="button-empty-new-client"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              New Client
-            </Button>
-          </CardContent>
-        </Card>
+        /* Onboarding empty state */
+        <div className="max-w-lg mx-auto py-12 text-center space-y-8">
+          <div>
+            <div className="w-14 h-14 rounded-2xl bg-foreground mx-auto mb-4 flex items-center justify-center">
+              <svg viewBox="0 0 20 20" fill="none" className="w-8 h-8">
+                <path d="M6 16L10 4L14 16" stroke="hsl(var(--background))" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                <line x1="7.5" y1="12" x2="12.5" y2="12" stroke="hsl(var(--background))" strokeWidth="1.8" strokeLinecap="round" />
+              </svg>
+            </div>
+            <h2 className="text-lg font-semibold">Welcome to Caliber</h2>
+            <p className="text-sm text-muted-foreground mt-1">Get started in three steps</p>
+          </div>
+
+          <div className="space-y-3 text-left">
+            <div className="flex items-start gap-4 p-4 rounded-lg border bg-card">
+              <span className="w-6 h-6 rounded-full bg-foreground text-background flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">1</span>
+              <div className="flex-1">
+                <p className="text-sm font-medium">Create a client</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Add your government entity with their website domain for automatic enrichment.</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-4 p-4 rounded-lg border bg-card">
+              <span className="w-6 h-6 rounded-full bg-muted text-muted-foreground flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">2</span>
+              <div className="flex-1">
+                <p className="text-sm font-medium">Create a project</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Choose engagement modules — Selection, IV&V, Health Check — based on your scope.</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-4 p-4 rounded-lg border bg-card">
+              <span className="w-6 h-6 rounded-full bg-muted text-muted-foreground flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">3</span>
+              <div className="flex-1">
+                <p className="text-sm font-medium">Load requirements or upload documents</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Import requirements for vendor evaluation, or upload status reports for health check analysis.</p>
+              </div>
+            </div>
+          </div>
+
+          <Button
+            onClick={openNewClient}
+            className="gap-2"
+            data-testid="button-empty-new-client"
+          >
+            <Plus className="w-4 h-4" />
+            Create Your First Client
+          </Button>
+        </div>
       )}
 
       {/* ── New Client Dialog ── */}

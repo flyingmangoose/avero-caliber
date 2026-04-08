@@ -3592,6 +3592,177 @@ Write in professional consulting tone covering: overall posture assessment, key 
     res.send(report);
   });
 
+  // Generate PDF health check report
+  app.get("/api/projects/:id/health-check/report-pdf", async (req, res) => {
+    const projectId = parseInt(req.params.id);
+    const project = storage.getProject(projectId);
+    if (!project) return res.status(404).json({ error: "Project not found" });
+
+    const assessments = storage.getHealthCheckAssessments(projectId);
+    const raidItems = storage.getRaidItems(projectId);
+    const budgetSummary = storage.getBudgetSummary(projectId);
+    const scheduleItems = storage.getScheduleEntries(projectId);
+    const baseline = storage.getProjectBaseline(projectId);
+    const client = project.clientId ? storage.getClient(project.clientId) : undefined;
+
+    const DOMAIN_LABELS: Record<string, string> = {
+      governance: "Governance & Oversight", raid: "RAID Log Analysis",
+      technical: "Technical Architecture & Quality", budget_schedule: "Budget & Schedule Performance",
+      change_management: "Change Management & Adoption", data_migration: "Data Migration & Conversion",
+      testing_quality: "Testing & Quality", vendor_performance: "Vendor/SI Performance",
+      compliance_security: "Compliance & Security", scope_requirements: "Scope & Requirements",
+    };
+    const RATING_LABELS: Record<string, string> = {
+      critical: "CRITICAL", high: "HIGH RISK", medium: "MEDIUM RISK", low: "LOW RISK", satisfactory: "SATISFACTORY",
+    };
+    const ratingOrder = ["critical", "high", "medium", "low", "satisfactory"];
+
+    try {
+      const PDFDocument = (await import("pdfkit")).default;
+      const doc = new PDFDocument({ size: "LETTER", margins: { top: 60, bottom: 60, left: 60, right: 60 }, bufferPages: true });
+
+      const chunks: Buffer[] = [];
+      doc.on("data", (chunk: Buffer) => chunks.push(chunk));
+      doc.on("end", () => {
+        const pdf = Buffer.concat(chunks);
+        res.setHeader("Content-Type", "application/pdf");
+        res.setHeader("Content-Disposition", `attachment; filename="health_check_${project.name.replace(/[^a-zA-Z0-9]/g, "_")}_${new Date().toISOString().split("T")[0]}.pdf"`);
+        res.send(pdf);
+      });
+
+      const navy = "#1e293b";
+      const accent = "#6d5edc";
+      const gray = "#64748b";
+      const lightGray = "#e2e8f0";
+
+      // Header
+      doc.rect(0, 0, doc.page.width, 100).fill(navy);
+      doc.fill("#ffffff").fontSize(22).font("Helvetica-Bold").text("Project Health Check Report", 60, 30);
+      doc.fontSize(11).font("Helvetica").text(`${project.name}${client ? ` — ${client.name}` : ""}`, 60, 58);
+      doc.text(`Generated ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}`, 60, 74);
+      doc.fill(navy);
+
+      // Overall health
+      const worstAssessment = assessments.filter(a => a.overallRating).sort((a, b) => ratingOrder.indexOf(a.overallRating!) - ratingOrder.indexOf(b.overallRating!))[0];
+      const overallRating = worstAssessment?.overallRating || "not assessed";
+
+      doc.moveDown(2);
+      doc.y = 120;
+      doc.fontSize(14).font("Helvetica-Bold").text("Overall Project Health");
+      doc.moveDown(0.3);
+      const ratingColor = overallRating === "critical" || overallRating === "high" ? "#dc2626" : overallRating === "medium" ? "#d97706" : overallRating === "satisfactory" ? "#16a34a" : "#3b82f6";
+      doc.fontSize(18).fillColor(ratingColor).font("Helvetica-Bold").text((RATING_LABELS[overallRating] || overallRating).toUpperCase());
+      doc.fillColor(navy);
+
+      // Contract baseline
+      if (baseline) {
+        doc.moveDown(1);
+        doc.fontSize(12).font("Helvetica-Bold").text("Contract Baseline");
+        doc.moveDown(0.3);
+        doc.fontSize(9).font("Helvetica").fillColor(gray);
+        if (baseline.contractedAmount) doc.text(`Contracted Amount: $${baseline.contractedAmount.toLocaleString()}`);
+        if (baseline.goLiveDate) {
+          const days = Math.ceil((new Date(baseline.goLiveDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+          doc.text(`Go-Live Date: ${baseline.goLiveDate} (${days > 0 ? days + " days remaining" : Math.abs(days) + " days past"})`);
+        }
+        if (baseline.vendorName) doc.text(`Implementation Vendor: ${baseline.vendorName}`);
+        doc.fillColor(navy);
+      }
+
+      // Quick stats
+      doc.moveDown(1);
+      doc.fontSize(12).font("Helvetica-Bold").text("Summary Statistics");
+      doc.moveDown(0.3);
+      const openRisks = raidItems.filter(r => r.status === "open" && r.type === "risk").length;
+      const openIssues = raidItems.filter(r => r.status === "open" && r.type === "issue").length;
+      const criticalItems = raidItems.filter(r => r.status === "open" && r.severity === "critical").length;
+      const delayedMilestones = scheduleItems.filter(s => s.status === "delayed").length;
+      const totalAuthorized = (budgetSummary.originalContract || 0) + (budgetSummary.totalChangeOrders || 0) + (budgetSummary.totalAdditionalFunding || 0);
+      const spendPct = totalAuthorized > 0 ? Math.round((budgetSummary.totalActualSpend || 0) / totalAuthorized * 100) : 0;
+
+      doc.fontSize(9).font("Helvetica").fillColor(gray);
+      doc.text(`Open Risks: ${openRisks}  |  Open Issues: ${openIssues}  |  Critical Items: ${criticalItems}`);
+      doc.text(`Budget: $${(budgetSummary.totalActualSpend || 0).toLocaleString()} spent of $${totalAuthorized.toLocaleString()} authorized (${spendPct}%)`);
+      doc.text(`Schedule: ${scheduleItems.length} milestones, ${delayedMilestones} delayed`);
+      doc.fillColor(navy);
+
+      // Domain assessments
+      for (const a of assessments) {
+        const label = DOMAIN_LABELS[a.domain] || a.domain;
+        const rating = a.overallRating ? (RATING_LABELS[a.overallRating] || a.overallRating) : "Not Rated";
+
+        if (doc.y > 650) doc.addPage();
+
+        doc.moveDown(1.2);
+        doc.moveTo(60, doc.y).lineTo(552, doc.y).strokeColor(lightGray).stroke();
+        doc.moveDown(0.5);
+        doc.fontSize(12).font("Helvetica-Bold").fillColor(navy).text(label, { continued: true });
+        const rc = a.overallRating === "critical" || a.overallRating === "high" ? "#dc2626" : a.overallRating === "medium" ? "#d97706" : a.overallRating === "satisfactory" ? "#16a34a" : "#3b82f6";
+        doc.fontSize(10).font("Helvetica-Bold").fillColor(rc).text(`  ${rating}`);
+        doc.fillColor(navy);
+
+        if (a.summary) {
+          doc.moveDown(0.3);
+          doc.fontSize(9).font("Helvetica").fillColor(gray).text(a.summary, { width: 492 });
+          doc.fillColor(navy);
+        }
+
+        if (a.findings) {
+          try {
+            const findings = JSON.parse(a.findings);
+            if (Array.isArray(findings) && findings.length > 0) {
+              doc.moveDown(0.3);
+              for (const f of findings) {
+                if (doc.y > 700) doc.addPage();
+                const sevColor = f.severity === "critical" ? "#dc2626" : f.severity === "high" ? "#ea580c" : f.severity === "medium" ? "#d97706" : "#3b82f6";
+                doc.fontSize(8).font("Helvetica-Bold").fillColor(sevColor).text(`[${(f.severity || "info").toUpperCase()}] `, { continued: true });
+                doc.font("Helvetica").fillColor(navy).text(f.finding || "", { width: 470 });
+                if (f.evidence) doc.fontSize(8).fillColor(gray).text(`Evidence: ${f.evidence}`, { indent: 12, width: 480 });
+                if (f.recommendation) doc.fontSize(8).fillColor(accent).text(`Recommendation: ${f.recommendation}`, { indent: 12, width: 480 });
+                doc.fillColor(navy);
+                doc.moveDown(0.3);
+              }
+            }
+          } catch {}
+        }
+      }
+
+      // Top RAID items
+      const topRaids = raidItems.filter(r => r.status === "open" && (r.severity === "critical" || r.severity === "high")).slice(0, 10);
+      if (topRaids.length > 0) {
+        if (doc.y > 600) doc.addPage();
+        doc.moveDown(1.5);
+        doc.fontSize(14).font("Helvetica-Bold").text("Top Open Risks & Issues");
+        doc.moveDown(0.5);
+        for (const r of topRaids) {
+          if (doc.y > 700) doc.addPage();
+          const sevColor = r.severity === "critical" ? "#dc2626" : "#ea580c";
+          doc.fontSize(8).font("Helvetica-Bold").fillColor(sevColor).text(`[${r.type?.toUpperCase()}/${r.severity?.toUpperCase()}] `, { continued: true });
+          doc.font("Helvetica-Bold").fillColor(navy).text(r.title || "");
+          if (r.description) doc.fontSize(8).font("Helvetica").fillColor(gray).text(r.description, { indent: 12, width: 480 });
+          if (r.owner) doc.fontSize(8).fillColor(gray).text(`Owner: ${r.owner}`, { indent: 12 });
+          doc.fillColor(navy);
+          doc.moveDown(0.4);
+        }
+      }
+
+      // Footer on all pages
+      const pageCount = doc.bufferedPageRange().count;
+      for (let i = 0; i < pageCount; i++) {
+        doc.switchToPage(i);
+        doc.fontSize(7).fillColor(gray).text(
+          `Caliber — Avero Advisors  |  Confidential  |  Page ${i + 1} of ${pageCount}`,
+          60, doc.page.height - 40, { width: 492, align: "center" }
+        );
+      }
+
+      doc.end();
+    } catch (err: any) {
+      console.error("PDF generation error:", err);
+      res.status(500).json({ error: "Failed to generate PDF: " + err.message });
+    }
+  });
+
   // Synthesize unified health assessment from all project data
   app.post("/api/projects/:id/health-check/synthesize", async (req, res) => {
     const projectId = parseInt(req.params.id);
