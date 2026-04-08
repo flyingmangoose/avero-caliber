@@ -14,7 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Stethoscope, ChevronLeft, Plus, Trash2, Edit2, Loader2, AlertTriangle, DollarSign, Calendar, Sparkles, FileText, Activity, TrendingUp, TrendingDown, ShieldAlert, CheckCircle2, RefreshCw, ArrowRight } from "lucide-react";
+import { Stethoscope, ChevronLeft, Plus, Trash2, Edit2, Loader2, AlertTriangle, DollarSign, Calendar, Sparkles, FileText, Activity, TrendingUp, TrendingDown, ShieldAlert, CheckCircle2, RefreshCw, ArrowRight, Search } from "lucide-react";
 import { DocumentsTab } from "./health-check-documents";
 
 const DOMAINS = [
@@ -43,7 +43,9 @@ type AssessmentForm = { domain: string; overallRating: string; summary: string; 
 type RaidForm = { type: string; title: string; description: string; severity: string; status: string; owner: string };
 type BudgetForm = { category: string; description: string; amount: string; date: string; notes: string };
 type ScheduleForm = { milestone: string; originalDate: string; currentDate: string; status: string; notes: string };
+type BaselineForm = { contractedAmount: string; goLiveDate: string; contractStartDate: string; vendorName: string; notes: string };
 
+const emptyBaseline = (): BaselineForm => ({ contractedAmount: "", goLiveDate: "", contractStartDate: "", vendorName: "", notes: "" });
 const emptyAssessment = (): AssessmentForm => ({ domain: "", overallRating: "", summary: "", findings: "", assessedBy: "" });
 const emptyRaid = (): RaidForm => ({ type: "risk", title: "", description: "", severity: "medium", status: "open", owner: "" });
 const emptyBudget = (): BudgetForm => ({ category: "actual_spend", description: "", amount: "", date: "", notes: "" });
@@ -87,14 +89,16 @@ const HEALTH_BG: Record<string, string> = {
   satisfactory: "bg-emerald-50 border-emerald-200 dark:bg-emerald-950/30 dark:border-emerald-900",
 };
 
-function SynthesisSummary({ synthesis, assessmentMap, raidItems, budgetSummary, scheduleItems, isSynthesizing, onSynthesize }: {
+function SynthesisSummary({ synthesis, assessmentMap, raidItems, budgetSummary, scheduleItems, baseline, isSynthesizing, onSynthesize, onEditBaseline }: {
   synthesis: any;
   assessmentMap: Record<string, any>;
   raidItems: any[];
   budgetSummary: any;
   scheduleItems: any[];
+  baseline: any;
   isSynthesizing: boolean;
   onSynthesize: () => void;
+  onEditBaseline: () => void;
 }) {
   // Quick stats from current data
   const openRisks = raidItems.filter(r => r.status === "open" && r.type === "risk").length;
@@ -188,6 +192,44 @@ function SynthesisSummary({ synthesis, assessmentMap, raidItems, budgetSummary, 
           </p>
         </Card>
       </div>
+
+      {/* Contract/SOW Baseline */}
+      <Card className="p-4">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-sm font-semibold flex items-center gap-2"><FileText className="w-4 h-4 text-[#d4a853]" />Contract Baseline</h3>
+          <Button variant="outline" size="sm" className="text-xs h-7 gap-1" onClick={onEditBaseline}>
+            <Edit2 className="w-3 h-3" />{baseline ? "Edit" : "Set Baseline"}
+          </Button>
+        </div>
+        {baseline ? (
+          <div className="grid grid-cols-4 gap-4">
+            <div>
+              <p className="text-[10px] text-muted-foreground">Contracted Amount</p>
+              <p className="text-sm font-semibold">{baseline.contractedAmount ? `$${baseline.contractedAmount.toLocaleString()}` : "—"}</p>
+            </div>
+            <div>
+              <p className="text-[10px] text-muted-foreground">Go-Live Date</p>
+              <p className="text-sm font-semibold">{baseline.goLiveDate || "—"}</p>
+              {baseline.goLiveDate && (() => {
+                const days = Math.ceil((new Date(baseline.goLiveDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+                return <p className={`text-[10px] font-medium ${days <= 0 ? "text-red-500" : days <= 90 ? "text-amber-500" : "text-muted-foreground"}`}>
+                  {days > 0 ? `${days} days remaining` : `${Math.abs(days)} days past`}
+                </p>;
+              })()}
+            </div>
+            <div>
+              <p className="text-[10px] text-muted-foreground">Contract Start</p>
+              <p className="text-sm font-semibold">{baseline.contractStartDate || "—"}</p>
+            </div>
+            <div>
+              <p className="text-[10px] text-muted-foreground">Implementation Vendor</p>
+              <p className="text-sm font-semibold">{baseline.vendorName || "—"}</p>
+            </div>
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground italic">No baseline set. Define the contract parameters to ground health assessments in "what was promised vs. where we are."</p>
+        )}
+      </Card>
 
       {/* Domain assessment cards — show synthesis or existing assessments */}
       <div className="grid grid-cols-2 gap-3">
@@ -315,18 +357,22 @@ export default function HealthCheckPage() {
   const [scheduleDialog, setScheduleDialog] = useState<{ open: boolean; editId?: number; form: ScheduleForm }>({ open: false, form: emptySchedule() });
   const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; type: string; id: number; label: string }>({ open: false, type: "", id: 0, label: "" });
   const [synthesis, setSynthesis] = useState<any>(null);
+  const [baselineDialog, setBaselineDialog] = useState<{ open: boolean; form: BaselineForm }>({ open: false, form: emptyBaseline() });
+  const [raidFilters, setRaidFilters] = useState<{ type: string; severity: string; status: string; search: string }>({ type: "", severity: "", status: "", search: "" });
 
   const { data: project } = useQuery<any>({ queryKey: ["/api/projects", projectId], queryFn: () => apiRequest("GET", `/api/projects/${projectId}`).then(r => r.json()), enabled: !!projectId });
   const { data: assessments = [] } = useQuery<any[]>({ queryKey: ["/api/projects", projectId, "hc-assessments"], queryFn: () => apiRequest("GET", `/api/projects/${projectId}/health-check/assessments`).then(r => r.json()), enabled: !!projectId });
   const { data: raidItems = [] } = useQuery<any[]>({ queryKey: ["/api/projects", projectId, "raid"], queryFn: () => apiRequest("GET", `/api/projects/${projectId}/raid`).then(r => r.json()), enabled: !!projectId });
   const { data: budgetData } = useQuery<any>({ queryKey: ["/api/projects", projectId, "budget"], queryFn: () => apiRequest("GET", `/api/projects/${projectId}/budget`).then(r => r.json()), enabled: !!projectId });
   const { data: scheduleItems = [] } = useQuery<any[]>({ queryKey: ["/api/projects", projectId, "schedule"], queryFn: () => apiRequest("GET", `/api/projects/${projectId}/schedule`).then(r => r.json()), enabled: !!projectId });
+  const { data: baseline } = useQuery<any>({ queryKey: ["/api/projects", projectId, "baseline"], queryFn: () => apiRequest("GET", `/api/projects/${projectId}/baseline`).then(r => r.json()), enabled: !!projectId });
 
   const invalidateAll = () => {
     queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "hc-assessments"] });
     queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "raid"] });
     queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "budget"] });
     queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "schedule"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "baseline"] });
   };
 
   const saveAssessment = useMutation({
@@ -394,6 +440,26 @@ export default function HealthCheckPage() {
     },
     onError: (e: any) => toast({ title: "Synthesis failed", description: e.message, variant: "destructive" }),
   });
+
+  const saveBaseline = useMutation({
+    mutationFn: (d: any) => apiRequest("POST", `/api/projects/${projectId}/baseline`, d).then(r => r.json()),
+    onSuccess: () => { invalidateAll(); setBaselineDialog({ open: false, form: emptyBaseline() }); toast({ title: "Baseline saved" }); },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  function openBaselineDialog() {
+    if (baseline) {
+      setBaselineDialog({ open: true, form: {
+        contractedAmount: baseline.contractedAmount?.toString() || "",
+        goLiveDate: baseline.goLiveDate || "",
+        contractStartDate: baseline.contractStartDate || "",
+        vendorName: baseline.vendorName || "",
+        notes: baseline.notes || "",
+      }});
+    } else {
+      setBaselineDialog({ open: true, form: emptyBaseline() });
+    }
+  }
 
   function confirmDelete(type: string, id: number, label: string) {
     setDeleteConfirm({ open: true, type, id, label });
@@ -478,8 +544,10 @@ export default function HealthCheckPage() {
                 raidItems={raidItems}
                 budgetSummary={budgetSummary}
                 scheduleItems={scheduleItems}
+                baseline={baseline}
                 isSynthesizing={synthesize.isPending}
                 onSynthesize={() => synthesize.mutate()}
+                onEditBaseline={openBaselineDialog}
               />
             </TabsContent>
 
@@ -514,39 +582,81 @@ export default function HealthCheckPage() {
                   <Plus className="w-3 h-3" />Add Item
                 </Button>
               </div>
-              {raidItems.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-8">No RAID items yet. Add risks, assumptions, issues, or dependencies.</p>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="text-xs w-24">Type</TableHead>
-                      <TableHead className="text-xs">Title</TableHead>
-                      <TableHead className="text-xs w-20">Severity</TableHead>
-                      <TableHead className="text-xs w-20">Status</TableHead>
-                      <TableHead className="text-xs w-20">Owner</TableHead>
-                      <TableHead className="text-xs w-20">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {raidItems.map((item: any) => (
-                      <TableRow key={item.id}>
-                        <TableCell><Badge variant="outline" className="text-[10px] uppercase">{item.type}</Badge></TableCell>
-                        <TableCell className="text-xs">{item.title}</TableCell>
-                        <TableCell>{item.severity && <Badge className={`text-[10px] ${RATING_COLORS[item.severity] || "bg-muted text-muted-foreground"}`}>{item.severity}</Badge>}</TableCell>
-                        <TableCell><Badge variant="outline" className="text-[10px]">{item.status}</Badge></TableCell>
-                        <TableCell className="text-xs text-muted-foreground">{item.owner || "—"}</TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => openRaidEdit(item)} data-testid={`edit-raid-${item.id}`}><Edit2 className="w-3 h-3" /></Button>
-                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-destructive" onClick={() => confirmDelete("raid", item.id, item.title)} data-testid={`delete-raid-${item.id}`}><Trash2 className="w-3 h-3" /></Button>
-                          </div>
-                        </TableCell>
+              {/* RAID Filters */}
+              <div className="flex gap-2 mb-3 flex-wrap">
+                <div className="relative flex-1 min-w-[160px]">
+                  <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                  <Input className="h-8 text-xs pl-8" placeholder="Search RAID items..." value={raidFilters.search} onChange={e => setRaidFilters(p => ({ ...p, search: e.target.value }))} />
+                </div>
+                <Select value={raidFilters.type} onValueChange={v => setRaidFilters(p => ({ ...p, type: v === "all" ? "" : v }))}>
+                  <SelectTrigger className="h-8 text-xs w-[120px]"><SelectValue placeholder="All types" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all" className="text-xs">All types</SelectItem>
+                    {RAID_TYPES.map(t => <SelectItem key={t} value={t} className="text-xs capitalize">{t}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <Select value={raidFilters.severity} onValueChange={v => setRaidFilters(p => ({ ...p, severity: v === "all" ? "" : v }))}>
+                  <SelectTrigger className="h-8 text-xs w-[120px]"><SelectValue placeholder="All severities" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all" className="text-xs">All severities</SelectItem>
+                    {SEVERITIES.map(s => <SelectItem key={s} value={s} className="text-xs capitalize">{s}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <Select value={raidFilters.status} onValueChange={v => setRaidFilters(p => ({ ...p, status: v === "all" ? "" : v }))}>
+                  <SelectTrigger className="h-8 text-xs w-[120px]"><SelectValue placeholder="All statuses" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all" className="text-xs">All statuses</SelectItem>
+                    {STATUSES.map(s => <SelectItem key={s} value={s} className="text-xs capitalize">{s}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              {(() => {
+                const filtered = raidItems.filter((item: any) => {
+                  if (raidFilters.type && item.type !== raidFilters.type) return false;
+                  if (raidFilters.severity && item.severity !== raidFilters.severity) return false;
+                  if (raidFilters.status && item.status !== raidFilters.status) return false;
+                  if (raidFilters.search) {
+                    const q = raidFilters.search.toLowerCase();
+                    if (!item.title?.toLowerCase().includes(q) && !item.description?.toLowerCase().includes(q) && !item.owner?.toLowerCase().includes(q)) return false;
+                  }
+                  return true;
+                });
+                return filtered.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-8">
+                    {raidItems.length === 0 ? "No RAID items yet. Add risks, assumptions, issues, or dependencies." : `No items match filters (${raidItems.length} total)`}
+                  </p>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-xs w-24">Type</TableHead>
+                        <TableHead className="text-xs">Title</TableHead>
+                        <TableHead className="text-xs w-20">Severity</TableHead>
+                        <TableHead className="text-xs w-20">Status</TableHead>
+                        <TableHead className="text-xs w-20">Owner</TableHead>
+                        <TableHead className="text-xs w-20">Actions</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
+                    </TableHeader>
+                    <TableBody>
+                      {filtered.map((item: any) => (
+                        <TableRow key={item.id}>
+                          <TableCell><Badge variant="outline" className="text-[10px] uppercase">{item.type}</Badge></TableCell>
+                          <TableCell className="text-xs">{item.title}</TableCell>
+                          <TableCell>{item.severity && <Badge className={`text-[10px] ${RATING_COLORS[item.severity] || "bg-muted text-muted-foreground"}`}>{item.severity}</Badge>}</TableCell>
+                          <TableCell><Badge variant="outline" className="text-[10px]">{item.status}</Badge></TableCell>
+                          <TableCell className="text-xs text-muted-foreground">{item.owner || "—"}</TableCell>
+                          <TableCell>
+                            <div className="flex gap-1">
+                              <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => openRaidEdit(item)} data-testid={`edit-raid-${item.id}`}><Edit2 className="w-3 h-3" /></Button>
+                              <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-destructive" onClick={() => confirmDelete("raid", item.id, item.title)} data-testid={`delete-raid-${item.id}`}><Trash2 className="w-3 h-3" /></Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                );
+              })()}
             </TabsContent>
 
             {/* TAB 3: Budget & Schedule */}
@@ -838,6 +948,51 @@ export default function HealthCheckPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Baseline Dialog */}
+      <Dialog open={baselineDialog.open} onOpenChange={o => !o && setBaselineDialog({ open: false, form: emptyBaseline() })}>
+        <DialogContent data-testid="dialog-baseline">
+          <DialogHeader><DialogTitle className="text-sm">Contract / SOW Baseline</DialogTitle><DialogDescription className="text-xs text-muted-foreground">Define the contract parameters to ground health assessments.</DialogDescription></DialogHeader>
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs text-muted-foreground">Contracted Amount ($)</label>
+                <Input className="h-8 text-xs" type="number" placeholder="e.g. 5000000" value={baselineDialog.form.contractedAmount} onChange={e => setBaselineDialog(p => ({ ...p, form: { ...p.form, contractedAmount: e.target.value } }))} data-testid="input-baseline-amount" />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">Implementation Vendor</label>
+                <Input className="h-8 text-xs" placeholder="e.g. Deloitte" value={baselineDialog.form.vendorName} onChange={e => setBaselineDialog(p => ({ ...p, form: { ...p.form, vendorName: e.target.value } }))} data-testid="input-baseline-vendor" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs text-muted-foreground">Contract Start Date</label>
+                <Input className="h-8 text-xs" type="date" value={baselineDialog.form.contractStartDate} onChange={e => setBaselineDialog(p => ({ ...p, form: { ...p.form, contractStartDate: e.target.value } }))} data-testid="input-baseline-start" />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">Go-Live Date</label>
+                <Input className="h-8 text-xs" type="date" value={baselineDialog.form.goLiveDate} onChange={e => setBaselineDialog(p => ({ ...p, form: { ...p.form, goLiveDate: e.target.value } }))} data-testid="input-baseline-golive" />
+              </div>
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground">Notes</label>
+              <Textarea className="text-xs" rows={2} placeholder="Key contract terms, scope boundaries, etc." value={baselineDialog.form.notes} onChange={e => setBaselineDialog(p => ({ ...p, form: { ...p.form, notes: e.target.value } }))} data-testid="input-baseline-notes" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button size="sm" className="bg-[#d4a853] hover:bg-[#c49843] text-white text-xs" disabled={saveBaseline.isPending}
+              onClick={() => saveBaseline.mutate({
+                contractedAmount: baselineDialog.form.contractedAmount ? parseInt(baselineDialog.form.contractedAmount) : null,
+                goLiveDate: baselineDialog.form.goLiveDate || null,
+                contractStartDate: baselineDialog.form.contractStartDate || null,
+                vendorName: baselineDialog.form.vendorName || null,
+                notes: baselineDialog.form.notes || null,
+              })} data-testid="button-save-baseline">
+              {saveBaseline.isPending ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}Save Baseline
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -36,6 +36,7 @@ import {
   type MonitoringRun, monitoringRuns,
   type VendorChange, vendorChanges,
   type MonitoringAlert, monitoringAlerts,
+  type ProjectBaseline, projectBaselines,
 } from "@shared/schema";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import Database from "better-sqlite3";
@@ -335,6 +336,20 @@ sqlite.exec(`
     variance_days INTEGER,
     notes TEXT,
     created_at TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS project_baselines (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    contracted_amount INTEGER,
+    go_live_date TEXT,
+    contract_start_date TEXT,
+    scope_items TEXT,
+    key_milestones TEXT,
+    vendor_name TEXT,
+    notes TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT
   );
 
   CREATE TABLE IF NOT EXISTS vendor_capabilities (
@@ -659,6 +674,10 @@ export interface IStorage {
   getScheduleEntries(projectId: number): ScheduleTracking[];
   updateScheduleEntry(id: number, data: Partial<{ milestone: string; originalDate: string | null; currentDate: string | null; actualDate: string | null; status: string; varianceDays: number | null; notes: string | null }>): ScheduleTracking | undefined;
   deleteScheduleEntry(id: number): void;
+
+  // Project Baseline (Contract/SOW)
+  getProjectBaseline(projectId: number): ProjectBaseline | undefined;
+  upsertProjectBaseline(projectId: number, data: Partial<{ contractedAmount: number | null; goLiveDate: string | null; contractStartDate: string | null; scopeItems: string | null; keyMilestones: string | null; vendorName: string | null; notes: string | null }>): ProjectBaseline;
 
   // Vendor Capabilities (Knowledge Base)
   createVendorCapability(data: { vendorPlatform: string; module: string; processArea: string; workflowDescription?: string | null; differentiators?: string | null; limitations?: string | null; bestFitFor?: string | null; integrationNotes?: string | null; automationLevel?: string | null; maturityRating?: number | null; sourceDocuments?: string | null; lastUpdated?: string | null }): VendorCapability;
@@ -2206,6 +2225,33 @@ export class DatabaseStorage implements IStorage {
 
   deleteScheduleEntry(id: number): void {
     db.delete(scheduleTracking).where(eq(scheduleTracking.id, id)).run();
+  }
+
+  // ==================== PROJECT BASELINE (CONTRACT/SOW) ====================
+
+  getProjectBaseline(projectId: number): ProjectBaseline | undefined {
+    return db.select().from(projectBaselines)
+      .where(eq(projectBaselines.projectId, projectId))
+      .get();
+  }
+
+  upsertProjectBaseline(projectId: number, data: Partial<{ contractedAmount: number | null; goLiveDate: string | null; contractStartDate: string | null; scopeItems: string | null; keyMilestones: string | null; vendorName: string | null; notes: string | null }>): ProjectBaseline {
+    const existing = this.getProjectBaseline(projectId);
+    const now = new Date().toISOString();
+    if (existing) {
+      return db.update(projectBaselines).set({ ...data, updatedAt: now }).where(eq(projectBaselines.id, existing.id)).returning().get();
+    }
+    return db.insert(projectBaselines).values({
+      projectId,
+      contractedAmount: data.contractedAmount ?? null,
+      goLiveDate: data.goLiveDate ?? null,
+      contractStartDate: data.contractStartDate ?? null,
+      scopeItems: data.scopeItems ?? null,
+      keyMilestones: data.keyMilestones ?? null,
+      vendorName: data.vendorName ?? null,
+      notes: data.notes ?? null,
+      createdAt: now,
+    }).returning().get();
   }
 
   // ==================== VENDOR CAPABILITIES (KNOWLEDGE BASE) ====================

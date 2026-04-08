@@ -3278,6 +3278,13 @@ Write in professional consulting tone covering: overall posture assessment, key 
       const project = storage.getProject(projectId);
       if (!project) return res.status(404).json({ error: "Project not found" });
 
+      // Guard against duplicate seeding
+      const existingAssessments = storage.getHealthCheckAssessments(projectId);
+      const existingRaid = storage.getRaidItems(projectId);
+      if (existingAssessments.length > 0 || existingRaid.length > 0) {
+        return res.status(409).json({ error: "Health check data already exists for this project. Delete existing data before re-seeding." });
+      }
+
       // 4 Health Check Assessments
       storage.createHealthCheckAssessment({
         projectId, domain: "governance", overallRating: "high", assessedBy: "IV&V Assessment Team",
@@ -3556,6 +3563,32 @@ Write in professional consulting tone covering: overall posture assessment, key 
       console.error("Health check synthesis error:", err);
       res.status(500).json({ error: "Synthesis failed: " + (err.message || "Unknown error") });
     }
+  });
+
+  // ==================== PROJECT BASELINE (CONTRACT/SOW) ====================
+
+  app.get("/api/projects/:id/baseline", (req, res) => {
+    const projectId = parseInt(req.params.id);
+    const baseline = storage.getProjectBaseline(projectId);
+    res.json(baseline || null);
+  });
+
+  app.post("/api/projects/:id/baseline", (req, res) => {
+    const projectId = parseInt(req.params.id);
+    const project = storage.getProject(projectId);
+    if (!project) return res.status(404).json({ error: "Project not found" });
+
+    const { contractedAmount, goLiveDate, contractStartDate, scopeItems, keyMilestones, vendorName, notes } = req.body;
+    const baseline = storage.upsertProjectBaseline(projectId, {
+      contractedAmount: contractedAmount ?? null,
+      goLiveDate: goLiveDate ?? null,
+      contractStartDate: contractStartDate ?? null,
+      scopeItems: scopeItems ? (typeof scopeItems === "string" ? scopeItems : JSON.stringify(scopeItems)) : null,
+      keyMilestones: keyMilestones ? (typeof keyMilestones === "string" ? keyMilestones : JSON.stringify(keyMilestones)) : null,
+      vendorName: vendorName ?? null,
+      notes: notes ?? null,
+    });
+    res.json(baseline);
   });
 
   // ==================== RAID LOG ====================

@@ -123,6 +123,16 @@ function DocumentRow({
     try { return doc.aiAnalysis ? JSON.parse(doc.aiAnalysis) : null; } catch { return null; }
   })();
 
+  const reanalyzeMutation = useMutation({
+    mutationFn: () =>
+      apiRequest("POST", `/api/projects/${projectId}/documents/${doc.id}/analyze`).then(r => r.json()),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "documents"] });
+      toast({ title: "Re-analysis started" });
+    },
+    onError: (e: any) => toast({ title: "Re-analyze failed", description: e.message, variant: "destructive" }),
+  });
+
   const applyMutation = useMutation({
     mutationFn: () =>
       apiRequest("POST", `/api/projects/${projectId}/documents/${doc.id}/apply`).then(r => r.json()),
@@ -178,6 +188,19 @@ function DocumentRow({
               title="View details"
             >
               {expanded ? <ChevronUp className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+            </Button>
+          )}
+          {(doc.analysisStatus === "completed" || doc.analysisStatus === "failed") && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 w-6 p-0"
+              onClick={() => reanalyzeMutation.mutate()}
+              disabled={reanalyzeMutation.isPending}
+              data-testid={`reanalyze-doc-${doc.id}`}
+              title="Re-analyze"
+            >
+              {reanalyzeMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
             </Button>
           )}
           <Button

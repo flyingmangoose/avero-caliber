@@ -452,6 +452,26 @@ export type InsertBudgetTracking = z.infer<typeof insertBudgetTrackingSchema>;
 export type ScheduleTracking = typeof scheduleTracking.$inferSelect;
 export type InsertScheduleTracking = z.infer<typeof insertScheduleTrackingSchema>;
 
+// ==================== PROJECT BASELINE (CONTRACT/SOW) ====================
+
+export const projectBaselines = sqliteTable("project_baselines", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  projectId: integer("project_id").notNull().references(() => projects.id),
+  contractedAmount: integer("contracted_amount"),          // Total contract value in dollars
+  goLiveDate: text("go_live_date"),                        // Contracted go-live date (ISO date)
+  contractStartDate: text("contract_start_date"),          // Contract start date
+  scopeItems: text("scope_items"),                         // JSON array of {name, description, status}
+  keyMilestones: text("key_milestones"),                   // JSON array of {name, date, description}
+  vendorName: text("vendor_name"),                         // Primary implementation vendor
+  notes: text("notes"),                                    // Additional contract notes
+  createdAt: text("created_at").default("CURRENT_TIMESTAMP"),
+  updatedAt: text("updated_at"),
+});
+
+export const insertProjectBaselineSchema = createInsertSchema(projectBaselines).omit({ id: true, createdAt: true, updatedAt: true });
+export type ProjectBaseline = typeof projectBaselines.$inferSelect;
+export type InsertProjectBaseline = z.infer<typeof insertProjectBaselineSchema>;
+
 // ==================== VENDOR KNOWLEDGE BASE ====================
 
 export const vendorCapabilities = sqliteTable("vendor_capabilities", {

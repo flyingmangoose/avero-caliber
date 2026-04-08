@@ -104,6 +104,9 @@ export function buildProjectContext(projectId: number): string {
   const workshopSummary = storage.getWorkshopSummary(projectId);
   const customCriteriaData = storage.getCustomCriteria(projectId);
 
+  // Contract/SOW baseline
+  const baseline = storage.getProjectBaseline(projectId);
+
   // Discovery & client context
   const client = project.clientId ? storage.getClient(project.clientId) : undefined;
   const orgProfileData = storage.getOrgProfile(projectId);
@@ -137,6 +140,34 @@ Status: ${project.status}
 Engagement Modules: ${project.engagementModules || "N/A"}
 Created: ${project.createdAt}
 `;
+
+  // Contract/SOW baseline context
+  if (baseline) {
+    context += `\nCONTRACT/SOW BASELINE:`;
+    if (baseline.contractedAmount) context += `\n- Contracted Amount: $${baseline.contractedAmount.toLocaleString()}`;
+    if (baseline.goLiveDate) {
+      const daysToGoLive = Math.ceil((new Date(baseline.goLiveDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+      context += `\n- Go-Live Date: ${baseline.goLiveDate} (${daysToGoLive > 0 ? daysToGoLive + " days remaining" : Math.abs(daysToGoLive) + " days past"})`;
+    }
+    if (baseline.contractStartDate) context += `\n- Contract Start: ${baseline.contractStartDate}`;
+    if (baseline.vendorName) context += `\n- Implementation Vendor: ${baseline.vendorName}`;
+    if (baseline.notes) context += `\n- Notes: ${baseline.notes}`;
+    try {
+      const scope = baseline.scopeItems ? JSON.parse(baseline.scopeItems) : [];
+      if (scope.length > 0) {
+        context += `\nScope Items:`;
+        for (const s of scope) context += `\n  - ${s.name}${s.status ? ` [${s.status}]` : ""}${s.description ? `: ${s.description}` : ""}`;
+      }
+    } catch {}
+    try {
+      const milestones = baseline.keyMilestones ? JSON.parse(baseline.keyMilestones) : [];
+      if (milestones.length > 0) {
+        context += `\nKey Contractual Milestones:`;
+        for (const m of milestones) context += `\n  - ${m.name}: ${m.date || "TBD"}${m.description ? ` — ${m.description}` : ""}`;
+      }
+    } catch {}
+    context += `\n`;
+  }
 
   // Client/Organization context
   if (client) {
