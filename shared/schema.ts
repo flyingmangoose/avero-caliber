@@ -2,6 +2,22 @@ import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// ==================== USERS ====================
+
+export const users = sqliteTable("users", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  googleId: text("google_id").notNull().unique(),
+  email: text("email").notNull(),
+  name: text("name").notNull(),
+  picture: text("picture"),
+  role: text("role").default("viewer"), // admin, editor, viewer
+  isActive: integer("is_active").default(1),
+  lastLoginAt: text("last_login_at"),
+  createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
+});
+
+export type User = typeof users.$inferSelect;
+
 // ==================== CLIENTS ====================
 
 export const clients = sqliteTable("clients", {

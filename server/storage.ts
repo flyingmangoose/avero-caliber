@@ -38,6 +38,7 @@ import {
   type MonitoringAlert, monitoringAlerts,
   type ProjectBaseline, projectBaselines,
   type AssessmentHistory, assessmentHistory,
+  type User, users,
 } from "@shared/schema";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import Database from "better-sqlite3";
@@ -53,6 +54,18 @@ export const db = drizzle(sqlite);
 
 // Create tables if not exist
 sqlite.exec(`
+  CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    google_id TEXT NOT NULL UNIQUE,
+    email TEXT NOT NULL,
+    name TEXT NOT NULL,
+    picture TEXT,
+    role TEXT DEFAULT 'viewer',
+    is_active INTEGER DEFAULT 1,
+    last_login_at TEXT,
+    created_at TEXT NOT NULL
+  );
+
   CREATE TABLE IF NOT EXISTS clients (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
@@ -600,6 +613,11 @@ export function scoreToNumber(score: string): number {
 }
 
 export interface IStorage {
+  // Users
+  findOrCreateUser(profile: { googleId: string; email: string; name: string; picture?: string }): User;
+  getUser(id: number): User | undefined;
+  getUserByGoogleId(googleId: string): User | undefined;
+
   // Clients
   createClient(data: any): Client;
   getClients(): Client[];
@@ -917,6 +935,38 @@ export interface EvaluationResult {
 }
 
 export class DatabaseStorage implements IStorage {
+  // ==================== Users ====================
+
+  findOrCreateUser(profile: { googleId: string; email: string; name: string; picture?: string }): User {
+    const existing = this.getUserByGoogleId(profile.googleId);
+    if (existing) {
+      return db.update(users).set({
+        name: profile.name,
+        picture: profile.picture || null,
+        email: profile.email,
+        lastLoginAt: new Date().toISOString(),
+      }).where(eq(users.id, existing.id)).returning().get();
+    }
+    return db.insert(users).values({
+      googleId: profile.googleId,
+      email: profile.email,
+      name: profile.name,
+      picture: profile.picture || null,
+      role: "editor",
+      isActive: 1,
+      lastLoginAt: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+    }).returning().get();
+  }
+
+  getUser(id: number): User | undefined {
+    return db.select().from(users).where(eq(users.id, id)).get();
+  }
+
+  getUserByGoogleId(googleId: string): User | undefined {
+    return db.select().from(users).where(eq(users.googleId, googleId)).get();
+  }
+
   // ==================== Clients ====================
 
   createClient(data: any): Client {

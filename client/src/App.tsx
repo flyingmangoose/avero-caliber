@@ -1,7 +1,7 @@
 import { Switch, Route, Router } from "wouter";
 import { useHashLocation } from "wouter/use-hash-location";
 import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/lib/theme";
@@ -25,6 +25,7 @@ import WorkshopView from "@/pages/workshop";
 import Portfolio from "@/pages/portfolio";
 import VendorMonitoringPage from "@/pages/vendor-monitoring";
 import AboutPage from "@/pages/about";
+import LoginPage from "@/pages/login";
 
 const sidebarStyle = {
   "--sidebar-width": "15rem",
@@ -65,6 +66,31 @@ function AppLayout() {
   );
 }
 
+function AuthGate() {
+  const { data: user, isLoading } = useQuery({
+    queryKey: ["/auth/me"],
+    queryFn: () => fetch("/auth/me").then(r => r.json()),
+    retry: false,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="w-6 h-6 border-2 border-foreground/20 border-t-foreground rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  // If user is null, show login (but only if auth is configured — null means not authed)
+  // If user is an object, they're logged in
+  if (!user) {
+    return <LoginPage />;
+  }
+
+  return <AppLayout />;
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -73,7 +99,8 @@ function App() {
           <Router hook={useHashLocation}>
             <Switch>
               <Route path="/workshop/:token" component={WorkshopView} />
-              <Route component={AppLayout} />
+              <Route path="/login" component={LoginPage} />
+              <Route component={AuthGate} />
             </Switch>
           </Router>
           <Toaster />
