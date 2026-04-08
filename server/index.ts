@@ -2,6 +2,8 @@ import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
 import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
+import Database from "better-sqlite3";
+import BetterSqliteStore from "better-sqlite3-session-store";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
@@ -34,16 +36,19 @@ app.use(
 );
 app.use(express.urlencoded({ extended: false }));
 
-// Session
+// Session — persisted in SQLite so sessions survive restarts
 const sessionSecret = process.env.SESSION_SECRET || "caliber-dev-secret-change-in-production";
+const SqliteStore = BetterSqliteStore(session);
+const sessionDb = new Database("sessions.db");
 app.use(session({
+  store: new SqliteStore({ client: sessionDb, expired: { clear: true, intervalMs: 3600000 } }),
   secret: sessionSecret,
   resave: false,
   saveUninitialized: false,
   cookie: {
     secure: process.env.NODE_ENV === "production" && !!process.env.FORCE_HTTPS,
     httpOnly: true,
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
     sameSite: "lax",
   },
 }));
