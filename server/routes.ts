@@ -2673,12 +2673,10 @@ Write in professional consulting tone covering: overall posture assessment, key 
       existingData.guide = guide.questions;
       if (!existingData.answers) existingData.answers = {};
       const jsonStr = JSON.stringify(existingData);
-      console.log(`[guide] Saving guide for interview ${id}, data length: ${jsonStr.length}, guide count: ${existingData.guide?.length}`);
       const result = storage.updateDiscoveryInterview(id, {
         messages: jsonStr,
         status: "in_progress",
       });
-      console.log(`[guide] Update result:`, result ? `saved, messages length: ${result.messages?.length}` : 'FAILED');
       res.json(guide);
     } catch (error: any) {
       console.error("Guide generation error:", error);

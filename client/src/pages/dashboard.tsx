@@ -35,6 +35,7 @@ import {
   MapPin,
   DollarSign,
   BarChart3,
+  Search,
 } from "lucide-react";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -182,6 +183,7 @@ export default function Dashboard() {
 
   // Expanded client set
   const [expandedClients, setExpandedClients] = useState<Set<number>>(new Set());
+  const [searchQuery, setSearchQuery] = useState("");
 
   // ── Data fetching ──
 
@@ -360,6 +362,12 @@ export default function Dashboard() {
         </Card>
       </div>
 
+      {/* Search */}
+      <div className="relative">
+        <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+        <Input className="pl-9 h-9 text-sm" placeholder="Search clients or projects..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+      </div>
+
       {/* Client Cards */}
       {isLoading ? (
         <div className="space-y-3">
@@ -369,7 +377,14 @@ export default function Dashboard() {
         </div>
       ) : clients && clients.length > 0 ? (
         <div className="space-y-3">
-          {clients.map((client) => {
+          {clients.filter((client) => {
+            if (!searchQuery.trim()) return true;
+            const q = searchQuery.toLowerCase();
+            return client.name.toLowerCase().includes(q) ||
+              client.state?.toLowerCase().includes(q) ||
+              client.entityType?.toLowerCase().includes(q) ||
+              client.projects.some(p => p.name.toLowerCase().includes(q));
+          }).map((client) => {
             const isExpanded = expandedClients.has(client.id);
             const borderColor =
               ENTITY_BORDER_COLOR[client.entityType ?? ""] ?? "#1a2744";

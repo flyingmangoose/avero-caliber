@@ -275,6 +275,7 @@ export default function ProjectView() {
   const [wsStakeholderName, setWsStakeholderName] = useState("");
   const [wsStakeholderEmail, setWsStakeholderEmail] = useState("");
   const [wsSelectedModules, setWsSelectedModules] = useState<Set<string>>(new Set());
+  const [wsExpiresAt, setWsExpiresAt] = useState("");
   const [wsAllModules, setWsAllModules] = useState(false);
 
   // Import dialog state
@@ -1430,6 +1431,17 @@ export default function ProjectView() {
               </div>
             </div>
 
+            <div>
+              <label className="text-xs font-medium mb-1 block">Link Expires (optional)</label>
+              <input
+                type="date"
+                value={wsExpiresAt}
+                onChange={e => setWsExpiresAt(e.target.value)}
+                className="w-full h-8 px-3 text-xs rounded border border-input bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+                min={new Date().toISOString().split('T')[0]}
+              />
+            </div>
+
             {/* Module selector */}
             <div>
               <label className="text-xs font-medium mb-1.5 block">Module Scope</label>
@@ -1483,6 +1495,7 @@ export default function ProjectView() {
               onClick={() => createWorkshopLinkMutation.mutate({
                 stakeholderName: wsStakeholderName.trim(),
                 stakeholderEmail: wsStakeholderEmail.trim(),
+                expiresAt: wsExpiresAt || undefined,
                 modules: wsAllModules ? [] : Array.from(wsSelectedModules),
               })}
               className="gap-1.5"
@@ -1521,6 +1534,11 @@ export default function ProjectView() {
                         </div>
                         <div className="text-[11px] text-muted-foreground">
                           Created {new Date(link.createdAt).toLocaleDateString()}
+                          {link.expiresAt && (
+                            <span className={`ml-2 ${new Date(link.expiresAt) < new Date() ? "text-red-500" : ""}`}>
+                              · {new Date(link.expiresAt) < new Date() ? "Expired" : `Expires ${new Date(link.expiresAt).toLocaleDateString()}`}
+                            </span>
+                          )}
                           {link.feedbackSummary && (
                             <span className="ml-2">
                               · {link.feedbackSummary.reviewed} reviewed
