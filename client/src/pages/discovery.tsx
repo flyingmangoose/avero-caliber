@@ -161,6 +161,12 @@ function OrgProfileTab({ projectId }: { projectId: string }) {
 
   return (
     <div className="max-w-3xl space-y-6">
+      {profile?._fromClient && (
+        <div className="flex items-center gap-2 p-3 rounded-lg bg-accent/5 border border-accent/20 text-xs text-muted-foreground">
+          <span className="font-medium text-accent">Auto-populated from Client Profile.</span>
+          Edit below to customize for this project, then save.
+        </div>
+      )}
       <Card>
         <CardContent className="p-5 space-y-4">
           <h3 className="text-sm font-semibold">Basic Information</h3>

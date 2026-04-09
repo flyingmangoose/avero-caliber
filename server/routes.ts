@@ -2814,6 +2814,33 @@ Write in professional consulting tone covering: overall posture assessment, key 
   app.get("/api/projects/:id/org-profile", (req, res) => {
     const projectId = parseInt(req.params.id);
     const profile = storage.getOrgProfile(projectId);
+
+    // If no org profile exists, auto-populate from client profile
+    if (!profile) {
+      const project = storage.getProject(projectId);
+      if (project?.clientId) {
+        const client = storage.getClient(project.clientId);
+        if (client) {
+          const clientProfile = {
+            projectId,
+            entityName: client.name,
+            entityType: client.entityType,
+            state: client.state,
+            population: client.population,
+            employeeCount: client.employeeCount,
+            annualBudget: client.annualBudget,
+            painSummary: client.painSummary,
+            currentSystems: client.currentSystems,
+            departments: client.departments,
+            leadership: client.leadership,
+            domain: client.domain,
+            _fromClient: true,
+          };
+          return res.json(clientProfile);
+        }
+      }
+    }
+
     res.json(profile || null);
   });
 
