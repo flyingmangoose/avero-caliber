@@ -11,6 +11,7 @@ import { storage } from "./storage";
 import type { User } from "@shared/schema";
 
 const app = express();
+app.set("trust proxy", 1); // Trust Nginx reverse proxy
 const httpServer = createServer(app);
 
 declare module "http" {
@@ -74,7 +75,8 @@ if (googleClientId && googleClientSecret) {
   passport.use(new GoogleStrategy({
     clientID: googleClientId,
     clientSecret: googleClientSecret,
-    callbackURL: "/auth/google/callback",
+    callbackURL: process.env.CALLBACK_URL || "/auth/google/callback",
+    proxy: true,
   }, (_accessToken, _refreshToken, profile, done) => {
     const email = profile.emails?.[0]?.value;
     if (!email) return done(new Error("No email from Google"), undefined);
