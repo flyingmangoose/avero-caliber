@@ -306,9 +306,9 @@ export default function Dashboard() {
   // ── Render ──
 
   return (
-    <div className="p-8 max-w-5xl mx-auto space-y-8" data-testid="page-dashboard">
+    <div className="p-4 sm:p-8 max-w-5xl mx-auto space-y-6 sm:space-y-8" data-testid="page-dashboard">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">
             Clients & Projects
@@ -328,7 +328,7 @@ export default function Dashboard() {
       </div>
 
       {/* Stats Row */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="px-4 py-3 rounded-lg bg-muted/50">
           <p className="text-xs text-muted-foreground mb-0.5">Clients</p>
           <p className="text-xl font-semibold tracking-tight">{isLoading ? "—" : totalClients}</p>

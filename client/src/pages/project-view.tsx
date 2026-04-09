@@ -823,7 +823,7 @@ export default function ProjectView() {
   return (
     <div className="flex h-full" data-testid="page-project-view">
       {/* Module sidebar */}
-      <div className="w-64 shrink-0 border-r bg-card/50 flex flex-col">
+      <div className="hidden md:flex w-64 shrink-0 border-r bg-card/50 flex-col">
         <div className="p-3 border-b">
           <Link href="/" className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors no-underline mb-2">
             <ChevronLeft className="w-3 h-3" />

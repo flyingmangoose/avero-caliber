@@ -176,7 +176,7 @@ function SynthesisSummary({ projectId, synthesis, assessmentMap, raidItems, budg
       </div>
 
       {/* Quick stats cards */}
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <Card className="p-3">
           <div className="flex items-center gap-2 mb-1">
             <AlertTriangle className="w-4 h-4 text-amber-500" />
@@ -224,7 +224,7 @@ function SynthesisSummary({ projectId, synthesis, assessmentMap, raidItems, budg
           </Button>
         </div>
         {baseline ? (
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div>
               <p className="text-[10px] text-muted-foreground">Contracted Amount</p>
               <p className="text-sm font-semibold">{baseline.contractedAmount ? `$${baseline.contractedAmount.toLocaleString()}` : "—"}</p>
@@ -562,7 +562,7 @@ export default function HealthCheckPage() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="px-6 py-4 border-b border-border/50 bg-card/50 backdrop-blur-sm shrink-0">
+      <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-border/50 bg-card/50 backdrop-blur-sm shrink-0">
         <div className="flex items-center gap-3">
           <Link href={`/projects/${projectId}`}>
             <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-muted-foreground hover:text-foreground -ml-2">
@@ -587,7 +587,7 @@ export default function HealthCheckPage() {
       </div>
 
       <ScrollArea className="flex-1">
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           <Tabs defaultValue="summary" data-testid="health-check-tabs">
             <TabsList className="mb-4">
               <TabsTrigger value="summary" data-testid="tab-summary"><Activity className="w-4 h-4 mr-1 inline" />Summary</TabsTrigger>
@@ -689,7 +689,7 @@ export default function HealthCheckPage() {
                     {raidItems.length === 0 ? "No RAID items yet. Add risks, assumptions, issues, or dependencies." : `No items match filters (${raidItems.length} total)`}
                   </p>
                 ) : (
-                  <Table>
+                  <div className="overflow-x-auto"><Table>
                     <TableHeader>
                       <TableRow>
                         <TableHead className="text-xs w-24">Type</TableHead>
@@ -717,14 +717,14 @@ export default function HealthCheckPage() {
                         </TableRow>
                       ))}
                     </TableBody>
-                  </Table>
+                  </Table></div>
                 );
               })()}
             </TabsContent>
 
             {/* TAB 3: Budget & Schedule */}
             <TabsContent value="budget">
-              <div className="grid grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                 {/* Budget Section */}
                 <div>
                   <div className="flex justify-between items-center mb-3">
@@ -751,7 +751,7 @@ export default function HealthCheckPage() {
                     <p className={`text-sm font-bold ${budgetSummary.variance >= 0 ? "text-emerald-500" : "text-red-500"}`}>${(budgetSummary.variance || 0).toLocaleString()}</p>
                   </Card>
                   {budgetEntries.length > 0 && (
-                    <Table>
+                    <div className="overflow-x-auto"><Table>
                       <TableHeader><TableRow>
                         <TableHead className="text-xs">Category</TableHead>
                         <TableHead className="text-xs">Description</TableHead>
@@ -773,7 +773,7 @@ export default function HealthCheckPage() {
                           </TableRow>
                         ))}
                       </TableBody>
-                    </Table>
+                    </Table></div>
                   )}
                 </div>
 
@@ -788,7 +788,7 @@ export default function HealthCheckPage() {
                   {scheduleItems.length === 0 ? (
                     <p className="text-sm text-muted-foreground text-center py-8">No milestones tracked yet.</p>
                   ) : (
-                    <Table>
+                    <div className="overflow-x-auto"><Table>
                       <TableHeader><TableRow>
                         <TableHead className="text-xs">Milestone</TableHead>
                         <TableHead className="text-xs">Original</TableHead>
@@ -816,7 +816,7 @@ export default function HealthCheckPage() {
                           </TableRow>
                         ))}
                       </TableBody>
-                    </Table>
+                    </Table></div>
                   )}
                 </div>
               </div>
