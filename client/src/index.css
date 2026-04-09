@@ -20,12 +20,12 @@
   --card-foreground: 0 0% 9%;
   --card-border: 0 0% 93%;
 
-  --sidebar: 0 0% 98%;
-  --sidebar-foreground: 224 64% 25%;
-  --sidebar-border: 0 0% 92%;
+  --sidebar: 224 30% 97%;
+  --sidebar-foreground: 224 40% 30%;
+  --sidebar-border: 224 20% 90%;
   --sidebar-primary: 224 64% 35%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 224 30% 95%;
+  --sidebar-accent: 224 40% 92%;
   --sidebar-accent-foreground: 224 64% 25%;
   --sidebar-ring: 224 64% 35%;
 
