@@ -41,6 +41,7 @@ import {
   type User, users,
   type ProjectMember, projectMembers,
   type InvitedEmail, invitedEmails,
+  type ActivityLog, activityLog,
 } from "@shared/schema";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import Database from "better-sqlite3";
@@ -65,6 +66,16 @@ sqlite.exec(`
     role TEXT DEFAULT 'viewer',
     is_active INTEGER DEFAULT 1,
     last_login_at TEXT,
+    created_at TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS activity_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER,
+    user_id INTEGER,
+    user_name TEXT,
+    action TEXT NOT NULL,
+    details TEXT,
     created_at TEXT NOT NULL
   );
 
@@ -639,6 +650,10 @@ export interface IStorage {
   getUserByGoogleId(googleId: string): User | undefined;
   getAllUsers(): User[];
 
+  // Activity Log
+  logActivity(data: { projectId?: number | null; userId?: number | null; userName?: string | null; action: string; details?: string | null }): ActivityLog;
+  getActivityLog(projectId?: number, limit?: number): ActivityLog[];
+
   // Invited Emails
   isEmailAllowed(email: string): boolean;
   getInvitedEmails(): InvitedEmail[];
@@ -1004,6 +1019,33 @@ export class DatabaseStorage implements IStorage {
 
   getAllUsers(): User[] {
     return db.select().from(users).where(eq(users.isActive, 1)).all();
+  }
+
+  // ==================== Activity Log ====================
+
+  logActivity(data: { projectId?: number | null; userId?: number | null; userName?: string | null; action: string; details?: string | null }): ActivityLog {
+    return db.insert(activityLog).values({
+      projectId: data.projectId || null,
+      userId: data.userId || null,
+      userName: data.userName || null,
+      action: data.action,
+      details: data.details || null,
+      createdAt: new Date().toISOString(),
+    }).returning().get();
+  }
+
+  getActivityLog(projectId?: number, limit = 50): ActivityLog[] {
+    if (projectId) {
+      return db.select().from(activityLog)
+        .where(eq(activityLog.projectId, projectId))
+        .orderBy(desc(activityLog.createdAt))
+        .limit(limit)
+        .all();
+    }
+    return db.select().from(activityLog)
+      .orderBy(desc(activityLog.createdAt))
+      .limit(limit)
+      .all();
   }
 
   // ==================== Invited Emails ====================

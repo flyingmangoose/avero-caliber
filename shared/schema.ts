@@ -18,6 +18,20 @@ export const users = sqliteTable("users", {
 
 export type User = typeof users.$inferSelect;
 
+// ==================== ACTIVITY LOG ====================
+
+export const activityLog = sqliteTable("activity_log", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  projectId: integer("project_id"),
+  userId: integer("user_id"),
+  userName: text("user_name"),
+  action: text("action").notNull(), // created_project, uploaded_document, ran_synthesis, added_member, etc.
+  details: text("details"), // JSON with context
+  createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
+});
+
+export type ActivityLog = typeof activityLog.$inferSelect;
+
 // ==================== INVITED EMAILS ====================
 
 export const invitedEmails = sqliteTable("invited_emails", {

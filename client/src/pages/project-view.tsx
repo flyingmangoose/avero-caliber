@@ -250,6 +250,41 @@ function StatusStepper({ projectId }: { projectId: number }) {
   );
 }
 
+const ACTION_LABELS: Record<string, string> = {
+  created_project: "Created project",
+  uploaded_document: "Uploaded",
+  ran_synthesis: "Ran health synthesis",
+  added_member: "Added team member",
+};
+
+function ProjectActivity({ projectId }: { projectId: string }) {
+  const { data: activity = [] } = useQuery<any[]>({
+    queryKey: ["/api/activity", projectId],
+    queryFn: () => apiRequest("GET", `/api/activity?projectId=${projectId}&limit=10`).then(r => r.json()),
+    staleTime: 30000,
+  });
+
+  if (activity.length === 0) return null;
+
+  return (
+    <div className="p-2 pt-3 border-t">
+      <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-2.5 pb-1.5">Recent Activity</p>
+      <div className="space-y-1">
+        {activity.slice(0, 8).map((a: any) => (
+          <div key={a.id} className="px-2.5 py-1">
+            <p className="text-[11px] text-foreground/80">
+              <span className="font-medium">{a.userName || "System"}</span>
+              {" "}{ACTION_LABELS[a.action] || a.action}
+            </p>
+            {a.details && <p className="text-[10px] text-muted-foreground truncate">{a.details}</p>}
+            <p className="text-[9px] text-muted-foreground/60">{new Date(a.createdAt).toLocaleDateString()}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function ProjectView() {
   const params = useParams<{ id: string }>();
   const projectId = parseInt(params.id || "0");
@@ -851,6 +886,8 @@ export default function ProjectView() {
               </p>
             )}
           </div>
+          {/* Activity feed */}
+          <ProjectActivity projectId={projectId} />
         </ScrollArea>
       </div>
 

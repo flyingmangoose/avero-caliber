@@ -59,6 +59,26 @@ export async function registerRoutes(
     return memberRole === "owner";
   }
 
+  // ==================== ACTIVITY LOG ====================
+
+  function logAction(req: any, action: string, projectId?: number | null, details?: string) {
+    const user = getUserFromReq(req);
+    storage.logActivity({
+      projectId: projectId || null,
+      userId: user?.id || null,
+      userName: user?.name || null,
+      action,
+      details: details || null,
+    });
+  }
+
+  app.get("/api/activity", (req, res) => {
+    const projectId = req.query.projectId ? parseInt(req.query.projectId as string) : undefined;
+    const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
+    const log = storage.getActivityLog(projectId, limit);
+    res.json(log);
+  });
+
   // ==================== PROJECT MEMBERS ====================
 
   app.get("/api/projects/:id/members", (req, res) => {
@@ -75,6 +95,8 @@ export async function registerRoutes(
     if (!userId) return res.status(400).json({ error: "userId required" });
     const user = getUserFromReq(req);
     const member = storage.addProjectMember(projectId, userId, role || "viewer", user?.id);
+    const addedUser = storage.getUser(userId);
+    logAction(req, "added_member", projectId, `${addedUser?.name || userId} as ${role || "viewer"}`);
     res.json(member);
   });
 
@@ -555,6 +577,7 @@ Only include fields that are clearly present in the document. Return ONLY valid 
     if (user) {
       try { storage.addProjectMember(project.id, user.id, "owner", user.id); } catch {}
     }
+    logAction(req, "created_project", project.id, project.name);
     res.status(201).json(project);
   });
 
@@ -3965,6 +3988,7 @@ Write in professional consulting tone covering: overall posture assessment, key 
         }
       }
 
+      logAction(req, "ran_synthesis", projectId, `Overall: ${result.overallHealth}`);
       res.json(result);
     } catch (err: any) {
       console.error("Health check synthesis error:", err);
@@ -4259,6 +4283,7 @@ Write in professional consulting tone covering: overall posture assessment, key 
         analysisStatus: "pending",
       });
 
+      logAction(req, "uploaded_document", parseInt(req.params.id), doc.fileName);
       res.json(doc);
     } catch (err: any) {
       console.error("File extraction error:", err);
