@@ -3880,9 +3880,10 @@ Write in professional consulting tone covering: overall posture assessment, key 
       doc.y = 120;
       tocItems.forEach((item, i) => {
         doc.moveDown(0.6);
-        doc.fontSize(11).font("Helvetica").fillColor(darkText);
-        doc.text(`${String(i + 1).padStart(2, "0")}`, 72, doc.y, { continued: true, width: 30 });
-        doc.fillColor(gray).text(`    ${item}`, { width: contentW - 30 });
+        const tocY = doc.y;
+        doc.fontSize(11).font("Helvetica-Bold").fillColor(darkText).text(`${String(i + 1).padStart(2, "0")}`, 72, tocY);
+        doc.fontSize(11).font("Helvetica").fillColor(gray).text(item, 110, tocY, { width: contentW - 38 });
+        doc.y = tocY + 18;
       });
 
       // ========== EXECUTIVE SUMMARY ==========
@@ -3904,12 +3905,13 @@ Write in professional consulting tone covering: overall posture assessment, key 
       const ratingColor = overallRating === "critical" || overallRating === "high" ? "#dc2626" : overallRating === "medium" ? "#d97706" : overallRating === "satisfactory" ? "#16a34a" : blue;
 
       doc.fontSize(11).font("Helvetica").fillColor(gray).text("Overall Project Health:");
-      doc.moveDown(0.2);
+      doc.moveDown(0.4);
       // Rating badge
       const badgeText = (RATING_LABELS[overallRating] || overallRating).toUpperCase();
-      doc.rect(72, doc.y, 140, 24).fill(ratingColor);
-      doc.fontSize(12).font("Helvetica-Bold").fillColor("#ffffff").text(badgeText, 78, doc.y - 22, { width: 128 });
-      doc.y += 8;
+      const badgeY = doc.y;
+      doc.rect(72, badgeY, 150, 26).fill(ratingColor);
+      doc.fontSize(13).font("Helvetica-Bold").fillColor("#ffffff").text(badgeText, 82, badgeY + 6, { width: 136 });
+      doc.y = badgeY + 34;
 
       // Quick stats
       doc.moveDown(1.2);
@@ -3934,42 +3936,58 @@ Write in professional consulting tone covering: overall posture assessment, key 
       doc.y = statsY + 65;
 
       // Domain summary table
-      doc.moveDown(1);
-      doc.fontSize(11).font("Helvetica-Bold").fillColor(darkText).text("Domain Assessment Summary");
-      doc.moveDown(0.5);
+      doc.moveDown(1.5);
+      doc.fontSize(12).font("Helvetica-Bold").fillColor(darkText).text("Domain Assessment Summary", 72, doc.y, { width: contentW });
+      doc.moveDown(0.8);
+
+      // Table header
+      const thY = doc.y;
+      doc.rect(72, thY, contentW, 18).fill("#f1f3f5");
+      doc.fontSize(8).font("Helvetica-Bold").fillColor(gray);
+      doc.text("Domain", 82, thY + 4, { width: 180 });
+      doc.text("Rating", 270, thY + 4, { width: 70 });
+      doc.text("Summary", 345, thY + 4, { width: 200 });
+      doc.y = thY + 22;
 
       for (const a of assessments) {
         const label = DOMAIN_LABELS[a.domain] || a.domain;
         const rating = a.overallRating || "not rated";
         const rc = rating === "critical" || rating === "high" ? "#dc2626" : rating === "medium" ? "#d97706" : rating === "satisfactory" ? "#16a34a" : blue;
 
-        if (doc.y > 700) doc.addPage();
+        if (doc.y > 690) doc.addPage();
 
         const rowY = doc.y;
-        doc.rect(72, rowY, 6, 14).fill(rc);
-        doc.fontSize(9).font("Helvetica-Bold").fillColor(darkText).text(label, 86, rowY + 2, { width: 200 });
-        doc.fontSize(9).font("Helvetica-Bold").fillColor(rc).text(rating.toUpperCase(), 290, rowY + 2, { width: 80 });
-        if (a.summary) doc.fontSize(8).font("Helvetica").fillColor(gray).text(a.summary, 375, rowY + 1, { width: 180 });
-        doc.y = rowY + Math.max(18, doc.heightOfString(a.summary || "", { width: 180, fontSize: 8 }) + 6);
+        doc.rect(72, rowY, 4, 12).fill(rc);
+        doc.fontSize(9).font("Helvetica").fillColor(darkText).text(label, 82, rowY + 1, { width: 180 });
+        doc.fontSize(8).font("Helvetica-Bold").fillColor(rc).text(rating.toUpperCase(), 270, rowY + 2, { width: 70 });
+        const summaryH = a.summary ? doc.heightOfString(a.summary, { width: 200, fontSize: 7 }) : 12;
+        if (a.summary) doc.fontSize(7).font("Helvetica").fillColor(gray).text(a.summary, 345, rowY + 1, { width: 200 });
+        doc.y = rowY + Math.max(16, summaryH + 4);
+        // Light separator
+        doc.moveTo(82, doc.y).lineTo(72 + contentW, doc.y).lineWidth(0.3).strokeColor("#e8eaed").stroke();
+        doc.y += 4;
       }
 
-      // ========== DOMAIN DETAIL PAGES ==========
+      // ========== DOMAIN DETAILS (CONTINUOUS FLOW) ==========
+      doc.addPage();
       for (const a of assessments) {
-        doc.addPage();
+        // Start new page if less than 180px remaining
+        if (doc.y > 580) doc.addPage();
+
         const label = DOMAIN_LABELS[a.domain] || a.domain;
         const rating = a.overallRating ? (RATING_LABELS[a.overallRating] || a.overallRating) : "Not Rated";
         const rc = a.overallRating === "critical" || a.overallRating === "high" ? "#dc2626" : a.overallRating === "medium" ? "#d97706" : a.overallRating === "satisfactory" ? "#16a34a" : blue;
 
         // Domain header with blue left bar
-        doc.rect(72, 72, 4, 28).fill(blue);
-        doc.fontSize(16).font("Helvetica-Bold").fillColor(darkText).text(label, 84, 74);
-        doc.fontSize(11).font("Helvetica-Bold").fillColor(rc).text(rating, 84, 96);
-
-        doc.y = 120;
+        const hdrY = doc.y;
+        doc.rect(72, hdrY, 4, 24).fill(blue);
+        doc.fontSize(14).font("Helvetica-Bold").fillColor(darkText).text(label, 84, hdrY + 1, { width: contentW - 100 });
+        doc.fontSize(10).font("Helvetica-Bold").fillColor(rc).text(rating, 72 + contentW - 80, hdrY + 3, { width: 80, align: "right" });
+        doc.y = hdrY + 28;
 
         if (a.summary) {
-          doc.fontSize(10).font("Helvetica").fillColor(gray).text(a.summary, 72, doc.y, { width: contentW });
-          doc.moveDown(0.8);
+          doc.fontSize(9).font("Helvetica").fillColor(gray).text(a.summary, 72, doc.y, { width: contentW });
+          doc.moveDown(0.5);
         }
 
         if (a.findings) {
@@ -3998,15 +4016,19 @@ Write in professional consulting tone covering: overall posture assessment, key 
                   doc.moveDown(0.2);
                 }
                 if (f.recommendation) {
-                  doc.fontSize(8).font("Helvetica-Bold").fillColor(orange).text(`Recommendation: `, { continued: true, width: contentW });
-                  doc.font("Helvetica").text(f.recommendation);
+                  doc.fontSize(8).font("Helvetica").fillColor(orange).text(`Rec: ${f.recommendation}`, 72, doc.y, { width: contentW });
                   doc.moveDown(0.2);
                 }
-                doc.moveDown(0.5);
+                doc.moveDown(0.3);
               }
             }
           } catch {}
         }
+
+        // Domain separator
+        doc.moveDown(0.5);
+        doc.moveTo(72, doc.y).lineTo(72 + contentW, doc.y).lineWidth(0.5).strokeColor(lightGray).stroke();
+        doc.moveDown(1);
       }
 
       // ========== TOP RISKS & ISSUES ==========
