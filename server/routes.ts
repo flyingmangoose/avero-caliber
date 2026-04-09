@@ -3797,7 +3797,7 @@ Write in professional consulting tone covering: overall posture assessment, key 
 
     try {
       const PDFDocument = (await import("pdfkit")).default;
-      const doc = new PDFDocument({ size: "LETTER", margins: { top: 60, bottom: 60, left: 60, right: 60 }, bufferPages: true });
+      const doc = new PDFDocument({ size: "LETTER", margins: { top: 72, bottom: 72, left: 72, right: 72 }, bufferPages: true });
 
       const chunks: Buffer[] = [];
       doc.on("data", (chunk: Buffer) => chunks.push(chunk));
@@ -3808,49 +3808,111 @@ Write in professional consulting tone covering: overall posture assessment, key 
         res.send(pdf);
       });
 
-      const navy = "#1e293b";
-      const accent = "#6d5edc";
-      const gray = "#64748b";
-      const lightGray = "#e2e8f0";
+      // Brand colors
+      const blue = "#203f90";
+      const orange = "#c45819";
+      const darkText = "#1a1a2e";
+      const gray = "#5a6478";
+      const lightGray = "#e8eaed";
+      const pageW = doc.page.width;
+      const pageH = doc.page.height;
+      const contentW = pageW - 144; // 72 margin each side
 
-      // Header
-      doc.rect(0, 0, doc.page.width, 100).fill(navy);
-      doc.fill("#ffffff").fontSize(22).font("Helvetica-Bold").text("Project Health Check Report", 60, 30);
-      doc.fontSize(11).font("Helvetica").text(`${project.name}${client ? ` — ${client.name}` : ""}`, 60, 58);
-      doc.text(`Generated ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}`, 60, 74);
-      doc.fill(navy);
+      // Load logo
+      let logoPath = path.resolve("client/public/avero-logo.png");
+      if (!fs.existsSync(logoPath)) logoPath = path.resolve("dist/public/avero-logo.png");
+      const hasLogo = fs.existsSync(logoPath);
 
-      // Overall health
-      const worstAssessment = assessments.filter(a => a.overallRating).sort((a, b) => ratingOrder.indexOf(a.overallRating!) - ratingOrder.indexOf(b.overallRating!))[0];
-      const overallRating = worstAssessment?.overallRating || "not assessed";
+      // ========== COVER PAGE ==========
+      // Blue band at top
+      doc.rect(0, 0, pageW, 280).fill(blue);
 
-      doc.moveDown(2);
-      doc.y = 120;
-      doc.fontSize(14).font("Helvetica-Bold").text("Overall Project Health");
-      doc.moveDown(0.3);
-      const ratingColor = overallRating === "critical" || overallRating === "high" ? "#dc2626" : overallRating === "medium" ? "#d97706" : overallRating === "satisfactory" ? "#16a34a" : "#3b82f6";
-      doc.fontSize(18).fillColor(ratingColor).font("Helvetica-Bold").text((RATING_LABELS[overallRating] || overallRating).toUpperCase());
-      doc.fillColor(navy);
-
-      // Contract baseline
-      if (baseline) {
-        doc.moveDown(1);
-        doc.fontSize(12).font("Helvetica-Bold").text("Contract Baseline");
-        doc.moveDown(0.3);
-        doc.fontSize(9).font("Helvetica").fillColor(gray);
-        if (baseline.contractedAmount) doc.text(`Contracted Amount: $${baseline.contractedAmount.toLocaleString()}`);
-        if (baseline.goLiveDate) {
-          const days = Math.ceil((new Date(baseline.goLiveDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-          doc.text(`Go-Live Date: ${baseline.goLiveDate} (${days > 0 ? days + " days remaining" : Math.abs(days) + " days past"})`);
-        }
-        if (baseline.vendorName) doc.text(`Implementation Vendor: ${baseline.vendorName}`);
-        doc.fillColor(navy);
+      // Logo on blue background
+      if (hasLogo) {
+        try { doc.image(logoPath, 72, 60, { height: 50 }); } catch {}
       }
 
+      // Title area
+      doc.fill("#ffffff").fontSize(32).font("Helvetica-Bold");
+      doc.text("Project Health\nCheck Report", 72, 140, { width: contentW });
+
+      // Orange accent line
+      doc.rect(72, 300, 80, 4).fill(orange);
+
+      // Project details on white area
+      doc.fill(darkText).fontSize(16).font("Helvetica-Bold");
+      doc.text(project.name, 72, 330, { width: contentW });
+
+      if (client) {
+        doc.fontSize(13).font("Helvetica").fillColor(gray);
+        doc.text(client.name, 72, 355);
+      }
+
+      doc.fontSize(10).font("Helvetica").fillColor(gray);
+      doc.text(`Prepared by Avero Advisors`, 72, 400);
+      doc.text(`${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}`, 72, 415);
+
+      if (baseline) {
+        doc.moveDown(2);
+        doc.fontSize(10).fillColor(gray);
+        if (baseline.contractedAmount) doc.text(`Contract Value: $${baseline.contractedAmount.toLocaleString()}`);
+        if (baseline.vendorName) doc.text(`Implementation Vendor: ${baseline.vendorName}`);
+        if (baseline.goLiveDate) {
+          const days = Math.ceil((new Date(baseline.goLiveDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+          doc.text(`Go-Live: ${baseline.goLiveDate} (${days > 0 ? days + " days" : Math.abs(days) + " days past"})`);
+        }
+      }
+
+      // Confidential notice at bottom
+      doc.fontSize(8).fillColor(gray).text("CONFIDENTIAL — For authorized recipients only", 72, pageH - 80, { width: contentW, align: "center" });
+
+      // ========== TABLE OF CONTENTS ==========
+      doc.addPage();
+      doc.fontSize(20).font("Helvetica-Bold").fillColor(blue).text("Contents", 72, 72);
+      doc.rect(72, 100, 50, 3).fill(orange);
+
+      const tocItems = [
+        "Executive Summary",
+        ...assessments.map(a => DOMAIN_LABELS[a.domain] || a.domain),
+        "Top Risks & Issues",
+      ];
+
+      doc.y = 120;
+      tocItems.forEach((item, i) => {
+        doc.moveDown(0.6);
+        doc.fontSize(11).font("Helvetica").fillColor(darkText);
+        doc.text(`${String(i + 1).padStart(2, "0")}`, 72, doc.y, { continued: true, width: 30 });
+        doc.fillColor(gray).text(`    ${item}`, { width: contentW - 30 });
+      });
+
+      // ========== EXECUTIVE SUMMARY ==========
+      doc.addPage();
+
+      // Section header helper
+      const sectionHeader = (title: string) => {
+        if (doc.y > 640) doc.addPage();
+        doc.fontSize(16).font("Helvetica-Bold").fillColor(blue).text(title, 72);
+        doc.rect(72, doc.y + 4, 40, 2.5).fill(orange);
+        doc.moveDown(0.8);
+      };
+
+      sectionHeader("Executive Summary");
+
+      // Overall health badge
+      const worstAssessment = assessments.filter(a => a.overallRating).sort((a, b) => ratingOrder.indexOf(a.overallRating!) - ratingOrder.indexOf(b.overallRating!))[0];
+      const overallRating = worstAssessment?.overallRating || "not assessed";
+      const ratingColor = overallRating === "critical" || overallRating === "high" ? "#dc2626" : overallRating === "medium" ? "#d97706" : overallRating === "satisfactory" ? "#16a34a" : blue;
+
+      doc.fontSize(11).font("Helvetica").fillColor(gray).text("Overall Project Health:");
+      doc.moveDown(0.2);
+      // Rating badge
+      const badgeText = (RATING_LABELS[overallRating] || overallRating).toUpperCase();
+      doc.rect(72, doc.y, 140, 24).fill(ratingColor);
+      doc.fontSize(12).font("Helvetica-Bold").fillColor("#ffffff").text(badgeText, 78, doc.y - 22, { width: 128 });
+      doc.y += 8;
+
       // Quick stats
-      doc.moveDown(1);
-      doc.fontSize(12).font("Helvetica-Bold").text("Summary Statistics");
-      doc.moveDown(0.3);
+      doc.moveDown(1.2);
       const openRisks = raidItems.filter(r => r.status === "open" && r.type === "risk").length;
       const openIssues = raidItems.filter(r => r.status === "open" && r.type === "issue").length;
       const criticalItems = raidItems.filter(r => r.status === "open" && r.severity === "critical").length;
@@ -3858,80 +3920,144 @@ Write in professional consulting tone covering: overall posture assessment, key 
       const totalAuthorized = (budgetSummary.originalContract || 0) + (budgetSummary.totalChangeOrders || 0) + (budgetSummary.totalAdditionalFunding || 0);
       const spendPct = totalAuthorized > 0 ? Math.round((budgetSummary.totalActualSpend || 0) / totalAuthorized * 100) : 0;
 
-      doc.fontSize(9).font("Helvetica").fillColor(gray);
-      doc.text(`Open Risks: ${openRisks}  |  Open Issues: ${openIssues}  |  Critical Items: ${criticalItems}`);
-      doc.text(`Budget: $${(budgetSummary.totalActualSpend || 0).toLocaleString()} spent of $${totalAuthorized.toLocaleString()} authorized (${spendPct}%)`);
-      doc.text(`Schedule: ${scheduleItems.length} milestones, ${delayedMilestones} delayed`);
-      doc.fillColor(navy);
+      const statsY = doc.y;
+      const statBox = (x: number, label: string, value: string, sub?: string) => {
+        doc.rect(x, statsY, 110, 50).lineWidth(0.5).strokeColor(lightGray).stroke();
+        doc.fontSize(18).font("Helvetica-Bold").fillColor(darkText).text(value, x + 10, statsY + 8, { width: 90 });
+        doc.fontSize(8).font("Helvetica").fillColor(gray).text(label, x + 10, statsY + 30, { width: 90 });
+        if (sub) doc.fontSize(7).fillColor(orange).text(sub, x + 10, statsY + 40, { width: 90 });
+      };
+      statBox(72, "Open Risks", String(openRisks), criticalItems > 0 ? `${criticalItems} critical` : undefined);
+      statBox(192, "Open Issues", String(openIssues));
+      statBox(312, "Budget Spent", `${spendPct}%`, `$${(budgetSummary.totalActualSpend || 0).toLocaleString()}`);
+      statBox(432, "Milestones", String(scheduleItems.length), delayedMilestones > 0 ? `${delayedMilestones} delayed` : "on track");
+      doc.y = statsY + 65;
 
-      // Domain assessments
+      // Domain summary table
+      doc.moveDown(1);
+      doc.fontSize(11).font("Helvetica-Bold").fillColor(darkText).text("Domain Assessment Summary");
+      doc.moveDown(0.5);
+
       for (const a of assessments) {
         const label = DOMAIN_LABELS[a.domain] || a.domain;
+        const rating = a.overallRating || "not rated";
+        const rc = rating === "critical" || rating === "high" ? "#dc2626" : rating === "medium" ? "#d97706" : rating === "satisfactory" ? "#16a34a" : blue;
+
+        if (doc.y > 700) doc.addPage();
+
+        const rowY = doc.y;
+        doc.rect(72, rowY, 6, 14).fill(rc);
+        doc.fontSize(9).font("Helvetica-Bold").fillColor(darkText).text(label, 86, rowY + 2, { width: 200 });
+        doc.fontSize(9).font("Helvetica-Bold").fillColor(rc).text(rating.toUpperCase(), 290, rowY + 2, { width: 80 });
+        if (a.summary) doc.fontSize(8).font("Helvetica").fillColor(gray).text(a.summary, 375, rowY + 1, { width: 180 });
+        doc.y = rowY + Math.max(18, doc.heightOfString(a.summary || "", { width: 180, fontSize: 8 }) + 6);
+      }
+
+      // ========== DOMAIN DETAIL PAGES ==========
+      for (const a of assessments) {
+        doc.addPage();
+        const label = DOMAIN_LABELS[a.domain] || a.domain;
         const rating = a.overallRating ? (RATING_LABELS[a.overallRating] || a.overallRating) : "Not Rated";
+        const rc = a.overallRating === "critical" || a.overallRating === "high" ? "#dc2626" : a.overallRating === "medium" ? "#d97706" : a.overallRating === "satisfactory" ? "#16a34a" : blue;
 
-        if (doc.y > 650) doc.addPage();
+        // Domain header with blue left bar
+        doc.rect(72, 72, 4, 28).fill(blue);
+        doc.fontSize(16).font("Helvetica-Bold").fillColor(darkText).text(label, 84, 74);
+        doc.fontSize(11).font("Helvetica-Bold").fillColor(rc).text(rating, 84, 96);
 
-        doc.moveDown(1.2);
-        doc.moveTo(60, doc.y).lineTo(552, doc.y).strokeColor(lightGray).stroke();
-        doc.moveDown(0.5);
-        doc.fontSize(12).font("Helvetica-Bold").fillColor(navy).text(label, { continued: true });
-        const rc = a.overallRating === "critical" || a.overallRating === "high" ? "#dc2626" : a.overallRating === "medium" ? "#d97706" : a.overallRating === "satisfactory" ? "#16a34a" : "#3b82f6";
-        doc.fontSize(10).font("Helvetica-Bold").fillColor(rc).text(`  ${rating}`);
-        doc.fillColor(navy);
+        doc.y = 120;
 
         if (a.summary) {
-          doc.moveDown(0.3);
-          doc.fontSize(9).font("Helvetica").fillColor(gray).text(a.summary, { width: 492 });
-          doc.fillColor(navy);
+          doc.fontSize(10).font("Helvetica").fillColor(gray).text(a.summary, 72, doc.y, { width: contentW });
+          doc.moveDown(0.8);
         }
 
         if (a.findings) {
           try {
             const findings = JSON.parse(a.findings);
             if (Array.isArray(findings) && findings.length > 0) {
-              doc.moveDown(0.3);
+              doc.fontSize(11).font("Helvetica-Bold").fillColor(darkText).text("Findings");
+              doc.moveDown(0.5);
+
               for (const f of findings) {
-                if (doc.y > 700) doc.addPage();
-                const sevColor = f.severity === "critical" ? "#dc2626" : f.severity === "high" ? "#ea580c" : f.severity === "medium" ? "#d97706" : "#3b82f6";
-                doc.fontSize(8).font("Helvetica-Bold").fillColor(sevColor).text(`[${(f.severity || "info").toUpperCase()}] `, { continued: true });
-                doc.font("Helvetica").fillColor(navy).text(f.finding || "", { width: 470 });
-                if (f.evidence) doc.fontSize(8).fillColor(gray).text(`Evidence: ${f.evidence}`, { indent: 12, width: 480 });
-                if (f.recommendation) doc.fontSize(8).fillColor(accent).text(`Recommendation: ${f.recommendation}`, { indent: 12, width: 480 });
-                doc.fillColor(navy);
-                doc.moveDown(0.3);
+                if (doc.y > 680) doc.addPage();
+                const sevColor = f.severity === "critical" ? "#dc2626" : f.severity === "high" ? "#ea580c" : f.severity === "medium" ? "#d97706" : blue;
+
+                // Severity pill
+                const pillY = doc.y;
+                doc.rect(72, pillY, 60, 14).fill(sevColor);
+                doc.fontSize(7).font("Helvetica-Bold").fillColor("#ffffff").text((f.severity || "info").toUpperCase(), 76, pillY + 3, { width: 52 });
+                doc.y = pillY + 18;
+
+                // Finding text
+                doc.fontSize(9).font("Helvetica-Bold").fillColor(darkText).text(f.finding || "", 72, doc.y, { width: contentW });
+                doc.moveDown(0.2);
+
+                if (f.evidence) {
+                  doc.fontSize(8).font("Helvetica").fillColor(gray).text(`Evidence: ${f.evidence}`, 72, doc.y, { width: contentW });
+                  doc.moveDown(0.2);
+                }
+                if (f.recommendation) {
+                  doc.fontSize(8).font("Helvetica-Bold").fillColor(orange).text(`Recommendation: `, { continued: true, width: contentW });
+                  doc.font("Helvetica").text(f.recommendation);
+                  doc.moveDown(0.2);
+                }
+                doc.moveDown(0.5);
               }
             }
           } catch {}
         }
       }
 
-      // Top RAID items
-      const topRaids = raidItems.filter(r => r.status === "open" && (r.severity === "critical" || r.severity === "high")).slice(0, 10);
+      // ========== TOP RISKS & ISSUES ==========
+      const topRaids = raidItems.filter(r => r.status === "open" && (r.severity === "critical" || r.severity === "high")).slice(0, 15);
       if (topRaids.length > 0) {
-        if (doc.y > 600) doc.addPage();
-        doc.moveDown(1.5);
-        doc.fontSize(14).font("Helvetica-Bold").text("Top Open Risks & Issues");
-        doc.moveDown(0.5);
+        doc.addPage();
+        sectionHeader("Top Open Risks & Issues");
+
         for (const r of topRaids) {
-          if (doc.y > 700) doc.addPage();
+          if (doc.y > 680) doc.addPage();
           const sevColor = r.severity === "critical" ? "#dc2626" : "#ea580c";
-          doc.fontSize(8).font("Helvetica-Bold").fillColor(sevColor).text(`[${r.type?.toUpperCase()}/${r.severity?.toUpperCase()}] `, { continued: true });
-          doc.font("Helvetica-Bold").fillColor(navy).text(r.title || "");
-          if (r.description) doc.fontSize(8).font("Helvetica").fillColor(gray).text(r.description, { indent: 12, width: 480 });
-          if (r.owner) doc.fontSize(8).fillColor(gray).text(`Owner: ${r.owner}`, { indent: 12 });
-          doc.fillColor(navy);
-          doc.moveDown(0.4);
+
+          const rowY = doc.y;
+          doc.rect(72, rowY, 4, 14).fill(sevColor);
+          doc.fontSize(8).font("Helvetica-Bold").fillColor(sevColor).text(`${r.type?.toUpperCase()} / ${r.severity?.toUpperCase()}`, 84, rowY + 2, { width: 100 });
+          doc.fontSize(9).font("Helvetica-Bold").fillColor(darkText).text(r.title || "", 190, rowY + 1, { width: contentW - 118 });
+          doc.y = rowY + 18;
+
+          if (r.description) {
+            doc.fontSize(8).font("Helvetica").fillColor(gray).text(r.description, 84, doc.y, { width: contentW - 12 });
+            doc.moveDown(0.2);
+          }
+          if (r.owner) doc.fontSize(8).fillColor(gray).text(`Owner: ${r.owner}`, 84);
+          doc.moveDown(0.6);
         }
       }
 
-      // Footer on all pages
+      // ========== HEADERS & FOOTERS ==========
       const pageCount = doc.bufferedPageRange().count;
       for (let i = 0; i < pageCount; i++) {
         doc.switchToPage(i);
-        doc.fontSize(7).fillColor(gray).text(
-          `Caliber — Avero Advisors  |  Confidential  |  Page ${i + 1} of ${pageCount}`,
-          60, doc.page.height - 40, { width: 492, align: "center" }
-        );
+
+        // Skip cover page header
+        if (i > 0) {
+          // Top line
+          doc.moveTo(72, 56).lineTo(pageW - 72, 56).lineWidth(0.5).strokeColor(lightGray).stroke();
+          // Header text
+          doc.fontSize(7).font("Helvetica").fillColor(gray);
+          doc.text("Avero Advisors", 72, 44, { width: contentW / 2 });
+          doc.text("Health Check Report", pageW / 2, 44, { width: contentW / 2, align: "right" });
+        }
+
+        // Footer
+        doc.moveTo(72, pageH - 56).lineTo(pageW - 72, pageH - 56).lineWidth(0.5).strokeColor(lightGray).stroke();
+        doc.fontSize(7).fillColor(gray);
+        if (i === 0) {
+          doc.text("CONFIDENTIAL", 72, pageH - 48, { width: contentW, align: "center" });
+        } else {
+          doc.text(`${project.name}`, 72, pageH - 48);
+          doc.text(`Page ${i + 1} of ${pageCount}`, 72, pageH - 48, { width: contentW, align: "right" });
+        }
       }
 
       doc.end();
