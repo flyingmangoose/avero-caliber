@@ -2,6 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
 import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
+import rateLimit from "express-rate-limit";
 import Database from "better-sqlite3";
 import BetterSqliteStore from "better-sqlite3-session-store";
 import { registerRoutes } from "./routes";
@@ -36,6 +37,44 @@ app.use(
   }),
 );
 app.use(express.urlencoded({ extended: false }));
+
+// Rate limiting
+const generalLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 120, // 120 requests per minute per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many requests, please try again later" },
+});
+
+const aiLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 10, // 10 AI calls per minute per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "AI rate limit exceeded. Please wait a moment before trying again." },
+});
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20, // 20 auth attempts per 15 min
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many login attempts, please try again later" },
+});
+
+app.use("/api", generalLimiter);
+app.use("/auth", authLimiter);
+
+// AI-specific rate limits (synthesis, analysis, chat, enrich)
+app.use("/api/projects/:id/health-check/synthesize", aiLimiter);
+app.use("/api/projects/:id/documents/:docId/analyze", aiLimiter);
+app.use("/api/projects/:id/chat", aiLimiter);
+app.use("/api/clients/:id/enrich", aiLimiter);
+app.use("/api/projects/:id/analyze-proposal", aiLimiter);
+app.use("/api/projects/:id/evaluation/generate-scores", aiLimiter);
+app.use("/api/projects/:id/discovery/generate-requirements", aiLimiter);
+app.use("/api/projects/:id/discovery/interviews/:iid/generate-guide", aiLimiter);
 
 // Session — persisted in SQLite so sessions survive restarts
 const sessionSecret = process.env.SESSION_SECRET || "caliber-dev-secret-change-in-production";
