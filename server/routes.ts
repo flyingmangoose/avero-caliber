@@ -4455,6 +4455,101 @@ Write in professional consulting tone covering: overall posture assessment, key 
         analysisStatus: "completed",
       });
 
+      // Auto-apply extracted items if not already applied
+      const projectId = parseInt(req.params.id);
+      if (!doc.appliedAt) {
+        try {
+          const items = { raids: analysis.raids, budgetItems: analysis.budgetItems, scheduleItems: analysis.scheduleItems, findings: analysis.findings };
+          const applied = { raids: 0, budgetItems: 0, scheduleItems: 0, findings: 0 };
+
+          for (const raid of (items.raids || [])) {
+            storage.createRaidItem({ projectId, type: raid.type || "risk", title: raid.title, description: raid.description || null, severity: raid.severity || "medium", status: raid.status || "open", owner: raid.owner || null, dueDate: raid.dueDate || null, sourceDocId: docId });
+            applied.raids++;
+          }
+          for (const budget of (items.budgetItems || [])) {
+            storage.createBudgetEntry({ projectId, category: budget.category || "actual_spend", description: budget.description, amount: budget.amount || 0, date: budget.date || null, notes: budget.notes || null, sourceDocId: docId });
+            applied.budgetItems++;
+          }
+          for (const sched of (items.scheduleItems || [])) {
+            storage.createScheduleEntry({ projectId, milestone: sched.milestone, originalDate: sched.originalDate || null, currentDate: sched.currentDate || null, status: sched.status || "on_track", varianceDays: sched.varianceDays || null, notes: sched.notes || null, sourceDocId: docId });
+            applied.scheduleItems++;
+          }
+
+          // Upsert assessments from findings
+          const existingAssessments = storage.getHealthCheckAssessments(projectId);
+          const findingsByDomain: Record<string, any[]> = {};
+          for (const f of (items.findings || [])) {
+            const domain = f.domain || "governance";
+            if (!findingsByDomain[domain]) findingsByDomain[domain] = [];
+            findingsByDomain[domain].push(f);
+          }
+          for (const [domain, findings] of Object.entries(findingsByDomain)) {
+            const worstSeverity = findings.reduce((worst: string, f: any) => {
+              const order = ["critical", "high", "medium", "low", "satisfactory"];
+              return order.indexOf(f.severity) < order.indexOf(worst) ? f.severity : worst;
+            }, "satisfactory");
+            const existing = existingAssessments.find(a => a.domain === domain);
+            if (existing && !(existing as any).isManual) {
+              let existingFindings: any[] = [];
+              try { existingFindings = existing.findings ? JSON.parse(existing.findings) : []; } catch {}
+              const mergedFindings = [...existingFindings, ...findings];
+              storage.updateHealthCheckAssessment(existing.id, {
+                overallRating: worstSeverity,
+                findings: JSON.stringify(mergedFindings),
+                summary: mergedFindings.map((f: any) => f.finding).join(". "),
+                assessedBy: `AI Analysis - ${doc.fileName}`,
+              });
+            } else if (!existing) {
+              storage.createHealthCheckAssessment({
+                projectId, domain, overallRating: worstSeverity,
+                findings: JSON.stringify(findings),
+                summary: findings.map((f: any) => f.finding).join(". "),
+                assessedBy: `AI Analysis - ${doc.fileName}`,
+              });
+            }
+            applied.findings += findings.length;
+          }
+
+          storage.updateProjectDocument(docId, { appliedAt: new Date().toISOString() });
+          logAction(req, "auto_applied_document", projectId, `${doc.fileName}: ${applied.raids} RAID, ${applied.budgetItems} budget, ${applied.scheduleItems} schedule, ${applied.findings} findings`);
+        } catch (applyErr: any) {
+          console.error("Auto-apply error:", applyErr.message);
+        }
+
+        // Auto-synthesize
+        try {
+          const { synthesizeHealthCheck, buildProjectContext: bpc } = await import("./ai");
+          const ctx = bpc(projectId);
+          const raidItems = storage.getRaidItems(projectId);
+          const budgetEntries = storage.getBudgetEntries(projectId);
+          const budgetSummaryData = storage.getBudgetSummary(projectId);
+          const scheduleItemsData = storage.getScheduleEntries(projectId);
+          const documents = storage.getProjectDocuments(projectId);
+          const existingAssessments2 = storage.getHealthCheckAssessments(projectId);
+
+          const result = await synthesizeHealthCheck({
+            projectContext: ctx, raidItems, budgetEntries, budgetSummary: budgetSummaryData,
+            scheduleItems: scheduleItemsData, documents, existingAssessments: existingAssessments2,
+          });
+
+          for (const domainResult of (result.domains || [])) {
+            const existing = existingAssessments2.find(a => a.domain === domainResult.domain);
+            if (existing && !(existing as any).isManual) {
+              storage.updateHealthCheckAssessment(existing.id, {
+                domain: domainResult.domain, overallRating: domainResult.rating,
+                findings: JSON.stringify(domainResult.findings || []),
+                summary: domainResult.summary, assessedBy: "AI Synthesis",
+              });
+            } else if (!existing) {
+              storage.createHealthCheckAssessment({ projectId, domain: domainResult.domain, overallRating: domainResult.rating, findings: JSON.stringify(domainResult.findings || []), summary: domainResult.summary, assessedBy: "AI Synthesis" });
+            }
+          }
+          logAction(req, "auto_synthesized", projectId, `Overall: ${result.overallHealth}`);
+        } catch (synthErr: any) {
+          console.error("Auto-synthesize error:", synthErr.message);
+        }
+      }
+
       res.json(analysis);
     } catch (error: any) {
       storage.updateProjectDocument(docId, { analysisStatus: "failed" });

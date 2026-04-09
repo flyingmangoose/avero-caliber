@@ -604,6 +604,10 @@ sqlite.exec(`
 // Safe column additions (ignored if already exists)
 try { sqlite.exec(`ALTER TABLE projects ADD COLUMN engagement_mode TEXT DEFAULT 'consulting'`); } catch {}
 try { sqlite.exec(`ALTER TABLE projects ADD COLUMN created_by INTEGER`); } catch {}
+try { sqlite.exec(`ALTER TABLE raid_items ADD COLUMN source_doc_id INTEGER`); } catch {}
+try { sqlite.exec(`ALTER TABLE budget_tracking ADD COLUMN source_doc_id INTEGER`); } catch {}
+try { sqlite.exec(`ALTER TABLE schedule_tracking ADD COLUMN source_doc_id INTEGER`); } catch {}
+try { sqlite.exec(`ALTER TABLE health_check_assessments ADD COLUMN is_manual INTEGER DEFAULT 0`); } catch {}
 
 // Enable foreign keys
 sqlite.pragma("foreign_keys = ON");
@@ -830,20 +834,20 @@ export interface IStorage {
   deleteHealthCheckAssessment(id: number): void;
 
   // RAID Items
-  createRaidItem(data: { projectId: number; type: string; title: string; description?: string | null; severity?: string | null; status?: string; owner?: string | null; dueDate?: string | null; resolution?: string | null; siReported?: number; siDiscrepancy?: string | null }): RaidItem;
+  createRaidItem(data: { projectId: number; type: string; title: string; description?: string | null; severity?: string | null; status?: string; owner?: string | null; dueDate?: string | null; resolution?: string | null; siReported?: number; siDiscrepancy?: string | null; sourceDocId?: number | null }): RaidItem;
   getRaidItems(projectId: number, filters?: { type?: string; status?: string }): RaidItem[];
   updateRaidItem(id: number, data: Partial<{ type: string; title: string; description: string | null; severity: string | null; status: string; owner: string | null; dueDate: string | null; resolution: string | null; siReported: number; siDiscrepancy: string | null }>): RaidItem | undefined;
   deleteRaidItem(id: number): void;
 
   // Budget Tracking
-  createBudgetEntry(data: { projectId: number; category: string; description: string; amount: number; date?: string | null; notes?: string | null }): BudgetTracking;
+  createBudgetEntry(data: { projectId: number; category: string; description: string; amount: number; date?: string | null; notes?: string | null; sourceDocId?: number | null }): BudgetTracking;
   getBudgetEntries(projectId: number): BudgetTracking[];
   updateBudgetEntry(id: number, data: Partial<{ category: string; description: string; amount: number; date: string | null; notes: string | null }>): BudgetTracking | undefined;
   deleteBudgetEntry(id: number): void;
   getBudgetSummary(projectId: number): { originalContract: number; totalChangeOrders: number; totalAdditionalFunding: number; totalActualSpend: number; variance: number };
 
   // Schedule Tracking
-  createScheduleEntry(data: { projectId: number; milestone: string; originalDate?: string | null; currentDate?: string | null; actualDate?: string | null; status?: string; varianceDays?: number | null; notes?: string | null }): ScheduleTracking;
+  createScheduleEntry(data: { projectId: number; milestone: string; originalDate?: string | null; currentDate?: string | null; actualDate?: string | null; status?: string; varianceDays?: number | null; notes?: string | null; sourceDocId?: number | null }): ScheduleTracking;
   getScheduleEntries(projectId: number): ScheduleTracking[];
   updateScheduleEntry(id: number, data: Partial<{ milestone: string; originalDate: string | null; currentDate: string | null; actualDate: string | null; status: string; varianceDays: number | null; notes: string | null }>): ScheduleTracking | undefined;
   deleteScheduleEntry(id: number): void;

@@ -257,20 +257,12 @@ function DocumentRow({
             </div>
           )}
 
-          {/* Apply button — only if not already applied */}
+          {/* Auto-applied notice or manual apply fallback */}
           {hasItems && !doc.appliedAt && !applyResult && (
-            <Button
-              size="sm"
-              className="bg-primary hover:bg-primary/90 text-white text-xs gap-1.5"
-              onClick={() => applyMutation.mutate()}
-              disabled={applyMutation.isPending}
-              data-testid={`apply-doc-${doc.id}`}
-            >
-              {applyMutation.isPending
-                ? <Loader2 className="w-3 h-3 animate-spin" />
-                : <Sparkles className="w-3 h-3" />}
-              Apply to Health Check
-            </Button>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/30 rounded p-2">
+              <Loader2 className="w-3 h-3 animate-spin" />
+              Auto-applying items and synthesizing assessment...
+            </div>
           )}
         </div>
       )}
@@ -630,7 +622,7 @@ export function DocumentsTab({ projectId, onApplyComplete }: { projectId: number
           {/* Upload & Analyze button */}
           <div className="flex items-center justify-between pt-1">
             <p className="text-[11px] text-muted-foreground">
-              AI will extract RAID items, budget data, milestones, and findings automatically.
+              AI will extract data, apply to health check, and update the assessment automatically.
             </p>
             <Button
               size="sm"
