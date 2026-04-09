@@ -1142,4 +1142,94 @@ Return ONLY valid JSON.`, undefined, 16384);
   }
 }
 
+// ==================== OUTCOMES & SCENARIOS ====================
+
+export async function generateOutcomes(painPoints: any[], orgProfile: any): Promise<{ outcomes: any[] }> {
+  const ppList = painPoints.map((p, i) =>
+    `${i + 1}. [${p.severity || "medium"}] [${p.functionalArea}] ${p.description}${p.impact ? " — Impact: " + p.impact : ""}`
+  ).join("\n");
+
+  const orgSummary = orgProfile
+    ? `${orgProfile.entityName || orgProfile.name || "Organization"} (${orgProfile.entityType || "government"}), ${orgProfile.state || "US"}, Pop: ${orgProfile.population || "N/A"}, Employees: ${orgProfile.employeeCount || "N/A"}, Budget: ${orgProfile.annualBudget || "N/A"}`
+    : "Government organization";
+
+  const text = await llmCall(`You are a senior ERP/EAM implementation consultant converting discovery pain points into strategic outcome statements for a vendor evaluation.
+
+ORGANIZATION: ${orgSummary}
+
+PAIN POINTS:
+${ppList}
+
+Generate 6-10 strategic outcome statements. Each outcome should:
+1. Be measurable and specific (not vague like "improve efficiency")
+2. Reference a target KPI with current vs target values
+3. Map to one or more source pain points by their index number
+4. Be written from the client's perspective ("Achieve...", "Reduce...", "Enable...")
+
+Categories: finance, hr, procurement, asset_management, it, utilities, general
+
+Return JSON:
+{
+  "outcomes": [
+    {
+      "title": "Achieve 3-day month-end financial close",
+      "description": "Eliminate manual reconciliation bottlenecks to compress the close cycle",
+      "category": "finance",
+      "sourcePainPointIndexes": [1, 2],
+      "currentState": "Month-end close takes 12 business days",
+      "targetState": "Automated close process completing in 3 business days",
+      "currentKpi": "12",
+      "targetKpi": "3",
+      "kpiUnit": "business days",
+      "priority": "critical"
+    }
+  ]
+}
+Return ONLY valid JSON.`, undefined, 4096);
+
+  const jsonMatch = text.match(/\{[\s\S]*"outcomes"[\s\S]*\}/);
+  if (!jsonMatch) return { outcomes: [] };
+  try { return JSON.parse(jsonMatch[0]); } catch { return { outcomes: [] }; }
+}
+
+export async function generateDemoScenarios(outcome: any, orgProfile: any): Promise<{ scenarios: any[] }> {
+  const orgSummary = orgProfile
+    ? `${orgProfile.entityName || orgProfile.name || "Organization"} (${orgProfile.entityType || "government"})`
+    : "Government organization";
+
+  const text = await llmCall(`You are creating vendor demo evaluation scenarios for a government ERP implementation.
+
+OUTCOME: ${outcome.title}
+DESCRIPTION: ${outcome.description || ""}
+CURRENT STATE: ${outcome.currentState || "Not documented"}
+TARGET STATE: ${outcome.targetState || "Not documented"}
+ORGANIZATION: ${orgSummary}
+
+Generate 3-5 demo scenarios that test whether a vendor can deliver this outcome. Each scenario should be a realistic end-to-end process walkthrough.
+
+Return JSON:
+{
+  "scenarios": [
+    {
+      "title": "Process title",
+      "narrative": "Business context story for the vendor before the demo",
+      "setupInstructions": "What test data/config the vendor should prepare",
+      "walkthrough": [
+        {"step": 1, "instruction": "What to demonstrate", "whatToEvaluate": "What evaluator watches for"}
+      ],
+      "successCriteria": [
+        {"criterion": "What success looks like", "measurable": true, "target": "Specific target"}
+      ],
+      "estimatedMinutes": 15,
+      "functionalArea": "${outcome.category || "general"}"
+    }
+  ]
+}
+Make scenarios specific to government processes. Return ONLY valid JSON.`, undefined, 8192);
+
+  const jsonMatch = text.match(/\{[\s\S]*"scenarios"[\s\S]*\}/);
+  if (!jsonMatch) return { scenarios: [] };
+  try { return JSON.parse(jsonMatch[0]); } catch { return { scenarios: [] }; }
+}
+
 export { xai, CHAT_SYSTEM_PROMPT, PROPOSAL_ANALYSIS_PROMPT, llmCall, llmStream };

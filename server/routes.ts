@@ -4376,6 +4376,207 @@ Write in professional consulting tone covering: overall posture assessment, key 
     res.json({ success: true });
   });
 
+  // ==================== OUTCOMES & SCENARIOS ====================
+
+  app.get("/api/projects/:id/outcomes", (req, res) => {
+    res.json(storage.getOutcomes(parseInt(req.params.id)));
+  });
+
+  app.post("/api/projects/:id/outcomes", (req, res) => {
+    const outcome = storage.createOutcome({ projectId: parseInt(req.params.id), ...req.body });
+    res.json(outcome);
+  });
+
+  app.patch("/api/outcomes/:outcomeId", (req, res) => {
+    const updated = storage.updateOutcome(parseInt(req.params.outcomeId), req.body);
+    if (!updated) return res.status(404).json({ error: "Outcome not found" });
+    res.json(updated);
+  });
+
+  app.delete("/api/outcomes/:outcomeId", (req, res) => {
+    storage.deleteOutcome(parseInt(req.params.outcomeId));
+    res.json({ success: true });
+  });
+
+  // AI: Generate outcomes from pain points
+  app.post("/api/projects/:id/outcomes/generate", async (req, res) => {
+    const projectId = parseInt(req.params.id);
+    const project = storage.getProject(projectId);
+    if (!project) return res.status(404).json({ error: "Project not found" });
+
+    const painPoints = storage.getPainPoints(projectId);
+    if (painPoints.length === 0) return res.status(400).json({ error: "No pain points found. Complete discovery interviews first." });
+
+    const orgProfile = storage.getOrgProfile(projectId) || (project.clientId ? storage.getClient(project.clientId) : null);
+
+    try {
+      const { generateOutcomes } = await import("./ai");
+      const result = await generateOutcomes(painPoints, orgProfile);
+
+      const created = [];
+      for (const o of result.outcomes) {
+        // Map source indexes to actual pain point IDs
+        const ppIds = (o.sourcePainPointIndexes || []).map((idx: number) => painPoints[idx - 1]?.id).filter(Boolean);
+        const outcome = storage.createOutcome({
+          projectId, title: o.title, description: o.description, category: o.category || "general",
+          sourcePainPointIds: JSON.stringify(ppIds),
+          currentState: o.currentState, targetState: o.targetState,
+          currentKpi: o.currentKpi, targetKpi: o.targetKpi, kpiUnit: o.kpiUnit,
+          priority: o.priority || "high",
+        });
+        created.push(outcome);
+      }
+      logAction(req, "generated_outcomes", projectId, `${created.length} outcomes from ${painPoints.length} pain points`);
+      res.json({ outcomes: created, count: created.length });
+    } catch (err: any) {
+      console.error("Outcome generation error:", err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Scenarios CRUD
+  app.get("/api/outcomes/:outcomeId/scenarios", (req, res) => {
+    res.json(storage.getDemoScenarios(parseInt(req.params.outcomeId)));
+  });
+
+  app.get("/api/projects/:id/scenarios", (req, res) => {
+    res.json(storage.getDemoScenariosByProject(parseInt(req.params.id)));
+  });
+
+  app.post("/api/outcomes/:outcomeId/scenarios", (req, res) => {
+    const outcome = storage.getOutcome(parseInt(req.params.outcomeId));
+    if (!outcome) return res.status(404).json({ error: "Outcome not found" });
+    const scenario = storage.createDemoScenario({ projectId: outcome.projectId, outcomeId: outcome.id, ...req.body });
+    res.json(scenario);
+  });
+
+  app.patch("/api/scenarios/:scenarioId", (req, res) => {
+    const updated = storage.updateDemoScenario(parseInt(req.params.scenarioId), req.body);
+    if (!updated) return res.status(404).json({ error: "Scenario not found" });
+    res.json(updated);
+  });
+
+  app.delete("/api/scenarios/:scenarioId", (req, res) => {
+    storage.deleteDemoScenario(parseInt(req.params.scenarioId));
+    res.json({ success: true });
+  });
+
+  // AI: Generate scenarios for an outcome
+  app.post("/api/outcomes/:outcomeId/scenarios/generate", async (req, res) => {
+    const outcome = storage.getOutcome(parseInt(req.params.outcomeId));
+    if (!outcome) return res.status(404).json({ error: "Outcome not found" });
+
+    const project = storage.getProject(outcome.projectId);
+    const orgProfile = storage.getOrgProfile(outcome.projectId) || (project?.clientId ? storage.getClient(project.clientId) : null);
+
+    try {
+      const { generateDemoScenarios } = await import("./ai");
+      const result = await generateDemoScenarios(outcome, orgProfile);
+
+      const created = [];
+      for (const s of result.scenarios) {
+        const scenario = storage.createDemoScenario({
+          projectId: outcome.projectId, outcomeId: outcome.id, title: s.title,
+          narrative: s.narrative, setupInstructions: s.setupInstructions,
+          walkthrough: s.walkthrough, successCriteria: s.successCriteria,
+          estimatedMinutes: s.estimatedMinutes || 15, functionalArea: s.functionalArea || outcome.category,
+        });
+        created.push(scenario);
+      }
+      logAction(req, "generated_scenarios", outcome.projectId, `${created.length} scenarios for "${outcome.title}"`);
+      res.json({ scenarios: created, count: created.length });
+    } catch (err: any) {
+      console.error("Scenario generation error:", err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Scenario Scores
+  app.get("/api/projects/:id/scenario-scores", (req, res) => {
+    const vendorId = req.query.vendorId ? parseInt(req.query.vendorId as string) : undefined;
+    res.json(storage.getScenarioScores(parseInt(req.params.id), vendorId));
+  });
+
+  app.post("/api/scenario-scores", (req, res) => {
+    // Upsert
+    const existing = storage.getScenarioScore(req.body.scenarioId, req.body.vendorId);
+    if (existing) {
+      const updated = storage.updateScenarioScore(existing.id, req.body);
+      return res.json(updated);
+    }
+    const score = storage.createScenarioScore(req.body);
+    res.json(score);
+  });
+
+  app.patch("/api/scenario-scores/:id", (req, res) => {
+    const updated = storage.updateScenarioScore(parseInt(req.params.id), req.body);
+    if (!updated) return res.status(404).json({ error: "Score not found" });
+    res.json(updated);
+  });
+
+  app.delete("/api/scenario-scores/:id", (req, res) => {
+    storage.deleteScenarioScore(parseInt(req.params.id));
+    res.json({ success: true });
+  });
+
+  // Outcome Scorecard (computed)
+  app.get("/api/projects/:id/outcome-scorecard", (req, res) => {
+    const projectId = parseInt(req.params.id);
+    const allOutcomes = storage.getOutcomes(projectId);
+    const allScenarios = storage.getDemoScenariosByProject(projectId);
+    const allScores = storage.getScenarioScores(projectId);
+    const allVendors = storage.getVendors();
+    const settings = storage.getProjectVendorSettings(projectId);
+    const selectedVendorIds: number[] = settings ? JSON.parse(settings.selectedVendors) : [];
+    const vendors = allVendors.filter(v => selectedVendorIds.includes(v.id));
+
+    const priorityWeight: Record<string, number> = { critical: 4, high: 3, medium: 2, low: 1 };
+
+    const outcomeResults = allOutcomes.map(o => {
+      const scenarios = allScenarios.filter(s => s.outcomeId === o.id);
+      const vendorResults = vendors.map(v => {
+        const scores = allScores.filter(s => scenarios.some(sc => sc.id === s.scenarioId) && s.vendorId === v.id);
+        const avg = (field: string) => {
+          const vals = scores.map(s => (s as any)[field]).filter(Boolean);
+          return vals.length > 0 ? Math.round(vals.reduce((a: number, b: number) => a + b, 0) / vals.length * 10) / 10 : null;
+        };
+        return {
+          vendorId: v.id, vendorName: v.name,
+          avgProcessFit: avg("processFit"), avgAutomation: avg("automationLevel"),
+          avgConfigComplexity: avg("configComplexity"), avgUX: avg("userExperience"),
+          avgDataVisibility: avg("dataVisibility"), avgOverall: avg("overallScore"),
+          scenariosScored: scores.length,
+        };
+      });
+      return {
+        id: o.id, title: o.title, category: o.category, priority: o.priority,
+        targetKpi: o.targetKpi, currentKpi: o.currentKpi, kpiUnit: o.kpiUnit,
+        scenarioCount: scenarios.length, vendors: vendorResults,
+      };
+    });
+
+    const vendorTotals = vendors.map(v => {
+      let weightedSum = 0, weightTotal = 0, scored = 0, total = 0;
+      for (const o of outcomeResults) {
+        const vr = o.vendors.find(vv => vv.vendorId === v.id);
+        if (vr?.avgOverall) {
+          const w = priorityWeight[o.priority] || 2;
+          weightedSum += vr.avgOverall * w;
+          weightTotal += w;
+        }
+        scored += vr?.scenariosScored || 0;
+        total += o.scenarioCount;
+      }
+      return {
+        vendorId: v.id, vendorName: v.name,
+        weightedAvg: weightTotal > 0 ? Math.round(weightedSum / weightTotal * 10) / 10 : null,
+        totalScenariosScored: scored, totalScenarios: total,
+      };
+    });
+
+    res.json({ outcomes: outcomeResults, vendorTotals });
+  });
+
   // ==================== HEALTH CHECK DOCUMENT UPLOAD & ANALYSIS ====================
 
   const docUploadMulter = multer({ dest: os.tmpdir(), limits: { fileSize: 50 * 1024 * 1024 } });

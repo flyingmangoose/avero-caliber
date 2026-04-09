@@ -40,6 +40,9 @@ import {
   type AssessmentHistory, assessmentHistory,
   type User, users,
   type ProjectMember, projectMembers,
+  type Outcome, outcomes,
+  type DemoScenario, demoScenarios,
+  type ScenarioScore, scenarioScores,
   type InvitedEmail, invitedEmails,
   type ActivityLog, activityLog,
 } from "@shared/schema";
@@ -525,6 +528,59 @@ sqlite.exec(`
     created_at TEXT NOT NULL
   );
 
+  CREATE TABLE IF NOT EXISTS outcomes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL,
+    category TEXT NOT NULL,
+    source_pain_point_ids TEXT,
+    current_state TEXT,
+    target_state TEXT,
+    target_kpi TEXT,
+    current_kpi TEXT,
+    kpi_unit TEXT,
+    priority TEXT NOT NULL DEFAULT 'high',
+    status TEXT NOT NULL DEFAULT 'draft',
+    sort_order INTEGER DEFAULT 0,
+    created_at TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS demo_scenarios (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    outcome_id INTEGER NOT NULL REFERENCES outcomes(id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    narrative TEXT NOT NULL,
+    setup_instructions TEXT,
+    walkthrough TEXT,
+    success_criteria TEXT,
+    estimated_minutes INTEGER DEFAULT 15,
+    functional_area TEXT,
+    sort_order INTEGER DEFAULT 0,
+    created_at TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS scenario_scores (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    scenario_id INTEGER NOT NULL REFERENCES demo_scenarios(id) ON DELETE CASCADE,
+    vendor_id INTEGER NOT NULL REFERENCES vendors(id),
+    process_fit INTEGER,
+    automation_level INTEGER,
+    config_complexity INTEGER,
+    user_experience INTEGER,
+    data_visibility INTEGER,
+    overall_score INTEGER,
+    notes TEXT,
+    strengths TEXT,
+    concerns TEXT,
+    evidence_notes TEXT,
+    evaluated_by TEXT,
+    evaluated_at TEXT,
+    created_at TEXT NOT NULL
+  );
+
   CREATE TABLE IF NOT EXISTS project_documents (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     project_id INTEGER,
@@ -653,6 +709,28 @@ export interface IStorage {
   getUser(id: number): User | undefined;
   getUserByGoogleId(googleId: string): User | undefined;
   getAllUsers(): User[];
+
+  // Outcomes
+  createOutcome(data: any): Outcome;
+  getOutcomes(projectId: number): Outcome[];
+  getOutcome(id: number): Outcome | undefined;
+  updateOutcome(id: number, data: any): Outcome | undefined;
+  deleteOutcome(id: number): void;
+
+  // Demo Scenarios
+  createDemoScenario(data: any): DemoScenario;
+  getDemoScenarios(outcomeId: number): DemoScenario[];
+  getDemoScenariosByProject(projectId: number): DemoScenario[];
+  getDemoScenario(id: number): DemoScenario | undefined;
+  updateDemoScenario(id: number, data: any): DemoScenario | undefined;
+  deleteDemoScenario(id: number): void;
+
+  // Scenario Scores
+  createScenarioScore(data: any): ScenarioScore;
+  getScenarioScores(projectId: number, vendorId?: number): ScenarioScore[];
+  getScenarioScore(scenarioId: number, vendorId: number): ScenarioScore | undefined;
+  updateScenarioScore(id: number, data: any): ScenarioScore | undefined;
+  deleteScenarioScore(id: number): void;
 
   // Activity Log
   logActivity(data: { projectId?: number | null; userId?: number | null; userName?: string | null; action: string; details?: string | null }): ActivityLog;
@@ -1023,6 +1101,114 @@ export class DatabaseStorage implements IStorage {
 
   getAllUsers(): User[] {
     return db.select().from(users).where(eq(users.isActive, 1)).all();
+  }
+
+  // ==================== Outcomes ====================
+
+  createOutcome(data: any): Outcome {
+    return db.insert(outcomes).values({
+      projectId: data.projectId, title: data.title, description: data.description,
+      category: data.category || "general",
+      sourcePainPointIds: typeof data.sourcePainPointIds === "string" ? data.sourcePainPointIds : JSON.stringify(data.sourcePainPointIds || []),
+      currentState: data.currentState || null, targetState: data.targetState || null,
+      targetKpi: data.targetKpi || null, currentKpi: data.currentKpi || null,
+      kpiUnit: data.kpiUnit || null, priority: data.priority || "high",
+      status: data.status || "draft", sortOrder: data.sortOrder || 0,
+      createdAt: new Date().toISOString(),
+    }).returning().get();
+  }
+
+  getOutcomes(projectId: number): Outcome[] {
+    return db.select().from(outcomes).where(eq(outcomes.projectId, projectId)).orderBy(outcomes.sortOrder).all();
+  }
+
+  getOutcome(id: number): Outcome | undefined {
+    return db.select().from(outcomes).where(eq(outcomes.id, id)).get();
+  }
+
+  updateOutcome(id: number, data: any): Outcome | undefined {
+    if (data.sourcePainPointIds && typeof data.sourcePainPointIds !== "string") data.sourcePainPointIds = JSON.stringify(data.sourcePainPointIds);
+    return db.update(outcomes).set(data).where(eq(outcomes.id, id)).returning().get();
+  }
+
+  deleteOutcome(id: number): void {
+    db.delete(outcomes).where(eq(outcomes.id, id)).run();
+  }
+
+  // ==================== Demo Scenarios ====================
+
+  createDemoScenario(data: any): DemoScenario {
+    return db.insert(demoScenarios).values({
+      projectId: data.projectId, outcomeId: data.outcomeId, title: data.title,
+      narrative: data.narrative || "",
+      setupInstructions: data.setupInstructions || null,
+      walkthrough: typeof data.walkthrough === "string" ? data.walkthrough : JSON.stringify(data.walkthrough || []),
+      successCriteria: typeof data.successCriteria === "string" ? data.successCriteria : JSON.stringify(data.successCriteria || []),
+      estimatedMinutes: data.estimatedMinutes || 15,
+      functionalArea: data.functionalArea || null,
+      sortOrder: data.sortOrder || 0,
+      createdAt: new Date().toISOString(),
+    }).returning().get();
+  }
+
+  getDemoScenarios(outcomeId: number): DemoScenario[] {
+    return db.select().from(demoScenarios).where(eq(demoScenarios.outcomeId, outcomeId)).orderBy(demoScenarios.sortOrder).all();
+  }
+
+  getDemoScenariosByProject(projectId: number): DemoScenario[] {
+    return db.select().from(demoScenarios).where(eq(demoScenarios.projectId, projectId)).orderBy(demoScenarios.sortOrder).all();
+  }
+
+  getDemoScenario(id: number): DemoScenario | undefined {
+    return db.select().from(demoScenarios).where(eq(demoScenarios.id, id)).get();
+  }
+
+  updateDemoScenario(id: number, data: any): DemoScenario | undefined {
+    if (data.walkthrough && typeof data.walkthrough !== "string") data.walkthrough = JSON.stringify(data.walkthrough);
+    if (data.successCriteria && typeof data.successCriteria !== "string") data.successCriteria = JSON.stringify(data.successCriteria);
+    return db.update(demoScenarios).set(data).where(eq(demoScenarios.id, id)).returning().get();
+  }
+
+  deleteDemoScenario(id: number): void {
+    db.delete(demoScenarios).where(eq(demoScenarios.id, id)).run();
+  }
+
+  // ==================== Scenario Scores ====================
+
+  createScenarioScore(data: any): ScenarioScore {
+    const dims = [data.processFit, data.automationLevel, data.configComplexity, data.userExperience, data.dataVisibility].filter(Boolean);
+    const avg = dims.length > 0 ? Math.round(dims.reduce((a: number, b: number) => a + b, 0) / dims.length) : null;
+    return db.insert(scenarioScores).values({
+      projectId: data.projectId, scenarioId: data.scenarioId, vendorId: data.vendorId,
+      processFit: data.processFit || null, automationLevel: data.automationLevel || null,
+      configComplexity: data.configComplexity || null, userExperience: data.userExperience || null,
+      dataVisibility: data.dataVisibility || null, overallScore: data.overallScore || avg,
+      notes: data.notes || null, strengths: data.strengths || null, concerns: data.concerns || null,
+      evidenceNotes: data.evidenceNotes || null, evaluatedBy: data.evaluatedBy || null,
+      evaluatedAt: new Date().toISOString(), createdAt: new Date().toISOString(),
+    }).returning().get();
+  }
+
+  getScenarioScores(projectId: number, vendorId?: number): ScenarioScore[] {
+    if (vendorId) {
+      return db.select().from(scenarioScores).where(and(eq(scenarioScores.projectId, projectId), eq(scenarioScores.vendorId, vendorId))).all();
+    }
+    return db.select().from(scenarioScores).where(eq(scenarioScores.projectId, projectId)).all();
+  }
+
+  getScenarioScore(scenarioId: number, vendorId: number): ScenarioScore | undefined {
+    return db.select().from(scenarioScores).where(and(eq(scenarioScores.scenarioId, scenarioId), eq(scenarioScores.vendorId, vendorId))).get();
+  }
+
+  updateScenarioScore(id: number, data: any): ScenarioScore | undefined {
+    const dims = [data.processFit, data.automationLevel, data.configComplexity, data.userExperience, data.dataVisibility].filter(Boolean);
+    if (dims.length > 0 && !data.overallScore) data.overallScore = Math.round(dims.reduce((a: number, b: number) => a + b, 0) / dims.length);
+    data.evaluatedAt = new Date().toISOString();
+    return db.update(scenarioScores).set(data).where(eq(scenarioScores.id, id)).returning().get();
+  }
+
+  deleteScenarioScore(id: number): void {
+    db.delete(scenarioScores).where(eq(scenarioScores.id, id)).run();
   }
 
   // ==================== Activity Log ====================

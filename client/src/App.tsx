@@ -26,6 +26,7 @@ import Portfolio from "@/pages/portfolio";
 import VendorMonitoringPage from "@/pages/vendor-monitoring";
 import AboutPage from "@/pages/about";
 import AdminPage from "@/pages/admin";
+import OutcomesPage from "@/pages/outcomes";
 import LoginPage from "@/pages/login";
 
 const sidebarStyle = {
@@ -51,6 +52,7 @@ function AppLayout() {
               <Route path="/projects/:id/health-check" component={HealthCheckPage} />
               <Route path="/projects/:id/client-profile" component={ClientProfilePage} />
               <Route path="/projects/:id/discovery" component={DiscoveryPage} />
+              <Route path="/projects/:id/outcomes" component={OutcomesPage} />
               <Route path="/projects/:id/future-state" component={FutureStatePage} />
               <Route path="/clients/:id/profile" component={ClientProfilePage} />
               <Route path="/projects/:id" component={ProjectView} />

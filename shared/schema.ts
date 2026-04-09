@@ -674,6 +674,71 @@ export type InsertDiscoveryPainPoint = z.infer<typeof insertDiscoveryPainPointSc
 export type ProcessTransformation = typeof processTransformations.$inferSelect;
 export type InsertProcessTransformation = z.infer<typeof insertProcessTransformationSchema>;
 
+// ==================== OUTCOMES & SCENARIOS ====================
+
+export const outcomes = sqliteTable("outcomes", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  projectId: integer("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  category: text("category").notNull(),
+  sourcePainPointIds: text("source_pain_point_ids"),
+  currentState: text("current_state"),
+  targetState: text("target_state"),
+  targetKpi: text("target_kpi"),
+  currentKpi: text("current_kpi"),
+  kpiUnit: text("kpi_unit"),
+  priority: text("priority").notNull().default("high"),
+  status: text("status").notNull().default("draft"),
+  sortOrder: integer("sort_order").default(0),
+  createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
+});
+
+export const demoScenarios = sqliteTable("demo_scenarios", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  projectId: integer("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  outcomeId: integer("outcome_id").notNull().references(() => outcomes.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  narrative: text("narrative").notNull(),
+  setupInstructions: text("setup_instructions"),
+  walkthrough: text("walkthrough"),
+  successCriteria: text("success_criteria"),
+  estimatedMinutes: integer("estimated_minutes").default(15),
+  functionalArea: text("functional_area"),
+  sortOrder: integer("sort_order").default(0),
+  createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
+});
+
+export const scenarioScores = sqliteTable("scenario_scores", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  projectId: integer("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  scenarioId: integer("scenario_id").notNull().references(() => demoScenarios.id, { onDelete: "cascade" }),
+  vendorId: integer("vendor_id").notNull().references(() => vendors.id),
+  processFit: integer("process_fit"),
+  automationLevel: integer("automation_level"),
+  configComplexity: integer("config_complexity"),
+  userExperience: integer("user_experience"),
+  dataVisibility: integer("data_visibility"),
+  overallScore: integer("overall_score"),
+  notes: text("notes"),
+  strengths: text("strengths"),
+  concerns: text("concerns"),
+  evidenceNotes: text("evidence_notes"),
+  evaluatedBy: text("evaluated_by"),
+  evaluatedAt: text("evaluated_at"),
+  createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
+});
+
+export const insertOutcomeSchema = createInsertSchema(outcomes).omit({ id: true, createdAt: true });
+export const insertDemoScenarioSchema = createInsertSchema(demoScenarios).omit({ id: true, createdAt: true });
+export const insertScenarioScoreSchema = createInsertSchema(scenarioScores).omit({ id: true, createdAt: true });
+export type Outcome = typeof outcomes.$inferSelect;
+export type InsertOutcome = z.infer<typeof insertOutcomeSchema>;
+export type DemoScenario = typeof demoScenarios.$inferSelect;
+export type InsertDemoScenario = z.infer<typeof insertDemoScenarioSchema>;
+export type ScenarioScore = typeof scenarioScores.$inferSelect;
+export type InsertScenarioScore = z.infer<typeof insertScenarioScoreSchema>;
+
 // ==================== PROJECT DOCUMENTS ====================
 
 export const projectDocuments = sqliteTable("project_documents", {
