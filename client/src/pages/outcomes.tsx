@@ -51,6 +51,9 @@ export default function OutcomesPage() {
   const { data: scorecard } = useQuery<any>({ queryKey: ["/api/projects", projectId, "outcome-scorecard"], queryFn: () => apiRequest("GET", `/api/projects/${projectId}/outcome-scorecard`).then(r => r.json()), enabled: !!projectId });
   const { data: allScores = [] } = useQuery<any[]>({ queryKey: ["/api/projects", projectId, "scenario-scores"], queryFn: () => apiRequest("GET", `/api/projects/${projectId}/scenario-scores`).then(r => r.json()), enabled: !!projectId });
 
+  const { data: requirements = [] } = useQuery<any[]>({ queryKey: ["/api/projects", projectId, "requirements"], queryFn: () => apiRequest("GET", `/api/projects/${projectId}/requirements`).then(r => r.json()), enabled: !!projectId });
+  const { data: unifiedEval } = useQuery<any>({ queryKey: ["/api/projects", projectId, "unified-evaluation"], queryFn: () => apiRequest("GET", `/api/projects/${projectId}/unified-evaluation`).then(r => r.json()), enabled: !!projectId });
+
   const [outcomeDialog, setOutcomeDialog] = useState<{ open: boolean; editId?: number; form: any }>({ open: false, form: {} });
   const [selectedVendorId, setSelectedVendorId] = useState<string>("");
 
@@ -59,6 +62,7 @@ export default function OutcomesPage() {
     queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "scenarios"] });
     queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "scenario-scores"] });
     queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "outcome-scorecard"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "unified-evaluation"] });
   };
 
   const generateOutcomes = useMutation({
@@ -177,8 +181,21 @@ export default function OutcomesPage() {
                             </div>
                           )}
 
-                          <div className="flex items-center gap-3 mt-2 text-[11px] text-muted-foreground">
+                          <div className="flex items-center gap-3 mt-2 text-[11px] text-muted-foreground flex-wrap">
                             <span>{scenarioCount} scenario{scenarioCount !== 1 ? "s" : ""}</span>
+                            {(() => {
+                              const linkedIds = parseJson(o.linkedRequirementIds);
+                              const linked = requirements.filter((r: any) => linkedIds.includes(r.id));
+                              return linked.length > 0 ? (
+                                <span className="flex items-center gap-1 flex-wrap">
+                                  <span className="text-muted-foreground/60">|</span>
+                                  {linked.slice(0, 6).map((r: any) => (
+                                    <Badge key={r.id} variant="outline" className="text-[8px] px-1 py-0 font-mono">{r.reqNumber}</Badge>
+                                  ))}
+                                  {linked.length > 6 && <span>+{linked.length - 6} more</span>}
+                                </span>
+                              ) : null;
+                            })()}
                           </div>
                         </CardContent>
                       </Card>
@@ -341,6 +358,7 @@ export default function OutcomesPage() {
                               {existing?.overallScore && (
                                 <p className="text-xs text-muted-foreground">Overall: <span className="font-bold">{existing.overallScore}/5</span></p>
                               )}
+                              <VendorKbHint scenarioId={s.id} vendorId={parseInt(selectedVendorId)} />
                             </CardContent>
                           </Card>
                         );
@@ -402,9 +420,39 @@ export default function OutcomesPage() {
                     </table>
                   </div>
 
-                  <div className="text-[10px] text-muted-foreground">
+                  <div className="text-[10px] text-muted-foreground mb-6">
                     Priority weighting: Critical (4x) | High (3x) | Medium (2x) | Low (1x)
                   </div>
+
+                  {/* Unified Evaluation */}
+                  {unifiedEval?.vendors?.length > 0 && (
+                    <div className="space-y-4">
+                      <h3 className="text-sm font-semibold flex items-center gap-2"><BarChart3 className="w-4 h-4" />Unified Vendor Evaluation</h3>
+                      <p className="text-xs text-muted-foreground">Combined score: {unifiedEval.weights.requirements}% requirements matrix + {unifiedEval.weights.outcomes}% outcome evaluation</p>
+                      <div className="space-y-2">
+                        {unifiedEval.vendors.map((v: any) => (
+                          <div key={v.vendorId} className="flex items-center gap-3 p-3 rounded-lg border">
+                            <div className="flex-1">
+                              <p className="text-sm font-medium">{v.vendorName}</p>
+                              <div className="flex items-center gap-4 mt-1 text-[11px] text-muted-foreground">
+                                <span>Requirements: {v.requirementScore}%</span>
+                                {v.outcomeScore !== null && <span>Outcomes: {v.outcomeScore}%</span>}
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <span className={`text-2xl font-bold ${v.combinedScore >= 80 ? "text-emerald-600" : v.combinedScore >= 60 ? "text-amber-600" : "text-red-600"}`}>
+                                {v.combinedScore}%
+                              </span>
+                              <p className="text-[10px] text-muted-foreground">combined</p>
+                            </div>
+                            <div className="w-24 h-2 rounded-full bg-muted overflow-hidden">
+                              <div className={`h-full rounded-full ${v.combinedScore >= 80 ? "bg-emerald-500" : v.combinedScore >= 60 ? "bg-amber-500" : "bg-red-500"}`} style={{ width: `${v.combinedScore}%` }} />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <Card className="p-8 text-center">
@@ -478,5 +526,34 @@ export default function OutcomesPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+function VendorKbHint({ scenarioId, vendorId }: { scenarioId: number; vendorId: number }) {
+  const [open, setOpen] = useState(false);
+  const { data: context } = useQuery<any>({
+    queryKey: ["/api/scenarios", scenarioId, "vendor-context", vendorId],
+    queryFn: () => apiRequest("GET", `/api/scenarios/${scenarioId}/vendor-context/${vendorId}`).then(r => r.json()),
+    enabled: open && !!vendorId,
+    staleTime: 60000,
+  });
+
+  return (
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <CollapsibleTrigger className="text-[10px] text-accent flex items-center gap-1 hover:underline mt-1">
+        <ChevronRight className={`w-3 h-3 transition-transform ${open ? "rotate-90" : ""}`} />
+        Vendor Knowledge Base
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        {context?.hasData ? (
+          <div className="mt-1.5 p-2 rounded bg-muted/30 text-[10px] text-muted-foreground space-y-1 max-h-32 overflow-y-auto">
+            {context.capabilities?.map((c: string, i: number) => <p key={i}>{c}</p>)}
+            {context.processDetails?.slice(0, 5).map((d: string, i: number) => <p key={`d${i}`} className="font-mono">{d}</p>)}
+          </div>
+        ) : (
+          <p className="mt-1 text-[10px] text-muted-foreground italic">No KB data for this vendor/area.</p>
+        )}
+      </CollapsibleContent>
+    </Collapsible>
   );
 }

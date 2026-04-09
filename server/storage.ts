@@ -664,6 +664,7 @@ try { sqlite.exec(`ALTER TABLE raid_items ADD COLUMN source_doc_id INTEGER`); } 
 try { sqlite.exec(`ALTER TABLE budget_tracking ADD COLUMN source_doc_id INTEGER`); } catch {}
 try { sqlite.exec(`ALTER TABLE schedule_tracking ADD COLUMN source_doc_id INTEGER`); } catch {}
 try { sqlite.exec(`ALTER TABLE health_check_assessments ADD COLUMN is_manual INTEGER DEFAULT 0`); } catch {}
+try { sqlite.exec(`ALTER TABLE outcomes ADD COLUMN linked_requirement_ids TEXT`); } catch {}
 
 // Enable foreign keys
 sqlite.pragma("foreign_keys = ON");

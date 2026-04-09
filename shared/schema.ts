@@ -683,6 +683,7 @@ export const outcomes = sqliteTable("outcomes", {
   description: text("description").notNull(),
   category: text("category").notNull(),
   sourcePainPointIds: text("source_pain_point_ids"),
+  linkedRequirementIds: text("linked_requirement_ids"), // JSON array of requirement IDs
   currentState: text("current_state"),
   targetState: text("target_state"),
   targetKpi: text("target_kpi"),

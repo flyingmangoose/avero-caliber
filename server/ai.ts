@@ -1232,4 +1232,70 @@ Make scenarios specific to government processes. Return ONLY valid JSON.`, undef
   try { return JSON.parse(jsonMatch[0]); } catch { return { scenarios: [] }; }
 }
 
+export async function mapOutcomesToRequirements(
+  outcomes: Array<{ id: number; title: string; description: string; category: string }>,
+  requirements: Array<{ id: number; reqNumber: string; functionalArea: string; description: string; category: string }>
+): Promise<Record<number, number[]>> {
+  // Build concise lists for the LLM
+  const outcomeList = outcomes.map(o => `${o.id}: [${o.category}] ${o.title} — ${o.description}`).join("\n");
+  const reqList = requirements.slice(0, 200).map(r => `${r.id}|${r.reqNumber}: [${r.functionalArea}] ${r.description}`).join("\n");
+
+  const text = await llmCall(`You are mapping strategic outcomes to specific ERP requirements.
+
+OUTCOMES:
+${outcomeList}
+
+REQUIREMENTS (id|reqNumber: description):
+${reqList}
+
+For each outcome, identify the 3-10 most relevant requirements that directly support achieving that outcome.
+
+Return JSON mapping outcome ID to array of requirement IDs:
+{
+  "mapping": {
+    "1": [101, 102, 105],
+    "2": [203, 204]
+  }
+}
+Return ONLY valid JSON.`, undefined, 4096);
+
+  const jsonMatch = text.match(/\{[\s\S]*"mapping"[\s\S]*\}/);
+  if (!jsonMatch) return {};
+  try {
+    const parsed = JSON.parse(jsonMatch[0]);
+    const result: Record<number, number[]> = {};
+    for (const [outcomeId, reqIds] of Object.entries(parsed.mapping || {})) {
+      result[parseInt(outcomeId)] = (reqIds as any[]).map(Number).filter(id => requirements.some(r => r.id === id));
+    }
+    return result;
+  } catch { return {}; }
+}
+
+export function getVendorKbContext(
+  vendorPlatform: string,
+  functionalArea: string,
+  capabilities: any[]
+): string {
+  const relevant = capabilities.filter(c =>
+    c.vendorPlatform === vendorPlatform &&
+    (c.module === functionalArea || c.processArea?.toLowerCase().includes(functionalArea.toLowerCase()))
+  );
+  if (relevant.length === 0) return "No knowledge base data available for this vendor/area.";
+
+  return relevant.map(c => {
+    let summary = `${c.processArea}: ${c.workflowDescription || ""}`;
+    if (c.maturityRating) summary += ` (Maturity: ${c.maturityRating}/5)`;
+    if (c.automationLevel) summary += ` [${c.automationLevel}]`;
+    try {
+      const diffs = JSON.parse(c.differentiators || "[]");
+      if (diffs.length) summary += `\nStrengths: ${diffs.join(", ")}`;
+    } catch {}
+    try {
+      const lims = JSON.parse(c.limitations || "[]");
+      if (lims.length) summary += `\nLimitations: ${lims.join(", ")}`;
+    } catch {}
+    return summary;
+  }).join("\n\n");
+}
+
 export { xai, CHAT_SYSTEM_PROMPT, PROPOSAL_ANALYSIS_PROMPT, llmCall, llmStream };

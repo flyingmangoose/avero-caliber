@@ -4426,8 +4426,29 @@ Write in professional consulting tone covering: overall posture assessment, key 
         });
         created.push(outcome);
       }
+      // Auto-map outcomes to requirements
+      const requirements = storage.getRequirements(projectId);
+      if (requirements.length > 0 && created.length > 0) {
+        try {
+          const { mapOutcomesToRequirements } = await import("./ai");
+          const mapping = await mapOutcomesToRequirements(
+            created.map(o => ({ id: o.id, title: o.title, description: o.description, category: o.category })),
+            requirements.map(r => ({ id: r.id, reqNumber: r.reqNumber, functionalArea: r.functionalArea, description: r.description, category: r.category }))
+          );
+          for (const [outcomeId, reqIds] of Object.entries(mapping)) {
+            if (reqIds.length > 0) {
+              storage.updateOutcome(parseInt(outcomeId as string), { linkedRequirementIds: JSON.stringify(reqIds) });
+            }
+          }
+        } catch (mapErr: any) {
+          console.error("Outcome-requirement mapping error:", mapErr.message);
+        }
+      }
+
       logAction(req, "generated_outcomes", projectId, `${created.length} outcomes from ${painPoints.length} pain points`);
-      res.json({ outcomes: created, count: created.length });
+      // Re-fetch to include linked requirements
+      const final = storage.getOutcomes(projectId);
+      res.json({ outcomes: final, count: created.length });
     } catch (err: any) {
       console.error("Outcome generation error:", err);
       res.status(500).json({ error: err.message });
@@ -4519,6 +4540,43 @@ Write in professional consulting tone covering: overall posture assessment, key 
     res.json({ success: true });
   });
 
+  // Vendor KB context for a scenario
+  app.get("/api/scenarios/:scenarioId/vendor-context/:vendorId", (req, res) => {
+    const scenario = storage.getDemoScenario(parseInt(req.params.scenarioId));
+    if (!scenario) return res.status(404).json({ error: "Scenario not found" });
+    const outcome = storage.getOutcome(scenario.outcomeId);
+    const vendor = storage.getVendors().find(v => v.id === parseInt(req.params.vendorId));
+    if (!vendor) return res.status(404).json({ error: "Vendor not found" });
+
+    const capabilities = storage.getVendorCapabilities({ platform: vendor.shortName?.toLowerCase() });
+    const processDetails = storage.getProcessDetails({ platform: vendor.shortName?.toLowerCase(), module: scenario.functionalArea || outcome?.category });
+
+    // Build context
+    const capSummary = capabilities.filter(c =>
+      c.module?.toLowerCase().includes((scenario.functionalArea || outcome?.category || "").toLowerCase()) ||
+      c.processArea?.toLowerCase().includes((scenario.functionalArea || outcome?.category || "").toLowerCase())
+    ).map(c => {
+      let s = `${c.processArea || c.module}: ${c.workflowDescription || ""}`;
+      if (c.maturityRating) s += ` (Maturity: ${c.maturityRating}/5)`;
+      if (c.automationLevel) s += ` [${c.automationLevel}]`;
+      try { const d = JSON.parse(c.differentiators || "[]"); if (d.length) s += ` | Strengths: ${d.join(", ")}`; } catch {}
+      try { const l = JSON.parse(c.limitations || "[]"); if (l.length) s += ` | Limitations: ${l.join(", ")}`; } catch {}
+      return s;
+    });
+
+    const detailSummary = processDetails.map(d =>
+      `${d.reqReference || ""}: ${d.capability} [${d.score || "?"}] — ${d.howHandled || ""}`
+    );
+
+    res.json({
+      vendorName: vendor.name,
+      vendorPlatform: vendor.shortName,
+      capabilities: capSummary,
+      processDetails: detailSummary,
+      hasData: capSummary.length > 0 || detailSummary.length > 0,
+    });
+  });
+
   // Outcome Scorecard (computed)
   app.get("/api/projects/:id/outcome-scorecard", (req, res) => {
     const projectId = parseInt(req.params.id);
@@ -4575,6 +4633,71 @@ Write in professional consulting tone covering: overall posture assessment, key 
     });
 
     res.json({ outcomes: outcomeResults, vendorTotals });
+  });
+
+  // Unified evaluation: combines requirements matrix + outcome scores
+  app.get("/api/projects/:id/unified-evaluation", (req, res) => {
+    const projectId = parseInt(req.params.id);
+    const evaluation = storage.calculateEvaluation(projectId);
+    const allOutcomes = storage.getOutcomes(projectId);
+    const allScenarios = storage.getDemoScenariosByProject(projectId);
+    const allScores = storage.getScenarioScores(projectId);
+    const settings = storage.getProjectVendorSettings(projectId);
+    const selectedVendorIds: number[] = settings ? JSON.parse(settings.selectedVendors) : [];
+    const allVendors = storage.getVendors().filter(v => selectedVendorIds.includes(v.id));
+
+    const priorityWeight: Record<string, number> = { critical: 4, high: 3, medium: 2, low: 1 };
+
+    const vendorResults = allVendors.map(v => {
+      // Requirements matrix score (from existing evaluation)
+      const evalVendor = evaluation.vendors.find((ev: any) => ev.vendorId === v.id);
+      const reqScore = evalVendor?.weightedScore || 0;
+      const reqMaxScore = evalVendor?.maxPossibleScore || 1;
+      const reqPct = Math.round((reqScore / reqMaxScore) * 100);
+
+      // Outcome score
+      let outcomeWeightedSum = 0, outcomeWeightTotal = 0;
+      for (const o of allOutcomes) {
+        const scenarios = allScenarios.filter(s => s.outcomeId === o.id);
+        const scores = allScores.filter(s => scenarios.some(sc => sc.id === s.scenarioId) && s.vendorId === v.id);
+        const avgOverall = scores.length > 0
+          ? scores.reduce((sum, s) => sum + (s.overallScore || 0), 0) / scores.length
+          : 0;
+        if (avgOverall > 0) {
+          const w = priorityWeight[o.priority] || 2;
+          outcomeWeightedSum += avgOverall * w;
+          outcomeWeightTotal += w;
+        }
+      }
+      const outcomePct = outcomeWeightTotal > 0 ? Math.round((outcomeWeightedSum / outcomeWeightTotal / 5) * 100) : null;
+
+      // Combined score (60% requirements, 40% outcomes — if outcomes exist)
+      let combinedPct = reqPct;
+      if (outcomePct !== null) {
+        combinedPct = Math.round(reqPct * 0.6 + outcomePct * 0.4);
+      }
+
+      return {
+        vendorId: v.id, vendorName: v.name, vendorShortName: v.shortName,
+        requirementScore: reqPct,
+        outcomeScore: outcomePct,
+        combinedScore: combinedPct,
+        reqDetails: { score: reqScore, maxScore: reqMaxScore, responseBreakdown: evalVendor?.responseBreakdown },
+        outcomeDetails: {
+          totalOutcomes: allOutcomes.length,
+          scoredOutcomes: allOutcomes.filter(o => {
+            const scenarios = allScenarios.filter(s => s.outcomeId === o.id);
+            return allScores.some(s => scenarios.some(sc => sc.id === s.scenarioId) && s.vendorId === v.id);
+          }).length,
+        },
+      };
+    }).sort((a, b) => b.combinedScore - a.combinedScore);
+
+    res.json({
+      vendors: vendorResults,
+      weights: { requirements: 60, outcomes: 40 },
+      hasOutcomeScores: allScores.length > 0,
+    });
   });
 
   // ==================== HEALTH CHECK DOCUMENT UPLOAD & ANALYSIS ====================
