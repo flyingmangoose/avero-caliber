@@ -14,7 +14,13 @@ export default function AboutPage() {
           {/* Product overview */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-sm">Caliber by Avero Advisors</CardTitle>
+              <div className="flex items-center gap-3">
+                <img src="/avero-logo.png" alt="Avero Advisors" className="h-10" />
+                <div>
+                  <CardTitle className="text-sm">Caliber</CardTitle>
+                  <p className="text-xs text-muted-foreground">by Avero Advisors</p>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground leading-relaxed">

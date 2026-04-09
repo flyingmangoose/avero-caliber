@@ -70,8 +70,9 @@ export function AppSidebar() {
   return (
     <Sidebar data-testid="sidebar-nav">
       <SidebarHeader className="px-4 py-4">
-        <Link href="/" className="flex items-center gap-2.5 no-underline">
-          <AveroLogo />
+        <Link href="/" className="flex items-center gap-2 no-underline">
+          <img src="/avero-logo.png" alt="Avero" className="h-6" />
+          <span className="text-xs font-medium text-sidebar-foreground/50">|</span>
           <span className="text-sm font-semibold tracking-tight text-sidebar-foreground/90">Caliber</span>
         </Link>
       </SidebarHeader>

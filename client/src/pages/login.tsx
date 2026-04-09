@@ -2,14 +2,9 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
       <div className="w-full max-w-sm mx-auto px-6">
-        <div className="text-center mb-8">
-          <div className="w-12 h-12 rounded-xl bg-foreground mx-auto mb-4 flex items-center justify-center">
-            <svg viewBox="0 0 20 20" fill="none" className="w-7 h-7">
-              <path d="M6 16L10 4L14 16" stroke="hsl(var(--background))" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-              <line x1="7.5" y1="12" x2="12.5" y2="12" stroke="hsl(var(--background))" strokeWidth="1.8" strokeLinecap="round" />
-            </svg>
-          </div>
-          <h1 className="text-xl font-semibold tracking-tight">Caliber</h1>
+        <div className="text-center mb-10">
+          <img src="/avero-logo.png" alt="Avero Advisors" className="h-16 mx-auto mb-6" />
+          <h1 className="text-lg font-semibold tracking-tight">Caliber</h1>
           <p className="text-sm text-muted-foreground mt-1">Sign in to continue</p>
         </div>
 
@@ -26,8 +21,8 @@ export default function LoginPage() {
           Continue with Google
         </a>
 
-        <p className="text-[11px] text-muted-foreground text-center mt-6">
-          Avero Advisors
+        <p className="text-[11px] text-muted-foreground text-center mt-8">
+          Powered by Avero Advisors
         </p>
       </div>
     </div>
