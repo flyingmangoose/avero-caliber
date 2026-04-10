@@ -112,6 +112,8 @@ export function AppSidebar() {
             <SidebarGroupContent>
               <SidebarMenu>
                 {/* Client Profile - now links to client level */}
+                {/* ── DISCOVERY ── */}
+                <p className="text-[9px] font-semibold text-sidebar-foreground/40 uppercase tracking-widest px-2.5 pt-3 pb-1">Discovery</p>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={location === `/clients/${clientId}/profile`}>
                     <Link href={clientId ? `/clients/${clientId}/profile` : `/projects/${projectId}/client-profile`} data-testid="nav-client-profile">
@@ -120,8 +122,6 @@ export function AppSidebar() {
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-
-                {/* Discovery */}
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={location === `/projects/${projectId}/discovery`}>
                     <Link href={`/projects/${projectId}/discovery`} data-testid="nav-discovery">
@@ -130,8 +130,6 @@ export function AppSidebar() {
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-
-                {/* Future State */}
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={location === `/projects/${projectId}/future-state`}>
                     <Link href={`/projects/${projectId}/future-state`} data-testid="nav-future-state">
@@ -141,7 +139,8 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
 
-                {/* Outcomes */}
+                {/* ── SELECTION ── */}
+                <p className="text-[9px] font-semibold text-sidebar-foreground/40 uppercase tracking-widest px-2.5 pt-3 pb-1">Selection</p>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={location === `/projects/${projectId}/outcomes`}>
                     <Link href={`/projects/${projectId}/outcomes`} data-testid="nav-outcomes">
@@ -150,14 +149,11 @@ export function AppSidebar() {
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-
-                {/* Selection module items */}
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={location === `/projects/${projectId}`}>
                     <Link href={`/projects/${projectId}`} data-testid="nav-project-requirements">
                       <FolderOpen className="w-4 h-4" />
                       <span>Requirements</span>
-                      {!hasModule("selection") && <Badge className="ml-auto text-[8px] px-1 py-0 bg-muted text-muted-foreground">SEL</Badge>}
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -166,12 +162,17 @@ export function AppSidebar() {
                     <Link href={`/projects/${projectId}/evaluation`} data-testid="nav-vendor-evaluation">
                       <BarChart3 className="w-4 h-4" />
                       <span>Vendor Evaluation</span>
-                      {!hasModule("selection") && <Badge className="ml-auto text-[8px] px-1 py-0 bg-muted text-muted-foreground">SEL</Badge>}
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-
-                {/* Evaluation Scorecard */}
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={location === `/projects/${projectId}/stakeholder-feedback`}>
+                    <Link href={`/projects/${projectId}/stakeholder-feedback`} data-testid="nav-stakeholder-feedback">
+                      <MessageSquare className="w-4 h-4" />
+                      <span>Stakeholder Feedback</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={location === `/projects/${projectId}/scorecard`}>
                     <Link href={`/projects/${projectId}/scorecard`} data-testid="nav-scorecard">
@@ -181,22 +182,21 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
 
-                {/* IV&V module items */}
+                {/* ── IMPLEMENTATION ── */}
+                <p className="text-[9px] font-semibold text-sidebar-foreground/40 uppercase tracking-widest px-2.5 pt-3 pb-1">Implementation</p>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={location === `/projects/${projectId}/compliance`}>
                     <Link href={`/projects/${projectId}/compliance`} data-testid="nav-contract-compliance">
                       <Shield className="w-4 h-4" />
                       <span>Contract Compliance</span>
-                      {!hasModule("ivv") && <Badge className="ml-auto text-[8px] px-1 py-0 bg-muted text-muted-foreground">IV&V</Badge>}
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={location === `/projects/${projectId}/stakeholder-feedback`}>
-                    <Link href={`/projects/${projectId}/stakeholder-feedback`} data-testid="nav-stakeholder-feedback">
-                      <MessageSquare className="w-4 h-4" />
-                      <span>Stakeholder Feedback</span>
-                      {!hasModule("ivv") && <Badge className="ml-auto text-[8px] px-1 py-0 bg-muted text-muted-foreground">IV&V</Badge>}
+                  <SidebarMenuButton asChild isActive={location === `/projects/${projectId}/health-check`}>
+                    <Link href={`/projects/${projectId}/health-check`} data-testid="nav-health-check">
+                      <Stethoscope className="w-4 h-4" />
+                      <span>Health Check</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -205,18 +205,6 @@ export function AppSidebar() {
                     <Link href={`/projects/${projectId}/go-live`} data-testid="nav-go-live">
                       <Rocket className="w-4 h-4" />
                       <span>Go-Live Readiness</span>
-                      {!hasModule("ivv") && <Badge className="ml-auto text-[8px] px-1 py-0 bg-muted text-muted-foreground">IV&V</Badge>}
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-
-                {/* Health Check module items */}
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={location === `/projects/${projectId}/health-check`}>
-                    <Link href={`/projects/${projectId}/health-check`} data-testid="nav-health-check">
-                      <Stethoscope className="w-4 h-4" />
-                      <span>Health Check</span>
-                      {!hasModule("health_check") && <Badge className="ml-auto text-[8px] px-1 py-0 bg-muted text-muted-foreground">HC</Badge>}
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
