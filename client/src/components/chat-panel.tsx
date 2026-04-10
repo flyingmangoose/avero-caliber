@@ -14,16 +14,16 @@ interface ChatMessage {
 }
 
 interface ChatPanelProps {
-  projectId: number;
+  projectId: number | string;
   projectName: string;
 }
 
 const SUGGESTIONS = [
-  "Summarize the top vendors and their differentiators",
-  "What are the biggest gaps across all vendors?",
+  "Summarize the current project health and top risks",
+  "What are the critical issues that need attention?",
   "Write an executive summary for the steering committee",
-  "Compare implementation costs",
-  "Identify top risks with the leading vendor",
+  "What's the go-live readiness status?",
+  "Compare vendor strengths and weaknesses",
 ];
 
 function renderMarkdown(text: string): JSX.Element {
@@ -300,7 +300,7 @@ export function ChatPanel({ projectId, projectName }: ChatPanelProps) {
                     <Sparkles className="w-6 h-6 text-accent" />
                   </div>
                   <h3 className="text-sm font-semibold text-foreground">How can I help?</h3>
-                  <p className="text-xs text-muted-foreground mt-1">Ask me anything about your vendor evaluation</p>
+                  <p className="text-xs text-muted-foreground mt-1">Ask me anything about your project</p>
                 </div>
                 <div className="flex flex-wrap gap-2 justify-center px-2">
                   {SUGGESTIONS.map((s, i) => (
@@ -356,7 +356,7 @@ export function ChatPanel({ projectId, projectName }: ChatPanelProps) {
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Ask about vendors, requirements, gaps..."
+                placeholder="Ask about project health, risks, vendors..."
                 rows={1}
                 className="flex-1 resize-none rounded-lg border border-border/60 bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-accent/50 placeholder:text-muted-foreground"
                 disabled={isStreaming}
