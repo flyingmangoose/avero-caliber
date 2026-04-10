@@ -1974,7 +1974,6 @@ export default function ProjectView() {
           )}
         </DialogContent>
       </Dialog>
-      <ChatPanel projectId={projectId} projectName={project?.name || "Project"} />
     </div>
   );
 }

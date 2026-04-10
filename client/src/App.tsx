@@ -29,6 +29,7 @@ import AdminPage from "@/pages/admin";
 import OutcomesPage from "@/pages/outcomes";
 import EvaluationScorecardPage from "@/pages/evaluation-scorecard";
 import LoginPage from "@/pages/login";
+import { ChatPanel } from "@/components/chat-panel";
 
 const sidebarStyle = {
   "--sidebar-width": "15rem",
@@ -36,6 +37,11 @@ const sidebarStyle = {
 };
 
 function AppLayout() {
+  // Extract project ID from hash URL for persistent chat
+  const hashPath = typeof window !== "undefined" ? window.location.hash.replace("#", "") : "";
+  const projectMatch = hashPath.match(/\/projects\/(\d+)/);
+  const chatProjectId = projectMatch ? projectMatch[1] : null;
+
   return (
     <SidebarProvider style={sidebarStyle as React.CSSProperties}>
       <div className="flex h-screen w-full overflow-hidden">
@@ -68,6 +74,7 @@ function AppLayout() {
           </main>
         </div>
       </div>
+      {chatProjectId && <ChatPanel projectId={chatProjectId} projectName="Project" />}
     </SidebarProvider>
   );
 }

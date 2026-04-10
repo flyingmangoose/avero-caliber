@@ -578,7 +578,6 @@ export default function StakeholderFeedback() {
           )}
         </div>
       </ScrollArea>
-      <ChatPanel projectId={projectId} projectName={project?.name || "Project"} />
     </div>
   );
 }

@@ -1313,6 +1313,83 @@ Only include fields that are clearly present in the document. Return ONLY valid 
 
   // ==================== PORTFOLIO ANALYTICS ====================
 
+  // Program management portfolio view
+  app.get("/api/analytics/program-dashboard", (req, res) => {
+    const allProjectsRaw = storage.getProjects();
+    const user = getUserFromReq(req);
+    const isAdmin = !user || user.role === "admin";
+    const userProjectIds = user ? storage.getUserProjects(user.id) : [];
+    const allProjects = allProjectsRaw.filter(p => {
+      if (isAdmin) return true;
+      if (userProjectIds.includes(p.id)) return true;
+      if ((p as any).createdBy === user?.id) return true;
+      const members = storage.getProjectMembers(p.id);
+      return members.length === 0;
+    });
+
+    const projects = allProjects.map(p => {
+      const client = p.clientId ? storage.getClient(p.clientId) : undefined;
+      const assessments = storage.getHealthCheckAssessments(p.id);
+      const raidItems = storage.getRaidItems(p.id);
+      const budgetSummary = storage.getBudgetSummary(p.id);
+      const scheduleItems = storage.getScheduleEntries(p.id);
+      const baseline = storage.getProjectBaseline(p.id);
+      const outcomes = storage.getOutcomes(p.id);
+      const reqs = storage.getRequirements(p.id);
+
+      // Overall health from assessments
+      const ratingOrder = ["critical", "high", "medium", "low", "satisfactory"];
+      const ratings = assessments.filter(a => a.overallRating).map(a => a.overallRating!);
+      const worstRating = ratings.sort((a, b) => ratingOrder.indexOf(a) - ratingOrder.indexOf(b))[0] || null;
+
+      // RAID summary
+      const openCritical = raidItems.filter(r => r.status === "open" && r.severity === "critical").length;
+      const openHigh = raidItems.filter(r => r.status === "open" && r.severity === "high").length;
+      const openRisks = raidItems.filter(r => r.status === "open" && r.type === "risk").length;
+      const openIssues = raidItems.filter(r => r.status === "open" && r.type === "issue").length;
+
+      // Budget
+      const totalAuth = (budgetSummary.originalContract || 0) + (budgetSummary.totalChangeOrders || 0) + (budgetSummary.totalAdditionalFunding || 0);
+      const spendPct = totalAuth > 0 ? Math.round((budgetSummary.totalActualSpend || 0) / totalAuth * 100) : null;
+
+      // Schedule
+      const delayedMilestones = scheduleItems.filter(s => s.status === "delayed").length;
+      const totalMilestones = scheduleItems.length;
+
+      // Go-live
+      let goLiveDate = baseline?.goLiveDate || null;
+      let daysToGoLive = goLiveDate ? Math.ceil((new Date(goLiveDate).getTime() - Date.now()) / 86400000) : null;
+
+      // Modules
+      let modules: string[] = [];
+      try { modules = JSON.parse(p.engagementModules || "[]"); } catch {}
+
+      return {
+        id: p.id, name: p.name, status: p.status,
+        clientName: client?.name || null,
+        modules,
+        healthRating: worstRating,
+        openCritical, openHigh, openRisks, openIssues,
+        totalRaidItems: raidItems.length,
+        budgetSpendPct: spendPct,
+        budgetTotal: totalAuth,
+        budgetSpent: budgetSummary.totalActualSpend || 0,
+        delayedMilestones, totalMilestones,
+        goLiveDate, daysToGoLive,
+        outcomeCount: outcomes.length,
+        requirementCount: reqs.length,
+        assessmentCount: assessments.length,
+      };
+    });
+
+    // Aggregates
+    const totalCritical = projects.reduce((s, p) => s + p.openCritical, 0);
+    const totalHighRisks = projects.reduce((s, p) => s + p.openHigh, 0);
+    const projectsAtRisk = projects.filter(p => p.healthRating === "critical" || p.healthRating === "high").length;
+
+    res.json({ projects, aggregates: { totalCritical, totalHighRisks, projectsAtRisk, totalProjects: projects.length } });
+  });
+
   app.get("/api/analytics/portfolio", (req, res) => {
     const allProjectsRaw = storage.getProjects();
     // Filter by user access (same as dashboard)

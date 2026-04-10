@@ -2403,7 +2403,6 @@ export default function VendorEvaluation() {
         </DialogContent>
       </Dialog>
 
-      <ChatPanel projectId={projectId} projectName={project?.name || "Project"} />
     </div>
   );
 }
