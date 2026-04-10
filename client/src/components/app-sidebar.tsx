@@ -99,19 +99,22 @@ export function AppSidebar() {
         </SidebarGroup>
 
         {/* Project-context navigation */}
-        {projectId && (
           <SidebarGroup>
-            {client && (
+            {projectId && client && (
               <div className="px-3 pb-1">
                 <Link href={`/clients/${clientId}/profile`} className="text-xs font-semibold text-accent hover:underline truncate block">
                   {client.name}
                 </Link>
               </div>
             )}
+            {!projectId && (
+              <div className="px-3 py-2 mb-1 rounded-md bg-muted/40 mx-2">
+                <p className="text-[10px] text-muted-foreground text-center">Select or create a project to get started</p>
+              </div>
+            )}
             <SidebarGroupLabel className="text-sidebar-foreground/50 text-[10px] uppercase tracking-widest font-semibold">Project</SidebarGroupLabel>
             <SidebarGroupContent>
-              <SidebarMenu>
-                {/* Client Profile - now links to client level */}
+              <SidebarMenu className={projectId ? "" : "opacity-40 pointer-events-none"}>
                 {/* ── DISCOVERY ── */}
                 <p className="text-[9px] font-semibold text-sidebar-foreground/40 uppercase tracking-widest px-2.5 pt-2 pb-0.5">Discovery</p>
                 <SidebarMenuItem>
@@ -211,7 +214,6 @@ export function AppSidebar() {
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
-        )}
       </SidebarContent>
       <SidebarFooter className="px-3 py-2 border-t border-sidebar-border">
         <div className="flex items-center gap-1">

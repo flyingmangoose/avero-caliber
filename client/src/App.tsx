@@ -74,7 +74,7 @@ function AppLayout() {
           </main>
         </div>
       </div>
-      {chatProjectId && <ChatPanel projectId={chatProjectId} projectName="Project" />}
+      <ChatPanel projectId={chatProjectId || "0"} projectName={chatProjectId ? "Project" : "Caliber AI"} />
     </SidebarProvider>
   );
 }
