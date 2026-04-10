@@ -119,7 +119,15 @@ function renderInline(text: string): (string | JSX.Element)[] {
 }
 
 export function ChatPanel({ projectId, projectName }: ChatPanelProps) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(() => {
+    // Auto-open on first visit (per session)
+    const key = "caliber_chat_shown";
+    if (!sessionStorage.getItem(key)) {
+      sessionStorage.setItem(key, "1");
+      return true;
+    }
+    return false;
+  });
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
