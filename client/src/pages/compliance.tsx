@@ -70,6 +70,8 @@ import {
   Sparkles,
   Target,
   Bell,
+  Rocket,
+  ArrowRight,
 } from "lucide-react";
 import { ChatPanel } from "@/components/chat-panel";
 
@@ -2364,7 +2366,7 @@ export default function CompliancePage() {
               <TabsTrigger value="deviations" data-testid="tab-deviations">Deviations</TabsTrigger>
               <TabsTrigger value="evidence" data-testid="tab-evidence">Evidence Log</TabsTrigger>
               <TabsTrigger value="integrations" data-testid="tab-integrations">Integrations</TabsTrigger>
-              <TabsTrigger value="golive" data-testid="tab-golive">Go-Live Readiness</TabsTrigger>
+              <TabsTrigger value="golive" data-testid="tab-golive">Go-Live</TabsTrigger>
             </TabsList>
 
             <TabsContent value="baseline" className="mt-4">
@@ -2388,7 +2390,18 @@ export default function CompliancePage() {
             </TabsContent>
 
             <TabsContent value="golive" className="mt-4">
-              <GoLiveReadinessTab contractId={primaryContractId} />
+              <div className="flex flex-col items-center py-12 gap-4 text-center">
+                <Rocket className="w-10 h-10 text-muted-foreground/30" />
+                <div>
+                  <p className="text-sm font-medium">Go-Live Readiness has moved</p>
+                  <p className="text-xs text-muted-foreground mt-1">The Go-Live Readiness assessment now has its own page with AI-powered auto-scoring.</p>
+                </div>
+                <Link href={`/projects/${projectId}/go-live`}>
+                  <Button className="gap-2 text-xs">
+                    <Rocket className="w-3.5 h-3.5" />Open Go-Live Readiness<ArrowRight className="w-3.5 h-3.5" />
+                  </Button>
+                </Link>
+              </div>
             </TabsContent>
           </Tabs>
         </div>
