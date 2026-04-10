@@ -113,7 +113,7 @@ export function AppSidebar() {
               <SidebarMenu>
                 {/* Client Profile - now links to client level */}
                 {/* ── DISCOVERY ── */}
-                <p className="text-[9px] font-semibold text-sidebar-foreground/40 uppercase tracking-widest px-2.5 pt-3 pb-1">Discovery</p>
+                <p className="text-[9px] font-semibold text-sidebar-foreground/40 uppercase tracking-widest px-2.5 pt-2 pb-0.5">Discovery</p>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={location === `/clients/${clientId}/profile`}>
                     <Link href={clientId ? `/clients/${clientId}/profile` : `/projects/${projectId}/client-profile`} data-testid="nav-client-profile">
@@ -140,7 +140,7 @@ export function AppSidebar() {
                 </SidebarMenuItem>
 
                 {/* ── SELECTION ── */}
-                <p className="text-[9px] font-semibold text-sidebar-foreground/40 uppercase tracking-widest px-2.5 pt-3 pb-1">Selection</p>
+                <p className="text-[9px] font-semibold text-sidebar-foreground/40 uppercase tracking-widest px-2.5 pt-2 pb-0.5">Selection</p>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={location === `/projects/${projectId}/outcomes`}>
                     <Link href={`/projects/${projectId}/outcomes`} data-testid="nav-outcomes">
@@ -183,7 +183,7 @@ export function AppSidebar() {
                 </SidebarMenuItem>
 
                 {/* ── IMPLEMENTATION ── */}
-                <p className="text-[9px] font-semibold text-sidebar-foreground/40 uppercase tracking-widest px-2.5 pt-3 pb-1">Implementation</p>
+                <p className="text-[9px] font-semibold text-sidebar-foreground/40 uppercase tracking-widest px-2.5 pt-2 pb-0.5">Implementation</p>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={location === `/projects/${projectId}/compliance`}>
                     <Link href={`/projects/${projectId}/compliance`} data-testid="nav-contract-compliance">
@@ -213,37 +213,27 @@ export function AppSidebar() {
           </SidebarGroup>
         )}
       </SidebarContent>
-      <SidebarFooter className="px-3 py-3 space-y-1">
-        {(() => {
-          const { data: me } = useQuery<any>({ queryKey: ["/auth/me"], queryFn: () => fetch("/auth/me").then(r => r.json()), retry: false, staleTime: 5 * 60 * 1000 });
-          return me?.role === "admin" ? (
-            <Link href="/admin">
-              <Button variant="ghost" size="sm" className="w-full justify-start gap-2 text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent">
-                <Shield className="w-4 h-4" /><span>Admin</span>
-              </Button>
-            </Link>
-          ) : null;
-        })()}
-        <Link href="/about">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="w-full justify-start gap-2 text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent"
-          >
-            <Info className="w-4 h-4" />
-            <span>About</span>
+      <SidebarFooter className="px-3 py-2 border-t border-sidebar-border">
+        <div className="flex items-center gap-1">
+          {(() => {
+            const { data: me } = useQuery<any>({ queryKey: ["/auth/me"], queryFn: () => fetch("/auth/me").then(r => r.json()), retry: false, staleTime: 5 * 60 * 1000 });
+            return me?.role === "admin" ? (
+              <Link href="/admin">
+                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-sidebar-foreground/50 hover:text-sidebar-foreground" title="Admin">
+                  <Shield className="w-3.5 h-3.5" />
+                </Button>
+              </Link>
+            ) : null;
+          })()}
+          <Link href="/about">
+            <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-sidebar-foreground/50 hover:text-sidebar-foreground" title="About">
+              <Info className="w-3.5 h-3.5" />
+            </Button>
+          </Link>
+          <Button variant="ghost" size="sm" onClick={toggleTheme} className="h-7 w-7 p-0 text-sidebar-foreground/50 hover:text-sidebar-foreground" data-testid="button-theme-toggle" title={theme === "dark" ? "Light mode" : "Dark mode"}>
+            {theme === "dark" ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
           </Button>
-        </Link>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={toggleTheme}
-          className="w-full justify-start gap-2 text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent"
-          data-testid="button-theme-toggle"
-        >
-          {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-          <span>{theme === "dark" ? "Light Mode" : "Dark Mode"}</span>
-        </Button>
+        </div>
       </SidebarFooter>
     </Sidebar>
   );
