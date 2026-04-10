@@ -2760,6 +2760,177 @@ Write in professional consulting tone covering: overall posture assessment, key 
     res.json(scorecard);
   });
 
+  // Go-Live PDF Report
+  app.get("/api/projects/:id/go-live/report-pdf", async (req, res) => {
+    const projectId = parseInt(req.params.id);
+    const project = storage.getProject(projectId);
+    if (!project) return res.status(404).json({ error: "Project not found" });
+
+    const client = project.clientId ? storage.getClient(project.clientId) : undefined;
+    const baseline = storage.getProjectBaseline(projectId);
+
+    // Try to get scorecard from compliance contract or from query params
+    const summary = storage.getContractBaselines(projectId);
+    let criteriaData: any[] = [];
+    let assessorNotes = "";
+    let overallScore = 0;
+    let readiness = "not_ready";
+
+    if (summary.length > 0) {
+      const scorecard = storage.getGoLiveScorecard(summary[0].id);
+      if (scorecard) {
+        try { criteriaData = typeof scorecard.criteria === "string" ? JSON.parse(scorecard.criteria) : scorecard.criteria; } catch {}
+        assessorNotes = scorecard.assessorNotes || "";
+        overallScore = scorecard.overallScore || 0;
+        readiness = scorecard.overallReadiness || "not_ready";
+      }
+    }
+
+    try {
+      const PDFDocument = (await import("pdfkit")).default;
+      const doc = new PDFDocument({ size: "LETTER", margins: { top: 72, bottom: 72, left: 72, right: 72 }, bufferPages: true });
+
+      const chunks: Buffer[] = [];
+      doc.on("data", (chunk: Buffer) => chunks.push(chunk));
+      doc.on("end", () => {
+        const pdf = Buffer.concat(chunks);
+        res.setHeader("Content-Type", "application/pdf");
+        res.setHeader("Content-Disposition", `attachment; filename="go_live_readiness_${project.name.replace(/[^a-zA-Z0-9]/g, "_")}_${new Date().toISOString().split("T")[0]}.pdf"`);
+        res.send(pdf);
+      });
+
+      const blue = "#203f90";
+      const orange = "#c45819";
+      const darkText = "#1a1a2e";
+      const gray = "#5a6478";
+      const lightGray = "#e8eaed";
+      const pageW = doc.page.width;
+      const pageH = doc.page.height;
+      const contentW = pageW - 144;
+
+      // Logo
+      let logoPath = path.resolve("client/public/avero-logo.png");
+      if (!fs.existsSync(logoPath)) logoPath = path.resolve("dist/public/avero-logo.png");
+      const hasLogo = fs.existsSync(logoPath);
+
+      // ========== COVER PAGE ==========
+      doc.rect(0, 0, pageW, 280).fill(blue);
+      if (hasLogo) { try { doc.image(logoPath, 72, 60, { height: 50 }); } catch {} }
+      doc.fill("#ffffff").fontSize(32).font("Helvetica-Bold").text("Go-Live Readiness\nAssessment", 72, 140, { width: contentW });
+      doc.rect(72, 300, 80, 4).fill(orange);
+      doc.fill(darkText).fontSize(16).font("Helvetica-Bold").text(project.name, 72, 330, { width: contentW });
+      if (client) doc.fontSize(13).font("Helvetica").fillColor(gray).text(client.name, 72, 355);
+      doc.fontSize(10).font("Helvetica").fillColor(gray).text("Prepared by Avero Advisors", 72, 400);
+      doc.text(new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }), 72, 415);
+      if (baseline?.goLiveDate) {
+        const days = Math.ceil((new Date(baseline.goLiveDate).getTime() - Date.now()) / 86400000);
+        doc.text(`Go-Live: ${baseline.goLiveDate} (${days > 0 ? days + " days" : Math.abs(days) + " days past"})`, 72, 445);
+      }
+      doc.fontSize(8).fillColor(gray).text("CONFIDENTIAL", 72, pageH - 80, { width: contentW, align: "center" });
+
+      // ========== READINESS SUMMARY ==========
+      doc.addPage();
+      doc.fontSize(20).font("Helvetica-Bold").fillColor(blue).text("Readiness Assessment", 72, 72);
+      doc.rect(72, 100, 50, 3).fill(orange);
+
+      // Overall score badge
+      doc.y = 120;
+      const scoreColor = overallScore >= 85 ? "#16a34a" : overallScore >= 70 ? "#d97706" : "#dc2626";
+      const readinessLabels: Record<string, string> = { ready: "READY", ready_with_conditions: "READY WITH CONDITIONS", not_ready: "NOT READY", critical_hold: "CRITICAL HOLD" };
+
+      doc.fontSize(11).fillColor(gray).text("Overall Readiness:");
+      doc.moveDown(0.4);
+      const badgeY = doc.y;
+      doc.rect(72, badgeY, 200, 28).fill(scoreColor);
+      doc.fontSize(14).font("Helvetica-Bold").fillColor("#ffffff").text(`${readinessLabels[readiness] || readiness} — ${overallScore}/100`, 82, badgeY + 7);
+      doc.y = badgeY + 40;
+
+      if (assessorNotes) {
+        doc.moveDown(0.5);
+        doc.fontSize(9).font("Helvetica").fillColor(gray).text(assessorNotes, 72, doc.y, { width: contentW });
+      }
+
+      // ========== CRITERIA TABLE ==========
+      doc.moveDown(1.5);
+      doc.fontSize(14).font("Helvetica-Bold").fillColor(blue).text("Detailed Criteria Scores");
+      doc.rect(72, doc.y + 4, 40, 2.5).fill(orange);
+      doc.moveDown(1);
+
+      // Table header
+      const thY2 = doc.y;
+      doc.rect(72, thY2, contentW, 18).fill("#f1f3f5");
+      doc.fontSize(8).font("Helvetica-Bold").fillColor(gray);
+      doc.text("Criterion", 82, thY2 + 4, { width: 160 });
+      doc.text("Wt", 245, thY2 + 4, { width: 25 });
+      doc.text("Score", 275, thY2 + 4, { width: 35 });
+      doc.text("Evidence & Recommendation", 315, thY2 + 4, { width: 230 });
+      doc.y = thY2 + 22;
+
+      let lastCategory = "";
+      for (const c of criteriaData) {
+        if (doc.y > 680) doc.addPage();
+
+        if (c.category !== lastCategory) {
+          lastCategory = c.category;
+          doc.rect(72, doc.y, contentW, 15).fill("#f8f9fa");
+          doc.fontSize(8).font("Helvetica-Bold").fillColor(darkText).text(c.category, 82, doc.y + 3);
+          doc.y += 18;
+        }
+
+        const rowY = doc.y;
+        const sc = c.score || 0;
+        const scColor = sc <= 3 ? "#dc2626" : sc <= 6 ? "#d97706" : "#16a34a";
+
+        doc.fontSize(8).font("Helvetica").fillColor(darkText).text(c.name, 82, rowY + 2, { width: 155 });
+        doc.fontSize(8).fillColor(gray).text(String(c.weight), 245, rowY + 2, { width: 25 });
+        doc.fontSize(9).font("Helvetica-Bold").fillColor(scColor).text(String(sc), 275, rowY + 1, { width: 35 });
+
+        let detailY = rowY + 1;
+        if (c.evidence) {
+          doc.fontSize(7).font("Helvetica").fillColor(gray).text(c.evidence, 315, detailY, { width: 230 });
+          detailY += doc.heightOfString(c.evidence, { width: 230, fontSize: 7 }) + 2;
+        }
+        if (c.recommendation) {
+          doc.fontSize(7).font("Helvetica").fillColor(orange).text(`Rec: ${c.recommendation}`, 315, detailY, { width: 230 });
+          detailY += doc.heightOfString(`Rec: ${c.recommendation}`, { width: 230, fontSize: 7 }) + 2;
+        }
+        if (c.notes) {
+          doc.fontSize(7).font("Helvetica-Oblique").fillColor(gray).text(`Note: ${c.notes}`, 315, detailY, { width: 230 });
+          detailY += doc.heightOfString(`Note: ${c.notes}`, { width: 230, fontSize: 7 }) + 2;
+        }
+
+        doc.y = Math.max(rowY + 16, detailY + 2);
+        doc.moveTo(82, doc.y).lineTo(72 + contentW, doc.y).lineWidth(0.3).strokeColor(lightGray).stroke();
+        doc.y += 3;
+      }
+
+      // ========== HEADERS & FOOTERS ==========
+      const pageCount = doc.bufferedPageRange().count;
+      for (let i = 0; i < pageCount; i++) {
+        doc.switchToPage(i);
+        if (i > 0) {
+          doc.moveTo(72, 56).lineTo(pageW - 72, 56).lineWidth(0.5).strokeColor(lightGray).stroke();
+          doc.fontSize(7).font("Helvetica").fillColor(gray);
+          doc.text("Avero Advisors", 72, 44, { width: contentW / 2 });
+          doc.text("Go-Live Readiness Report", pageW / 2, 44, { width: contentW / 2, align: "right" });
+        }
+        doc.moveTo(72, pageH - 56).lineTo(pageW - 72, pageH - 56).lineWidth(0.5).strokeColor(lightGray).stroke();
+        doc.fontSize(7).fillColor(gray);
+        if (i === 0) {
+          doc.text("CONFIDENTIAL", 72, pageH - 48, { width: contentW, align: "center" });
+        } else {
+          doc.text(project.name, 72, pageH - 48);
+          doc.text(`Page ${i + 1} of ${pageCount}`, 72, pageH - 48, { width: contentW, align: "right" });
+        }
+      }
+
+      doc.end();
+    } catch (err: any) {
+      console.error("Go-Live PDF error:", err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // AI: Auto-assess go-live readiness from project data
   app.post("/api/projects/:id/go-live/auto-assess", async (req, res) => {
     const projectId = parseInt(req.params.id);

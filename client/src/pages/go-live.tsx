@@ -13,7 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Rocket, ChevronLeft, Check, Loader2, Sparkles, AlertTriangle } from "lucide-react";
+import { Rocket, ChevronLeft, Check, Loader2, Sparkles, AlertTriangle, Download } from "lucide-react";
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from "recharts";
 
 const DEFAULT_CRITERIA = [
@@ -174,6 +174,11 @@ export default function GoLivePage() {
               {autoAssess.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
               {autoAssess.isPending ? "Assessing..." : "Auto-Assess from Project Data"}
             </Button>
+            {initialized && (
+              <Button size="sm" variant="outline" className="gap-1.5 text-xs" onClick={() => window.open(`/api/projects/${projectId}/go-live/report-pdf`, "_blank")} data-testid="btn-export-pdf">
+                <Download className="w-3 h-3" />PDF
+              </Button>
+            )}
             {initialized && (
               <Button size="sm" variant="outline" className="gap-1.5 text-xs" onClick={handleSave} disabled={saveMutation.isPending} data-testid="btn-save-scorecard">
                 {saveMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}Save
