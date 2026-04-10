@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Shield, UserPlus, Mail, Trash2, Users, FolderOpen, Plus, ChevronDown, ChevronRight, X } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Shield, UserPlus, Mail, Trash2, Users, FolderOpen, Plus, ChevronDown, ChevronRight, X, Activity } from "lucide-react";
 
 export default function AdminPage() {
   const { toast } = useToast();
@@ -111,6 +112,13 @@ export default function AdminPage() {
 
       <ScrollArea className="flex-1">
         <div className="p-6 max-w-3xl mx-auto space-y-6">
+          <Tabs defaultValue="users">
+            <TabsList className="mb-4">
+              <TabsTrigger value="users"><Users className="w-3.5 h-3.5 mr-1.5" />Users & Access</TabsTrigger>
+              <TabsTrigger value="activity"><Activity className="w-3.5 h-3.5 mr-1.5" />Activity Log</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="users" className="space-y-6">
 
           {/* Invite Users */}
           <Card>
@@ -224,9 +232,77 @@ export default function AdminPage() {
             </CardContent>
           </Card>
 
+            </TabsContent>
+
+            <TabsContent value="activity">
+              <ActivityLogTab />
+            </TabsContent>
+          </Tabs>
+
         </div>
       </ScrollArea>
     </div>
+  );
+}
+
+function ActivityLogTab() {
+  const { data: activity = [], isLoading } = useQuery<any[]>({
+    queryKey: ["/api/activity"],
+    queryFn: () => apiRequest("GET", "/api/activity?limit=100").then(r => r.json()),
+  });
+
+  const ACTION_LABELS: Record<string, string> = {
+    created_project: "Created project",
+    uploaded_document: "Uploaded document",
+    ran_synthesis: "Ran health synthesis",
+    auto_synthesized: "Auto-synthesized",
+    auto_applied_document: "Auto-applied document",
+    added_member: "Added team member",
+    generated_outcomes: "Generated outcomes",
+    generated_scenarios: "Generated scenarios",
+    generated_processes: "Generated processes",
+    auto_assessed_golive: "Auto-assessed go-live",
+    auto_assessed_checkpoint: "Auto-assessed checkpoint",
+    auto_suggested_scores: "Auto-scored from KB",
+  };
+
+  if (isLoading) return <p className="text-sm text-muted-foreground py-4">Loading...</p>;
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm flex items-center gap-2">
+          <Activity className="w-4 h-4" />
+          Activity Log ({activity.length})
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {activity.length === 0 ? (
+          <p className="text-xs text-muted-foreground text-center py-4">No activity recorded yet.</p>
+        ) : (
+          <div className="space-y-1">
+            {activity.map((a: any) => (
+              <div key={a.id} className="flex items-start gap-3 py-2 border-b border-border/30 last:border-0">
+                <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center text-[10px] font-medium shrink-0 mt-0.5">
+                  {a.userName?.[0]?.toUpperCase() || "?"}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-medium">{a.userName || "System"}</span>
+                    <span className="text-xs text-muted-foreground">{ACTION_LABELS[a.action] || a.action}</span>
+                    {a.projectId && <Badge variant="outline" className="text-[8px]">Project #{a.projectId}</Badge>}
+                  </div>
+                  {a.details && <p className="text-[11px] text-muted-foreground truncate mt-0.5">{a.details}</p>}
+                </div>
+                <span className="text-[10px] text-muted-foreground shrink-0">
+                  {new Date(a.createdAt).toLocaleDateString()} {new Date(a.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
