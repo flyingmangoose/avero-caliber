@@ -1313,8 +1313,19 @@ Only include fields that are clearly present in the document. Return ONLY valid 
 
   // ==================== PORTFOLIO ANALYTICS ====================
 
-  app.get("/api/analytics/portfolio", (_req, res) => {
-    const allProjects = storage.getProjects();
+  app.get("/api/analytics/portfolio", (req, res) => {
+    const allProjectsRaw = storage.getProjects();
+    // Filter by user access (same as dashboard)
+    const user = getUserFromReq(req);
+    const isAdmin = !user || user.role === "admin";
+    const userProjectIds = user ? storage.getUserProjects(user.id) : [];
+    const allProjects = allProjectsRaw.filter(p => {
+      if (isAdmin) return true;
+      if (userProjectIds.includes(p.id)) return true;
+      if ((p as any).createdBy === user?.id) return true;
+      const members = storage.getProjectMembers(p.id);
+      return members.length === 0;
+    });
     const allVendors = storage.getVendors();
 
     const moduleFrequency: Record<string, number> = {};
