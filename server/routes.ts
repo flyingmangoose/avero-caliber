@@ -3567,6 +3567,7 @@ Write in professional consulting tone covering: overall posture assessment, key 
   });
 
   app.post("/api/knowledge-base/capabilities", (req, res) => {
+    const user = getUserFromReq(req); if (user && user.role === "viewer") return res.status(403).json({ error: "Edit access required" });
     const { vendorPlatform, module, processArea } = req.body;
     if (!vendorPlatform || !module || !processArea) {
       return res.status(400).json({ error: "vendorPlatform, module, and processArea are required" });
@@ -3576,6 +3577,7 @@ Write in professional consulting tone covering: overall posture assessment, key 
   });
 
   app.patch("/api/knowledge-base/capabilities/:id", (req, res) => {
+    const user = getUserFromReq(req); if (user && user.role === "viewer") return res.status(403).json({ error: "Edit access required" });
     const id = parseInt(req.params.id);
     const updated = storage.updateVendorCapability(id, req.body);
     if (!updated) return res.status(404).json({ error: "Capability not found" });
@@ -3583,6 +3585,7 @@ Write in professional consulting tone covering: overall posture assessment, key 
   });
 
   app.delete("/api/knowledge-base/capabilities/:id", (req, res) => {
+    const user = getUserFromReq(req); if (user && user.role === "viewer") return res.status(403).json({ error: "Edit access required" });
     const id = parseInt(req.params.id);
     storage.deleteVendorCapability(id);
     res.json({ success: true });
@@ -3612,7 +3615,8 @@ Write in professional consulting tone covering: overall posture assessment, key 
     res.json(details);
   });
 
-  app.post("/api/knowledge-base/seed", (_req, res) => {
+  app.post("/api/knowledge-base/seed", (req: any, res) => {
+    const user = getUserFromReq(req); if (user && user.role !== "admin") return res.status(403).json({ error: "Admin access required" });
     try {
       const dataPath = path.resolve("port_of_portland_vendor_data.json");
       if (!fs.existsSync(dataPath)) {
@@ -5775,6 +5779,7 @@ Write in professional consulting tone covering: overall posture assessment, key 
   });
 
   app.post("/api/monitoring/sources", (req, res) => {
+    const user = getUserFromReq(req); if (user && user.role === "viewer") return res.status(403).json({ error: "Edit access required" });
     const source = storage.createMonitoringSource(req.body);
     res.json(source);
   });
