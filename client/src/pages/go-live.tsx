@@ -13,23 +13,23 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Rocket, ChevronLeft, Plus, Check, Loader2 } from "lucide-react";
+import { Rocket, ChevronLeft, Check, Loader2, Sparkles, AlertTriangle } from "lucide-react";
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from "recharts";
 
 const DEFAULT_CRITERIA = [
-  { category: "Testing", key: "sit_completion", name: "SIT Completion", weight: 10, score: 0, notes: "" },
-  { category: "Testing", key: "e2e_testing", name: "E2E Testing Exit", weight: 12, score: 0, notes: "" },
-  { category: "Testing", key: "uat_completion", name: "UAT/UER Completion", weight: 12, score: 0, notes: "" },
-  { category: "Testing", key: "payroll_compare", name: "Payroll Compare", weight: 8, score: 0, notes: "" },
-  { category: "Defects", key: "critical_high_resolution", name: "Critical/High Defect Resolution", weight: 15, score: 0, notes: "" },
-  { category: "Defects", key: "burndown_trend", name: "Defect Burn-down Trend", weight: 5, score: 0, notes: "" },
-  { category: "Data", key: "migration_quality", name: "Data Migration Quality", weight: 10, score: 0, notes: "" },
-  { category: "Data", key: "reconciliation", name: "Reconciliation Results", weight: 5, score: 0, notes: "" },
-  { category: "Cutover", key: "plan_completeness", name: "Cutover Plan Completeness", weight: 8, score: 0, notes: "" },
-  { category: "Cutover", key: "rollback_plan", name: "Rollback Plan", weight: 3, score: 0, notes: "" },
-  { category: "Readiness", key: "training", name: "Training Completion", weight: 5, score: 0, notes: "" },
-  { category: "Readiness", key: "support_model", name: "Support Model Activated", weight: 4, score: 0, notes: "" },
-  { category: "Readiness", key: "hypercare_plan", name: "Hypercare Plan", weight: 3, score: 0, notes: "" },
+  { category: "Testing", key: "sit_completion", name: "SIT Completion", weight: 10, score: 0, notes: "", evidence: "", recommendation: "", confidence: "", isManual: false },
+  { category: "Testing", key: "e2e_testing", name: "E2E Testing Exit", weight: 12, score: 0, notes: "", evidence: "", recommendation: "", confidence: "", isManual: false },
+  { category: "Testing", key: "uat_completion", name: "UAT/UER Completion", weight: 12, score: 0, notes: "", evidence: "", recommendation: "", confidence: "", isManual: false },
+  { category: "Testing", key: "payroll_compare", name: "Payroll Compare", weight: 8, score: 0, notes: "", evidence: "", recommendation: "", confidence: "", isManual: false },
+  { category: "Defects", key: "critical_high_resolution", name: "Critical/High Defect Resolution", weight: 15, score: 0, notes: "", evidence: "", recommendation: "", confidence: "", isManual: false },
+  { category: "Defects", key: "burndown_trend", name: "Defect Burn-down Trend", weight: 5, score: 0, notes: "", evidence: "", recommendation: "", confidence: "", isManual: false },
+  { category: "Data", key: "migration_quality", name: "Data Migration Quality", weight: 10, score: 0, notes: "", evidence: "", recommendation: "", confidence: "", isManual: false },
+  { category: "Data", key: "reconciliation", name: "Reconciliation Results", weight: 5, score: 0, notes: "", evidence: "", recommendation: "", confidence: "", isManual: false },
+  { category: "Cutover", key: "plan_completeness", name: "Cutover Plan Completeness", weight: 8, score: 0, notes: "", evidence: "", recommendation: "", confidence: "", isManual: false },
+  { category: "Cutover", key: "rollback_plan", name: "Rollback Plan", weight: 3, score: 0, notes: "", evidence: "", recommendation: "", confidence: "", isManual: false },
+  { category: "Readiness", key: "training", name: "Training Completion", weight: 5, score: 0, notes: "", evidence: "", recommendation: "", confidence: "", isManual: false },
+  { category: "Readiness", key: "support_model", name: "Support Model Activated", weight: 4, score: 0, notes: "", evidence: "", recommendation: "", confidence: "", isManual: false },
+  { category: "Readiness", key: "hypercare_plan", name: "Hypercare Plan", weight: 3, score: 0, notes: "", evidence: "", recommendation: "", confidence: "", isManual: false },
 ];
 
 const READINESS_COLORS: Record<string, string> = {
@@ -43,6 +43,10 @@ const READINESS_LABELS: Record<string, string> = {
   ready: "Ready", ready_with_conditions: "Ready with Conditions", not_ready: "Not Ready", critical_hold: "Critical Hold",
 };
 
+const CONFIDENCE_COLORS: Record<string, string> = {
+  high: "text-emerald-600", medium: "text-amber-600", low: "text-red-600",
+};
+
 export default function GoLivePage() {
   const { id } = useParams<{ id: string }>();
   const projectId = parseInt(id || "0");
@@ -51,6 +55,7 @@ export default function GoLivePage() {
   const [criteria, setCriteria] = useState(DEFAULT_CRITERIA);
   const [assessorNotes, setAssessorNotes] = useState("");
   const [initialized, setInitialized] = useState(false);
+  const [aiNotes, setAiNotes] = useState("");
 
   const { data: project } = useQuery<any>({
     queryKey: ["/api/projects", projectId],
@@ -92,6 +97,31 @@ export default function GoLivePage() {
     onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
+  const autoAssess = useMutation({
+    mutationFn: () => apiRequest("POST", `/api/projects/${projectId}/go-live/auto-assess`).then(r => r.json()),
+    onSuccess: (data: any) => {
+      // Merge AI scores into criteria, preserving manual overrides
+      setCriteria(prev => prev.map((c, i) => {
+        const aiCriterion = data.criteria?.[i] || data.criteria?.find((ac: any) => ac.name === c.name);
+        if (!aiCriterion) return c;
+        // Don't override if manually set
+        if (c.isManual) return { ...c, evidence: aiCriterion.evidence || c.evidence, recommendation: aiCriterion.recommendation || c.recommendation, confidence: aiCriterion.confidence || "" };
+        return {
+          ...c,
+          score: aiCriterion.score ?? c.score,
+          evidence: aiCriterion.evidence || "",
+          recommendation: aiCriterion.recommendation || "",
+          confidence: aiCriterion.confidence || "",
+          isManual: false,
+        };
+      }));
+      setAiNotes(data.overallNotes || "");
+      setInitialized(true);
+      toast({ title: `Auto-assessed: ${data.overallReadiness?.replace(/_/g, " ")} (${data.overallScore}/100)` });
+    },
+    onError: (e: any) => toast({ title: "Auto-assess failed", description: e.message, variant: "destructive" }),
+  });
+
   // Calculate scores
   const totalWeight = criteria.reduce((s, c) => s + c.weight, 0);
   const weightedSum = criteria.reduce((s, c) => s + c.weight * c.score, 0);
@@ -100,7 +130,7 @@ export default function GoLivePage() {
   const scoreColor = overallScore >= 85 ? "text-emerald-500" : overallScore >= 70 ? "text-amber-500" : overallScore >= 50 ? "text-red-500" : "text-red-900";
 
   // Radar data
-  const categories = [...new Set(criteria.map(c => c.category))];
+  const categories = ["Testing", "Defects", "Data", "Cutover", "Readiness"];
   const radarData = categories.map(cat => {
     const items = criteria.filter(c => c.category === cat);
     const catWeight = items.reduce((s, i) => s + i.weight, 0);
@@ -108,8 +138,8 @@ export default function GoLivePage() {
     return { category: cat, score: catWeight > 0 ? Math.round((catSum / catWeight) * 10) / 10 : 0, fullMark: 10 };
   });
 
-  function updateCriterion(key: string, field: "score" | "notes", value: any) {
-    setCriteria(prev => prev.map(c => c.key === key ? { ...c, [field]: value } : c));
+  function updateCriterion(key: string, field: string, value: any) {
+    setCriteria(prev => prev.map(c => c.key === key ? { ...c, [field]: value, isManual: field === "score" ? true : c.isManual } : c));
   }
 
   function handleSave() {
@@ -120,43 +150,47 @@ export default function GoLivePage() {
     return <div className="p-6 space-y-4"><Skeleton className="h-8 w-48" /><Skeleton className="h-64 w-full" /></div>;
   }
 
-  const hasScorecard = scorecard || initialized;
-
   return (
     <div className="flex flex-col h-full">
-      <div className="px-6 py-4 border-b border-border/50 bg-card/50 backdrop-blur-sm shrink-0">
+      <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-border/50 shrink-0">
         <div className="flex items-center gap-3">
           <Link href={`/projects/${projectId}`}>
             <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-muted-foreground hover:text-foreground -ml-2">
-              <ChevronLeft className="w-4 h-4" />
-              {project?.name || "Project"}
+              <ChevronLeft className="w-4 h-4" />{project?.name || "Project"}
             </Button>
           </Link>
           <span className="text-muted-foreground/40">/</span>
-          <h1 className="text-lg font-semibold text-foreground flex items-center gap-2">
-            <Rocket className="w-5 h-5 text-accent" />
-            Go-Live Readiness Scorecard
+          <h1 className="text-lg font-semibold flex items-center gap-2">
+            <Rocket className="w-5 h-5 text-accent" />Go-Live Readiness
           </h1>
         </div>
       </div>
 
       <ScrollArea className="flex-1">
-        <div className="p-6 space-y-5">
-          {!contractId ? (
-            <div className="text-center py-12 text-sm text-muted-foreground">
-              Add a contract on the Compliance page first to create a go-live scorecard.
-            </div>
-          ) : !hasScorecard ? (
-            <div className="flex flex-col items-center py-12 gap-4">
-              <Rocket className="w-12 h-12 text-muted-foreground/30" />
-              <p className="text-sm text-muted-foreground">No go-live scorecard yet</p>
-              <Button className="bg-accent hover:bg-accent/90 text-accent-foreground gap-2" onClick={() => setInitialized(true)} data-testid="button-create-scorecard">
-                <Plus className="w-4 h-4" /> Create Scorecard
+        <div className="p-4 sm:p-6 space-y-5">
+          {/* Action buttons */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button size="sm" className="gap-1.5 text-xs" onClick={() => autoAssess.mutate()} disabled={autoAssess.isPending} data-testid="btn-auto-assess">
+              {autoAssess.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+              {autoAssess.isPending ? "Assessing..." : "Auto-Assess from Project Data"}
+            </Button>
+            {initialized && (
+              <Button size="sm" variant="outline" className="gap-1.5 text-xs" onClick={handleSave} disabled={saveMutation.isPending} data-testid="btn-save-scorecard">
+                {saveMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}Save
               </Button>
+            )}
+          </div>
+
+          {/* AI Summary */}
+          {aiNotes && (
+            <div className="p-3 rounded-lg bg-accent/5 border border-accent/20 text-xs text-muted-foreground">
+              <span className="font-medium text-accent">AI Assessment: </span>{aiNotes}
             </div>
-          ) : (
+          )}
+
+          {/* Score Overview */}
+          {initialized && (
             <>
-              {/* Score Overview */}
               <div className="flex items-center gap-6">
                 <div className="text-center">
                   <span className={`text-4xl font-bold ${scoreColor}`}>{overallScore}</span>
@@ -166,24 +200,18 @@ export default function GoLivePage() {
                 <Badge className={`text-sm px-3 py-1 ${READINESS_COLORS[readiness] || ""}`} data-testid="readiness-badge">
                   {READINESS_LABELS[readiness]}
                 </Badge>
-                <div className="ml-auto">
-                  <Button size="sm" className="bg-accent hover:bg-accent/90 text-accent-foreground text-xs gap-1.5" onClick={handleSave}
-                    disabled={saveMutation.isPending} data-testid="button-save-scorecard">
-                    {saveMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />} Save Scorecard
-                  </Button>
-                </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 {/* Criteria Table */}
-                <div className="col-span-2">
+                <div className="lg:col-span-2 overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
                         <TableHead className="text-xs">Criteria</TableHead>
-                        <TableHead className="text-xs w-16 text-center">Weight</TableHead>
-                        <TableHead className="text-xs w-36">Score (0-10)</TableHead>
-                        <TableHead className="text-xs">Notes</TableHead>
+                        <TableHead className="text-xs w-14 text-center">Wt</TableHead>
+                        <TableHead className="text-xs w-28">Score</TableHead>
+                        <TableHead className="text-xs">Evidence / Notes</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -194,20 +222,34 @@ export default function GoLivePage() {
                           </TableRow>
                           {criteria.filter(c => c.category === cat).map(item => (
                             <TableRow key={item.key}>
-                              <TableCell className="text-xs py-1.5">{item.name}</TableCell>
-                              <TableCell className="text-center py-1.5">
+                              <TableCell className="text-xs py-2">
+                                <div>
+                                  {item.name}
+                                  {item.confidence && (
+                                    <span className={`ml-1.5 text-[9px] ${CONFIDENCE_COLORS[item.confidence] || ""}`}>
+                                      ({item.confidence})
+                                    </span>
+                                  )}
+                                  {item.isManual && <Badge variant="outline" className="text-[8px] ml-1">manual</Badge>}
+                                </div>
+                                {item.recommendation && (
+                                  <p className="text-[10px] text-accent mt-0.5">{item.recommendation}</p>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-center py-2">
                                 <Badge className="text-[10px] bg-muted text-muted-foreground">{item.weight}</Badge>
                               </TableCell>
-                              <TableCell className="py-1.5">
+                              <TableCell className="py-2">
                                 <div className="flex items-center gap-1.5">
-                                  <input type="range" min="0" max="10" step="1" className="w-20 h-1.5 accent-amber-500"
+                                  <input type="range" min="0" max="10" step="1" className="w-16 h-1.5 accent-amber-500"
                                     value={item.score} onChange={e => updateCriterion(item.key, "score", parseInt(e.target.value))}
                                     data-testid={`score-${item.key}`} />
-                                  <span className="text-[11px] font-mono w-4">{item.score}</span>
+                                  <span className={`text-[11px] font-mono font-bold w-4 ${item.score <= 3 ? "text-red-600" : item.score <= 6 ? "text-amber-600" : "text-emerald-600"}`}>{item.score}</span>
                                 </div>
                               </TableCell>
-                              <TableCell className="py-1.5">
-                                <Input className="h-6 text-[11px]" placeholder="Notes" value={item.notes}
+                              <TableCell className="py-2">
+                                {item.evidence && <p className="text-[10px] text-muted-foreground mb-1">{item.evidence}</p>}
+                                <Input className="h-6 text-[10px]" placeholder="Add notes..." value={item.notes}
                                   onChange={e => updateCriterion(item.key, "notes", e.target.value)} />
                               </TableCell>
                             </TableRow>
@@ -216,7 +258,7 @@ export default function GoLivePage() {
                       ))}
                     </TableBody>
                   </Table>
-                  <Textarea placeholder="Assessor notes" className="mt-3 text-xs" value={assessorNotes} onChange={e => setAssessorNotes(e.target.value)} data-testid="assessor-notes" />
+                  <Textarea placeholder="Assessor notes — add context, conditions, or recommendations" className="mt-3 text-xs" rows={3} value={assessorNotes} onChange={e => setAssessorNotes(e.target.value)} data-testid="assessor-notes" />
                 </div>
 
                 {/* Radar Chart */}
@@ -228,13 +270,29 @@ export default function GoLivePage() {
                         <PolarGrid stroke="hsl(var(--border))" />
                         <PolarAngleAxis dataKey="category" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
                         <PolarRadiusAxis angle={90} domain={[0, 10]} tick={{ fontSize: 9 }} />
-                        <Radar dataKey="score" stroke="#d4a853" fill="#d4a853" fillOpacity={0.3} />
+                        <Radar dataKey="score" stroke="hsl(var(--accent))" fill="hsl(var(--accent))" fillOpacity={0.3} />
                       </RadarChart>
                     </ResponsiveContainer>
+                    <div className="mt-3 space-y-1">
+                      {radarData.map(d => (
+                        <div key={d.category} className="flex justify-between text-[11px]">
+                          <span className="text-muted-foreground">{d.category}</span>
+                          <span className={`font-mono font-bold ${d.score <= 3 ? "text-red-600" : d.score <= 6 ? "text-amber-600" : "text-emerald-600"}`}>{d.score}/10</span>
+                        </div>
+                      ))}
+                    </div>
                   </CardContent>
                 </Card>
               </div>
             </>
+          )}
+
+          {!initialized && !autoAssess.isPending && (
+            <Card className="p-8 text-center">
+              <Rocket className="w-8 h-8 mx-auto text-muted-foreground/40 mb-3" />
+              <p className="text-sm font-medium">Go-Live Readiness Assessment</p>
+              <p className="text-xs text-muted-foreground mt-1">Click "Auto-Assess from Project Data" to generate an AI-powered readiness assessment based on health check findings, RAID items, and project documents.</p>
+            </Card>
           )}
         </div>
       </ScrollArea>

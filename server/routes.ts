@@ -2760,6 +2760,49 @@ Write in professional consulting tone covering: overall posture assessment, key 
     res.json(scorecard);
   });
 
+  // AI: Auto-assess go-live readiness from project data
+  app.post("/api/projects/:id/go-live/auto-assess", async (req, res) => {
+    const projectId = parseInt(req.params.id);
+    const project = storage.getProject(projectId);
+    if (!project) return res.status(404).json({ error: "Project not found" });
+
+    try {
+      const { assessGoLiveReadiness, buildProjectContext } = await import("./ai");
+      const projectContext = buildProjectContext(projectId);
+      const assessments = storage.getHealthCheckAssessments(projectId);
+      const raidItems = storage.getRaidItems(projectId);
+      const budgetSummary = storage.getBudgetSummary(projectId);
+      const scheduleItems = storage.getScheduleEntries(projectId);
+      const documents = storage.getProjectDocuments(projectId);
+      const baseline = storage.getProjectBaseline(projectId);
+
+      const result = await assessGoLiveReadiness({
+        projectContext, assessments, raidItems, budgetSummary, scheduleItems, documents, baseline,
+      });
+
+      // Calculate weighted score
+      let weightedSum = 0, totalWeight = 0;
+      for (const c of result.criteria) {
+        weightedSum += (c.score || 0) * (c.weight || 1);
+        totalWeight += c.weight || 1;
+      }
+      const overallScore = totalWeight > 0 ? Math.round((weightedSum / totalWeight) * 10) : 0;
+      const readiness = overallScore >= 85 ? "ready" : overallScore >= 70 ? "ready_with_conditions" : overallScore >= 50 ? "not_ready" : "critical_hold";
+
+      logAction(req, "auto_assessed_golive", projectId, `Score: ${overallScore}, Readiness: ${readiness}`);
+      res.json({
+        criteria: result.criteria,
+        overallScore,
+        overallReadiness: readiness,
+        overallNotes: result.overallNotes,
+        assessedAt: new Date().toISOString(),
+      });
+    } catch (err: any) {
+      console.error("Go-live auto-assess error:", err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // ==================== ESCALATION STATUS ====================
 
   // Get escalation status for a project

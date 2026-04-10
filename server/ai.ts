@@ -1142,6 +1142,101 @@ Return ONLY valid JSON.`, undefined, 16384);
   }
 }
 
+// ==================== GO-LIVE READINESS ASSESSMENT ====================
+
+export async function assessGoLiveReadiness(data: {
+  projectContext: string;
+  assessments: any[];
+  raidItems: any[];
+  budgetSummary: any;
+  scheduleItems: any[];
+  documents: any[];
+  baseline: any;
+}): Promise<{ criteria: any[]; overallNotes: string }> {
+  let snapshot = data.projectContext + "\n\n";
+
+  // RAID summary
+  const openRisks = data.raidItems.filter(r => r.status === "open");
+  const criticalItems = openRisks.filter(r => r.severity === "critical");
+  snapshot += `RAID: ${data.raidItems.length} total, ${openRisks.length} open, ${criticalItems.length} critical\n`;
+  for (const r of criticalItems.slice(0, 10)) {
+    snapshot += `- [${r.type}/${r.severity}] ${r.title}: ${r.description || ""}\n`;
+  }
+
+  // Health check assessments
+  snapshot += "\nHEALTH CHECK ASSESSMENTS:\n";
+  for (const a of data.assessments) {
+    snapshot += `- ${a.domain}: ${a.overallRating || "unrated"} — ${a.summary || ""}\n`;
+  }
+
+  // Schedule
+  const delayed = data.scheduleItems.filter(s => s.status === "delayed");
+  snapshot += `\nSCHEDULE: ${data.scheduleItems.length} milestones, ${delayed.length} delayed\n`;
+  for (const s of delayed.slice(0, 5)) {
+    snapshot += `- ${s.milestone}: ${s.varianceDays ? s.varianceDays + " days late" : "delayed"}\n`;
+  }
+
+  // Budget
+  const bs = data.budgetSummary;
+  const totalAuth = (bs.originalContract || 0) + (bs.totalChangeOrders || 0) + (bs.totalAdditionalFunding || 0);
+  snapshot += `\nBUDGET: $${(bs.totalActualSpend || 0).toLocaleString()} spent of $${totalAuth.toLocaleString()} authorized\n`;
+
+  // Baseline
+  if (data.baseline?.goLiveDate) {
+    const days = Math.ceil((new Date(data.baseline.goLiveDate).getTime() - Date.now()) / (86400000));
+    snapshot += `\nGO-LIVE: ${data.baseline.goLiveDate} (${days > 0 ? days + " days remaining" : Math.abs(days) + " days past"})\n`;
+  }
+
+  // Document summaries
+  const analyzedDocs = data.documents.filter(d => d.analysisStatus === "completed" && d.aiAnalysis);
+  for (const doc of analyzedDocs.slice(0, 5)) {
+    try {
+      const analysis = JSON.parse(doc.aiAnalysis);
+      snapshot += `\nDOCUMENT "${doc.fileName}": ${analysis.summary || ""}\n`;
+    } catch {}
+  }
+
+  const text = await llmCall(`You are a senior IV&V consultant assessing go-live readiness for a government ERP implementation.
+
+PROJECT DATA:
+${snapshot}
+
+Score each of the following 13 go-live readiness criteria on a scale of 0-10. For each criterion, provide:
+- score (0-10)
+- evidence (specific data points from the project that justify the score)
+- recommendation (what needs to happen before go-live)
+- confidence (high/medium/low — how confident you are in this score given available data)
+
+CRITERIA:
+1. SIT Completion (weight: 10) — Has System Integration Testing been completed? What % of test cases passed?
+2. E2E Testing Exit (weight: 12) — Have end-to-end business process tests been completed and signed off?
+3. UAT/UER Completion (weight: 12) — Has User Acceptance Testing been completed with sign-off from business owners?
+4. Payroll Compare (weight: 8) — Have parallel payroll runs been completed and reconciled?
+5. Critical/High Defect Resolution (weight: 15) — Have all critical and high-severity defects been resolved?
+6. Defect Burn-down Trend (weight: 5) — Is the defect discovery/resolution trend positive?
+7. Data Migration Quality (weight: 10) — Has data migration been validated with acceptable error rates?
+8. Reconciliation Results (weight: 5) — Have financial and data reconciliation checks passed?
+9. Cutover Plan Completeness (weight: 8) — Is the cutover plan documented, reviewed, and rehearsed?
+10. Rollback Plan (weight: 3) — Is a rollback plan documented and tested?
+11. Training Completion (weight: 5) — Have all end users been trained?
+12. Support Model Activated (weight: 4) — Is the post-go-live support model (hypercare team, help desk) ready?
+13. Hypercare Plan (weight: 3) — Is the hypercare plan documented with escalation procedures?
+
+Return JSON:
+{
+  "criteria": [
+    {"name": "SIT Completion", "score": 4, "weight": 10, "evidence": "SIT at 34% completion per health check", "recommendation": "Extend SIT by 4 weeks minimum", "confidence": "high"},
+    ...all 13 criteria
+  ],
+  "overallNotes": "2-3 sentence executive summary of go-live readiness"
+}
+Return ONLY valid JSON.`, undefined, 4096);
+
+  const jsonMatch = text.match(/\{[\s\S]*"criteria"[\s\S]*\}/);
+  if (!jsonMatch) return { criteria: [], overallNotes: "Unable to assess readiness." };
+  try { return JSON.parse(jsonMatch[0]); } catch { return { criteria: [], overallNotes: "Parse error." }; }
+}
+
 // ==================== PROCESS DESCRIPTIONS ====================
 
 export async function generateProcessDescriptions(
