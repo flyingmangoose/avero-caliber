@@ -4412,7 +4412,7 @@ Write in professional consulting tone covering: overall posture assessment, key 
           description: p.description, currentSteps: p.currentSteps,
           currentSystems: p.currentSystems, currentActors: p.currentActors,
           avgDuration: p.avgDuration, frequency: p.frequency,
-          mermaidDiagram: p.mermaidDiagram,
+          mermaidDiagram: p.mermaidDiagram, swimlaneDiagram: p.swimlaneDiagram,
           sourceInterviewIds: sourceIds,
         });
         created.push(proc);

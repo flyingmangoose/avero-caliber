@@ -686,6 +686,7 @@ try { sqlite.exec(`ALTER TABLE budget_tracking ADD COLUMN source_doc_id INTEGER`
 try { sqlite.exec(`ALTER TABLE schedule_tracking ADD COLUMN source_doc_id INTEGER`); } catch {}
 try { sqlite.exec(`ALTER TABLE health_check_assessments ADD COLUMN is_manual INTEGER DEFAULT 0`); } catch {}
 try { sqlite.exec(`ALTER TABLE outcomes ADD COLUMN linked_requirement_ids TEXT`); } catch {}
+try { sqlite.exec(`ALTER TABLE process_descriptions ADD COLUMN swimlane_diagram TEXT`); } catch {}
 
 // Enable foreign keys
 sqlite.pragma("foreign_keys = ON");
@@ -1141,7 +1142,7 @@ export class DatabaseStorage implements IStorage {
       description: data.description || null,
       currentSteps: stringify(data.currentSteps), currentSystems: data.currentSystems || null,
       currentActors: data.currentActors || null, avgDuration: data.avgDuration || null,
-      frequency: data.frequency || null, mermaidDiagram: data.mermaidDiagram || null,
+      frequency: data.frequency || null, mermaidDiagram: data.mermaidDiagram || null, swimlaneDiagram: data.swimlaneDiagram || null,
       futureSteps: stringify(data.futureSteps), futureDescription: data.futureDescription || null,
       futureMermaidDiagram: data.futureMermaidDiagram || null,
       status: data.status || "draft",

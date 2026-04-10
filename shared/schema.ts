@@ -688,6 +688,7 @@ export const processDescriptions = sqliteTable("process_descriptions", {
   avgDuration: text("avg_duration"),
   frequency: text("frequency"),
   mermaidDiagram: text("mermaid_diagram"),
+  swimlaneDiagram: text("swimlane_diagram"),
   futureSteps: text("future_steps"), // JSON: populated after future state
   futureDescription: text("future_description"),
   futureMermaidDiagram: text("future_mermaid_diagram"),

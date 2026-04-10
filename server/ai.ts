@@ -1182,7 +1182,27 @@ From these interviews and pain points, identify and document 4-8 key business pr
 3. List 4-8 current-state steps with the actor (role), system used, whether it's manual, and any pain points at that step
 4. Identify the systems involved and actors/roles
 5. Estimate average duration and frequency
-6. Generate a Mermaid flowchart diagram showing the process flow
+6. Generate TWO Mermaid diagrams:
+   a) A simple flowchart (graph TD) showing the process flow
+   b) A swimlane diagram using Mermaid's "block-beta" or flowchart subgraph syntax that groups steps by actor/role
+
+For the swimlane, use this Mermaid syntax pattern with subgraphs per role:
+graph LR
+  subgraph AP_Clerk[AP Clerk]
+    A[Receive Invoice] --> B[Enter in SAP]
+  end
+  subgraph AP_Supervisor[AP Supervisor]
+    C[Review & Approve]
+  end
+  subgraph AP_Manager[AP Manager]
+    D[3-Way Match]
+  end
+  subgraph Treasury[Treasury]
+    E[Schedule Payment] --> F[Execute Payment]
+  end
+  B --> C
+  C --> D
+  D --> E
 
 Return JSON:
 {
@@ -1202,7 +1222,8 @@ Return JSON:
       "currentActors": "AP Clerk, AP Supervisor, AP Manager, Treasury",
       "avgDuration": "5-7 business days",
       "frequency": "Daily (50-100 invoices/week)",
-      "mermaidDiagram": "graph TD\\n    A[Receive Invoice] --> B[Enter in SAP]\\n    B --> C{PO Match?}\\n    C -->|Yes| D[Approve]\\n    C -->|No| E[Return to Vendor]\\n    D --> F[Schedule Payment]\\n    F --> G[Execute Payment]"
+      "mermaidDiagram": "graph TD\\n    A[Receive Invoice] --> B[Enter in SAP]\\n    B --> C{PO Match?}\\n    C -->|Yes| D[Approve]\\n    C -->|No| E[Return to Vendor]\\n    D --> F[Schedule Payment]\\n    F --> G[Execute Payment]",
+      "swimlaneDiagram": "graph LR\\n  subgraph AP_Clerk[AP Clerk]\\n    A[Receive Invoice] --> B[Enter in SAP]\\n  end\\n  subgraph AP_Supervisor[AP Supervisor]\\n    C[Review & Approve]\\n  end\\n  subgraph AP_Manager[AP Manager]\\n    D[3-Way Match]\\n  end\\n  subgraph Treasury[Treasury]\\n    E[Schedule Payment] --> F[Execute Payment]\\n  end\\n  B --> C\\n  C --> D\\n  D --> E"
     }
   ]
 }

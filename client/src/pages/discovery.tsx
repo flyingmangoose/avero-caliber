@@ -1234,6 +1234,7 @@ const FREQ_BADGE: Record<string, string> = {
 function ProcessesTab({ projectId }: { projectId: string }) {
   const { toast } = useToast();
   const [showDiagram, setShowDiagram] = useState<number | null>(null);
+  const [diagramMode, setDiagramMode] = useState<"flow" | "swimlane">("flow");
 
   const { data: processes = [], isLoading } = useQuery<any[]>({
     queryKey: ["/api/projects", projectId, "processes"],
@@ -1342,11 +1343,19 @@ function ProcessesTab({ projectId }: { projectId: string }) {
                   {/* Mermaid diagram toggle */}
                   {hasDiagram && (
                     <div>
-                      <button className="text-[11px] text-accent flex items-center gap-1 hover:underline" onClick={() => setShowDiagram(showDiagram === proc.id ? null : proc.id)}>
-                        {showDiagram === proc.id ? "Hide" : "View"} Process Diagram
-                      </button>
+                      <div className="flex items-center gap-3">
+                        <button className="text-[11px] text-accent flex items-center gap-1 hover:underline" onClick={() => setShowDiagram(showDiagram === proc.id ? null : proc.id)}>
+                          {showDiagram === proc.id ? "Hide" : "View"} Process Diagram
+                        </button>
+                        {showDiagram === proc.id && proc.swimlaneDiagram && (
+                          <div className="flex gap-1">
+                            <button className={`text-[10px] px-2 py-0.5 rounded ${diagramMode !== "swimlane" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`} onClick={() => setDiagramMode("flow")}>Simple Flow</button>
+                            <button className={`text-[10px] px-2 py-0.5 rounded ${diagramMode === "swimlane" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`} onClick={() => setDiagramMode("swimlane")}>Swimlane</button>
+                          </div>
+                        )}
+                      </div>
                       {showDiagram === proc.id && (
-                        <MermaidDiagram chart={proc.mermaidDiagram} />
+                        <MermaidDiagram chart={diagramMode === "swimlane" && proc.swimlaneDiagram ? proc.swimlaneDiagram : proc.mermaidDiagram} />
                       )}
                     </div>
                   )}
