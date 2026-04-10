@@ -1379,6 +1379,12 @@ Only include fields that are clearly present in the document. Return ONLY valid 
         outcomeCount: outcomes.length,
         requirementCount: reqs.length,
         assessmentCount: assessments.length,
+        // Domain assessments for tiles
+        domains: assessments.map(a => ({ domain: a.domain, rating: a.overallRating, summary: a.summary?.substring(0, 120) })),
+        // Top critical/high RAID items
+        topRisks: raidItems.filter(r => r.status === "open" && (r.severity === "critical" || r.severity === "high")).slice(0, 3).map(r => ({ type: r.type, severity: r.severity, title: r.title })),
+        // Vendor if baseline has one
+        vendorName: baseline?.vendorName || null,
       };
     });
 
