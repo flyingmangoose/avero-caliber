@@ -2725,6 +2725,51 @@ Write in professional consulting tone covering: overall posture assessment, key 
     res.json(assessments);
   });
 
+  // AI: Auto-assess checkpoint dimensions
+  app.post("/api/checkpoints/:id/auto-assess", async (req, res) => {
+    const checkpointId = parseInt(req.params.id);
+    const cp = storage.getCheckpoint(checkpointId);
+    if (!cp) return res.status(404).json({ error: "Checkpoint not found" });
+
+    // Find the project from the baseline
+    const baseline = storage.getContractBaseline(cp.baselineId);
+    if (!baseline) return res.status(400).json({ error: "No contract baseline found" });
+    const projectId = baseline.projectId;
+
+    try {
+      const { assessCheckpoint, buildProjectContext } = await import("./ai");
+      const projectContext = buildProjectContext(projectId);
+      const hcAssessments = storage.getHealthCheckAssessments(projectId);
+      const raidItems = storage.getRaidItems(projectId);
+      const scheduleItems = storage.getScheduleEntries(projectId);
+      const documents = storage.getProjectDocuments(projectId);
+
+      const result = await assessCheckpoint({
+        checkpointName: cp.name, checkpointPhase: cp.phase,
+        projectContext, assessments: hcAssessments, raidItems, scheduleItems, documents,
+      });
+
+      // Save dimensions
+      if (result.dimensions.length > 0) {
+        storage.saveCheckpointAssessment(checkpointId, result.dimensions);
+      }
+
+      // Update checkpoint with overall assessment
+      storage.updateCheckpoint(checkpointId, {
+        overallAssessment: result.overallAssessment,
+        recommendations: result.recommendations,
+        findings: result.findings,
+        status: "completed",
+      });
+
+      logAction(req, "auto_assessed_checkpoint", projectId, `${cp.name}: ${result.dimensions.length} dimensions`);
+      res.json(result);
+    } catch (err: any) {
+      console.error("Checkpoint auto-assess error:", err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // Generate readiness report (text) for a checkpoint
   app.get("/api/checkpoints/:id/readiness-report", (req, res) => {
     const checkpointId = parseInt(req.params.id);

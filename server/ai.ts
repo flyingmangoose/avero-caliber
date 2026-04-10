@@ -1142,6 +1142,85 @@ Return ONLY valid JSON.`, undefined, 16384);
   }
 }
 
+// ==================== IV&V CHECKPOINT ASSESSMENT ====================
+
+export async function assessCheckpoint(data: {
+  checkpointName: string;
+  checkpointPhase: string;
+  projectContext: string;
+  assessments: any[];
+  raidItems: any[];
+  scheduleItems: any[];
+  documents: any[];
+}): Promise<{ dimensions: any[]; overallAssessment: string; recommendations: string; findings: string }> {
+  let snapshot = `Checkpoint: ${data.checkpointName} (Phase: ${data.checkpointPhase})\n\n`;
+  snapshot += data.projectContext + "\n\n";
+
+  // Health check summary
+  snapshot += "HEALTH CHECK DOMAINS:\n";
+  for (const a of data.assessments) {
+    snapshot += `- ${a.domain}: ${a.overallRating || "unrated"} — ${(a.summary || "").substring(0, 150)}\n`;
+  }
+
+  // RAID
+  const openCrit = data.raidItems.filter(r => r.status === "open" && (r.severity === "critical" || r.severity === "high"));
+  snapshot += `\nRAID: ${data.raidItems.length} total, ${openCrit.length} open critical/high\n`;
+  for (const r of openCrit.slice(0, 8)) {
+    snapshot += `- [${r.type}/${r.severity}] ${r.title}\n`;
+  }
+
+  // Schedule
+  const delayed = data.scheduleItems.filter(s => s.status === "delayed");
+  snapshot += `\nSCHEDULE: ${data.scheduleItems.length} milestones, ${delayed.length} delayed\n`;
+
+  // Documents
+  const analyzed = data.documents.filter(d => d.analysisStatus === "completed" && d.aiAnalysis);
+  for (const doc of analyzed.slice(0, 3)) {
+    try { snapshot += `\nDocument "${doc.fileName}": ${JSON.parse(doc.aiAnalysis).summary || ""}\n`; } catch {}
+  }
+
+  const text = await llmCall(`You are a senior IV&V consultant performing a checkpoint assessment for a government ERP implementation.
+
+PROJECT DATA:
+${snapshot}
+
+Assess each of the 7 IV&V dimensions. For each, provide:
+- rating: satisfactory, needs_attention, at_risk, or unsatisfactory
+- observation: 1-2 sentences on what you observed
+- evidence: specific data points
+- recommendation: what to do
+
+DIMENSIONS:
+1. schedule_discipline — Are milestones being met? Is the schedule realistic?
+2. deliverable_completeness — Are contract deliverables being produced on time and at quality?
+3. requirements_traceability — Can requirements be traced from discovery through design to testing?
+4. design_architecture — Is the technical design sound? Are integrations properly planned?
+5. data_migration — Is data migration on track with acceptable quality?
+6. defect_management — Are defects being tracked, triaged, and resolved effectively?
+7. testing_coverage — Is testing comprehensive? Are test cases covering critical paths?
+
+Also provide:
+- overallAssessment: 2-3 sentence summary
+- recommendations: top 3-5 recommendations
+- findings: key findings paragraph
+
+Return JSON:
+{
+  "dimensions": [
+    {"dimension": "schedule_discipline", "rating": "at_risk", "observation": "...", "evidence": "...", "recommendation": "..."},
+    ...all 7
+  ],
+  "overallAssessment": "...",
+  "recommendations": "...",
+  "findings": "..."
+}
+Return ONLY valid JSON.`, undefined, 4096);
+
+  const jsonMatch = text.match(/\{[\s\S]*"dimensions"[\s\S]*\}/);
+  if (!jsonMatch) return { dimensions: [], overallAssessment: "Unable to assess.", recommendations: "", findings: "" };
+  try { return JSON.parse(jsonMatch[0]); } catch { return { dimensions: [], overallAssessment: "Parse error.", recommendations: "", findings: "" }; }
+}
+
 // ==================== GO-LIVE READINESS ASSESSMENT ====================
 
 export async function assessGoLiveReadiness(data: {

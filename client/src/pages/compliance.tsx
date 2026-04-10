@@ -875,6 +875,30 @@ function CheckpointsTab({ contractId, projectId }: { contractId: number | null; 
     },
   });
 
+  const [autoAssessing, setAutoAssessing] = useState<number | null>(null);
+  const autoAssessCheckpoint = async (checkpointId: number) => {
+    setAutoAssessing(checkpointId);
+    try {
+      const res = await apiRequest("POST", `/api/checkpoints/${checkpointId}/auto-assess`);
+      const data = await res.json();
+      queryClient.invalidateQueries({ queryKey: ["/api/checkpoints"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/contracts"] });
+      // Load the AI results into the form if editing this checkpoint
+      if (editingId === checkpointId && data.dimensions) {
+        const newForm: any = {};
+        for (const d of data.dimensions) {
+          newForm[d.dimension] = { rating: d.rating, observation: d.observation, recommendation: d.recommendation };
+        }
+        setAssessmentForm(newForm);
+        setForm((prev: any) => ({ ...prev, overallAssessment: data.overallAssessment || prev.overallAssessment, recommendations: data.recommendations || prev.recommendations, findings: data.findings || prev.findings }));
+      }
+      toast({ title: "AI assessment complete" });
+    } catch (e: any) {
+      toast({ title: "Auto-assess failed", description: e.message, variant: "destructive" });
+    }
+    setAutoAssessing(null);
+  };
+
   const PRESETS = [
     "Requirements Validation", "Design Review", "Configuration Review", "Data Migration Review",
     "Integration Testing Review", "UAT Readiness", "Go-Live Readiness", "Post Go-Live Assessment",
@@ -981,6 +1005,10 @@ function CheckpointsTab({ contractId, projectId }: { contractId: number | null; 
                   </div>
                   <div className="flex items-center gap-1">
                     {cp.scheduledDate && <span className="text-[11px] text-muted-foreground flex items-center gap-1"><Calendar className="w-3 h-3" />{cp.scheduledDate}</span>}
+                    <Button variant="outline" size="sm" className="h-7 text-[10px] gap-1" onClick={() => autoAssessCheckpoint(cp.id)} disabled={autoAssessing === cp.id} data-testid={`auto-assess-${cp.id}`}>
+                      {autoAssessing === cp.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                      {autoAssessing === cp.id ? "Assessing..." : "Auto-Assess"}
+                    </Button>
                     <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(cp)} data-testid={`edit-checkpoint-${cp.id}`}><Pencil className="w-3 h-3" /></Button>
                     <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => deleteMutation.mutate(cp.id)} data-testid={`delete-checkpoint-${cp.id}`}><Trash2 className="w-3 h-3" /></Button>
                   </div>
