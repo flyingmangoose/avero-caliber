@@ -1927,8 +1927,7 @@ Only include fields that are clearly present in the document. Return ONLY valid 
 
   app.post("/api/projects/:id/chat", async (req, res) => {
     const projectId = parseInt(req.params.id);
-    const project = storage.getProject(projectId);
-    if (!project) return res.status(404).json({ error: "Project not found" });
+    const project = projectId > 0 ? storage.getProject(projectId) : null;
 
     const { message, history } = req.body as {
       message: string;
@@ -1936,12 +1935,12 @@ Only include fields that are clearly present in the document. Return ONLY valid 
     };
     if (!message) return res.status(400).json({ error: "message is required" });
 
-    // Save user message to DB
-    storage.addChatMessage(projectId, "user", message);
+    // Save user message to DB (only for real projects)
+    if (project) storage.addChatMessage(projectId, "user", message);
 
     // Build project context
     const { buildProjectContext, llmCall, llmStream, CHAT_SYSTEM_PROMPT } = await import("./ai");
-    const projectContext = buildProjectContext(projectId);
+    const projectContext = project ? buildProjectContext(projectId) : "No project selected. User is on the dashboard. Help them understand Caliber's capabilities and guide them to create or select a project.";
     const systemPrompt = CHAT_SYSTEM_PROMPT.replace("{projectContext}", projectContext);
 
     // Build messages array from history + new message
@@ -1974,8 +1973,8 @@ Only include fields that are clearly present in the document. Return ONLY valid 
         }
       }
 
-      // Save assistant message to DB
-      storage.addChatMessage(projectId, "assistant", fullResponse);
+      // Save assistant message to DB (only for real projects)
+      if (project) storage.addChatMessage(projectId, "assistant", fullResponse);
       res.write(`data: ${JSON.stringify({ type: "done" })}\n\n`);
       res.end();
     } catch (error: any) {
@@ -1988,6 +1987,7 @@ Only include fields that are clearly present in the document. Return ONLY valid 
   // Chat History
   app.get("/api/projects/:id/chat/history", (req, res) => {
     const projectId = parseInt(req.params.id);
+    if (projectId <= 0) return res.json([]);
     const messages = storage.getChatMessages(projectId);
     res.json(messages);
   });
