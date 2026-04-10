@@ -21,35 +21,42 @@ const API_BASE = "";
 
 function MermaidDiagram({ chart }: { chart: string }) {
   const ref = useRef<HTMLDivElement>(null);
-  const [rendered, setRendered] = useState(false);
+  const [svg, setSvg] = useState<string | null>(null);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
-    if (!ref.current || !chart) return;
+    if (!chart) return;
     let cancelled = false;
-    import("mermaid").then(({ default: mermaid }) => {
-      if (cancelled) return;
-      mermaid.initialize({ startOnLoad: false, theme: "neutral", securityLevel: "loose" });
-      const id = `mermaid-${Date.now()}`;
-      mermaid.render(id, chart).then(({ svg }) => {
-        if (!cancelled && ref.current) {
-          ref.current.innerHTML = svg;
-          setRendered(true);
-        }
-      }).catch(() => {
-        if (!cancelled && ref.current) {
-          ref.current.innerHTML = `<pre class="text-xs text-muted-foreground whitespace-pre-wrap">${chart}</pre>`;
-          setRendered(true);
-        }
-      });
-    });
+
+    (async () => {
+      try {
+        const mermaid = (await import("mermaid")).default;
+        mermaid.initialize({ startOnLoad: false, theme: "neutral", securityLevel: "loose" });
+        const { svg: rendered } = await mermaid.render(`mermaid-${Math.random().toString(36).slice(2)}`, chart);
+        if (!cancelled) setSvg(rendered);
+      } catch {
+        if (!cancelled) setError(true);
+      }
+    })();
+
     return () => { cancelled = true; };
   }, [chart]);
 
+  if (error) {
+    return (
+      <pre className="mt-2 p-3 rounded-lg bg-muted/30 text-[10px] font-mono overflow-x-auto whitespace-pre-wrap">{chart}</pre>
+    );
+  }
+
+  if (svg) {
+    return (
+      <div className="mt-2 p-3 rounded-lg bg-muted/30 overflow-x-auto" dangerouslySetInnerHTML={{ __html: svg }} />
+    );
+  }
+
   return (
-    <div className="mt-2 p-3 rounded-lg bg-muted/30 overflow-x-auto">
-      <div ref={ref} className="mermaid-container">
-        {!rendered && <p className="text-xs text-muted-foreground">Rendering diagram...</p>}
-      </div>
+    <div className="mt-2 p-3 rounded-lg bg-muted/30">
+      <p className="text-xs text-muted-foreground">Rendering diagram...</p>
     </div>
   );
 }
