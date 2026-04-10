@@ -119,7 +119,7 @@ export function AppSidebar() {
                 <p className="text-[9px] font-semibold text-sidebar-foreground/40 uppercase tracking-widest px-2.5 pt-2 pb-0.5">Discovery</p>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={location === `/clients/${clientId}/profile`}>
-                    <Link href={clientId ? `/clients/${clientId}/profile` : `/projects/${projectId}/client-profile`} data-testid="nav-client-profile">
+                    <Link href={`/projects/${projectId}/client-profile`} data-testid="nav-client-profile">
                       <Building2 className="w-4 h-4" />
                       <span>Client Profile</span>
                     </Link>
