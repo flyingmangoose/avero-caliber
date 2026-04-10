@@ -845,7 +845,17 @@ Return a JSON array of changes (empty array if no notable changes):
   }
 ]
 
-Be selective — only flag genuinely meaningful changes. Ignore boilerplate, marketing fluff, and minor UI tweaks. Focus on changes that would matter to a government organization evaluating this vendor.`;
+IMPORTANT RULES:
+- Be highly selective — only flag genuinely NEW and meaningful changes
+- Ignore boilerplate, marketing fluff, minor UI tweaks, and generic blog content
+- Focus on: product releases, deprecations, pricing changes, acquisitions, roadmap shifts, security updates, compliance certifications
+- Each change must be a specific, actionable item — not a general summary of the page
+- Do NOT repeat information that would appear on every page load (navigation text, footer content, "about us" text)
+- If the content is mostly static marketing copy, return an empty array
+- For press releases: extract the actual news, not the boilerplate
+- For release notes: focus on major features and breaking changes, skip minor fixes
+- For roadmaps: note timeline changes, new module announcements, platform direction shifts
+- Focus on changes that would matter to a government organization evaluating this vendor for ERP/EAM implementation`;
 
 export async function analyzeVendorChanges(
   vendorPlatform: string,

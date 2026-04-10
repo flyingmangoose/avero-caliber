@@ -5795,24 +5795,29 @@ Write in professional consulting tone covering: overall posture assessment, key 
     const defaultSources = [
       // Workday
       { vendorPlatform: "workday", sourceType: "release_notes", name: "Workday Release Notes", url: "https://community.workday.com/release-notes" },
-      { vendorPlatform: "workday", sourceType: "blog", name: "Workday Blog", url: "https://blog.workday.com" },
       { vendorPlatform: "workday", sourceType: "press_release", name: "Workday Newsroom", url: "https://newsroom.workday.com" },
-      // Oracle Cloud
-      { vendorPlatform: "oracle_cloud", sourceType: "release_notes", name: "Oracle Cloud Updates", url: "https://docs.oracle.com/en/cloud/saas/index.html" },
-      { vendorPlatform: "oracle_cloud", sourceType: "blog", name: "Oracle Cloud Blog", url: "https://blogs.oracle.com/cloud-infrastructure" },
+      { vendorPlatform: "workday", sourceType: "roadmap", name: "Workday Product Roadmap", url: "https://community.workday.com/products" },
+      { vendorPlatform: "workday", sourceType: "blog", name: "Workday Blog", url: "https://blog.workday.com" },
+      // Oracle Cloud ERP
+      { vendorPlatform: "oracle_cloud", sourceType: "release_notes", name: "Oracle Cloud Release Readiness", url: "https://www.oracle.com/webfolder/technetwork/tutorials/tutorial/cloud/r13/wn/erp/releases/erp-wn.htm" },
       { vendorPlatform: "oracle_cloud", sourceType: "press_release", name: "Oracle Newsroom", url: "https://www.oracle.com/news" },
+      { vendorPlatform: "oracle_cloud", sourceType: "roadmap", name: "Oracle Cloud Roadmap", url: "https://www.oracle.com/erp/cloud-roadmap/" },
+      { vendorPlatform: "oracle_cloud", sourceType: "blog", name: "Oracle Applications Blog", url: "https://blogs.oracle.com/applications" },
       // Tyler Technologies
-      { vendorPlatform: "tyler", sourceType: "press_release", name: "Tyler News", url: "https://www.tylertech.com/about/news-press" },
-      { vendorPlatform: "tyler", sourceType: "product_page", name: "Tyler ERP Products", url: "https://www.tylertech.com/products/erp-pro" },
-      // Maximo
-      { vendorPlatform: "maximo", sourceType: "release_notes", name: "Maximo Application Suite", url: "https://www.ibm.com/docs/en/mas-cd/maximo-manage" },
-      { vendorPlatform: "maximo", sourceType: "blog", name: "IBM Sustainability Blog", url: "https://www.ibm.com/blog/category/asset-management" },
-      // NV5
-      { vendorPlatform: "nv5", sourceType: "press_release", name: "NV5 News", url: "https://www.nv5.com/news" },
-      { vendorPlatform: "nv5", sourceType: "product_page", name: "NV5 Technology", url: "https://www.nv5.com/technology" },
-      // Oracle EAM
-      { vendorPlatform: "oracle_eam", sourceType: "documentation", name: "Oracle EAM Docs", url: "https://docs.oracle.com/en/cloud/saas/enterprise-asset-management" },
-      { vendorPlatform: "oracle_eam", sourceType: "release_notes", name: "Oracle SCM Updates", url: "https://docs.oracle.com/en/cloud/saas/supply-chain-and-manufacturing" },
+      { vendorPlatform: "tyler", sourceType: "press_release", name: "Tyler Press Releases", url: "https://www.tylertech.com/about/news-press" },
+      { vendorPlatform: "tyler", sourceType: "product_page", name: "Tyler Munis ERP", url: "https://www.tylertech.com/products/munis" },
+      { vendorPlatform: "tyler", sourceType: "blog", name: "Tyler Blog", url: "https://www.tylertech.com/resources/blog" },
+      // IBM Maximo
+      { vendorPlatform: "maximo", sourceType: "release_notes", name: "Maximo What's New", url: "https://www.ibm.com/docs/en/mas-cd/maximo-manage/continuous-delivery?topic=new" },
+      { vendorPlatform: "maximo", sourceType: "press_release", name: "IBM Newsroom", url: "https://newsroom.ibm.com/search?q=maximo" },
+      { vendorPlatform: "maximo", sourceType: "roadmap", name: "Maximo Roadmap", url: "https://www.ibm.com/products/maximo/roadmap" },
+      // NV5 / Cityworks
+      { vendorPlatform: "nv5", sourceType: "press_release", name: "NV5 Press Releases", url: "https://www.nv5.com/news" },
+      { vendorPlatform: "nv5", sourceType: "product_page", name: "Cityworks Product Updates", url: "https://www.cityworks.com/products" },
+      // SAP
+      { vendorPlatform: "sap", sourceType: "release_notes", name: "SAP S/4HANA What's New", url: "https://help.sap.com/whats-new/cf0cb2cb149647329b5d02aa96303f56" },
+      { vendorPlatform: "sap", sourceType: "press_release", name: "SAP News Center", url: "https://news.sap.com" },
+      { vendorPlatform: "sap", sourceType: "roadmap", name: "SAP Product Roadmap", url: "https://roadmaps.sap.com/board?PRODUCT=42F2E964FAAF1EDA9FF753E1C5D5028E" },
     ];
     const existing = storage.getMonitoringSources();
     let created = 0;
@@ -5929,9 +5934,17 @@ Write in professional consulting tone covering: overall posture assessment, key 
         durationMs: Date.now() - startTime,
       });
 
-      // Save changes and generate alerts
+      // Save changes with deduplication
+      const existingChanges = storage.getVendorChanges({ vendorPlatform: source.vendorPlatform, limit: 100 });
       const savedChanges = [];
       for (const change of aiChanges) {
+        // Skip duplicates — check if same title or very similar summary already exists
+        const isDuplicate = existingChanges.some((ec: any) =>
+          ec.title?.toLowerCase() === change.title?.toLowerCase() ||
+          (ec.summary && change.summary && ec.summary.substring(0, 80).toLowerCase() === change.summary.substring(0, 80).toLowerCase())
+        );
+        if (isDuplicate) continue;
+
         const saved = storage.createVendorChange({
           runId: run.id,
           vendorPlatform: source.vendorPlatform,
