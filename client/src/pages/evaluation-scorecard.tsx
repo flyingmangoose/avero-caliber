@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronLeft, ChevronRight, Sparkles, Loader2, BarChart3, Trophy } from "lucide-react";
+import { ChevronLeft, ChevronRight, Sparkles, Loader2, BarChart3, Trophy, Download } from "lucide-react";
 
 const PRI_COLORS: Record<string, string> = {
   critical: "bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400",
@@ -78,6 +78,11 @@ export default function EvaluationScorecardPage() {
           <h1 className="text-lg font-semibold flex items-center gap-2">
             <Trophy className="w-5 h-5 text-accent" />Evaluation Scorecard
           </h1>
+          <div className="ml-auto">
+            <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => window.open(`/api/projects/${projectId}/scorecard/report-pdf`, "_blank")} data-testid="btn-scorecard-pdf">
+              <Download className="w-3.5 h-3.5" />PDF
+            </Button>
+          </div>
         </div>
       </div>
 

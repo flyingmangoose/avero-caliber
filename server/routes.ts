@@ -4601,6 +4601,207 @@ Write in professional consulting tone covering: overall posture assessment, key 
     res.json({ success: true });
   });
 
+  // Outcomes/Scorecard PDF Report
+  app.get("/api/projects/:id/scorecard/report-pdf", async (req, res) => {
+    const projectId = parseInt(req.params.id);
+    const project = storage.getProject(projectId);
+    if (!project) return res.status(404).json({ error: "Project not found" });
+
+    const client = project.clientId ? storage.getClient(project.clientId) : undefined;
+    const allOutcomes = storage.getOutcomes(projectId);
+    const allScenarios = storage.getDemoScenariosByProject(projectId);
+    const allScores = storage.getScenarioScores(projectId);
+    const settings = storage.getProjectVendorSettings(projectId);
+    const selectedVendorIds: number[] = settings ? JSON.parse(settings.selectedVendors) : [];
+    const vendors = storage.getVendors().filter(v => selectedVendorIds.includes(v.id));
+
+    try {
+      const PDFDocument = (await import("pdfkit")).default;
+      const doc = new PDFDocument({ size: "LETTER", margins: { top: 72, bottom: 72, left: 72, right: 72 }, bufferPages: true });
+
+      const chunks: Buffer[] = [];
+      doc.on("data", (chunk: Buffer) => chunks.push(chunk));
+      doc.on("end", () => {
+        const pdf = Buffer.concat(chunks);
+        res.setHeader("Content-Type", "application/pdf");
+        res.setHeader("Content-Disposition", `attachment; filename="vendor_scorecard_${project.name.replace(/[^a-zA-Z0-9]/g, "_")}_${new Date().toISOString().split("T")[0]}.pdf"`);
+        res.send(pdf);
+      });
+
+      const blue = "#203f90";
+      const orange = "#c45819";
+      const darkText = "#1a1a2e";
+      const gray = "#5a6478";
+      const lightGray = "#e8eaed";
+      const pageW = doc.page.width;
+      const pageH = doc.page.height;
+      const contentW = pageW - 144;
+
+      let logoPath = path.resolve("client/public/avero-logo.png");
+      if (!fs.existsSync(logoPath)) logoPath = path.resolve("dist/public/avero-logo.png");
+      const hasLogo = fs.existsSync(logoPath);
+
+      // ========== COVER ==========
+      doc.rect(0, 0, pageW, 280).fill(blue);
+      if (hasLogo) { try { doc.image(logoPath, 72, 60, { height: 50 }); } catch {} }
+      doc.fill("#ffffff").fontSize(32).font("Helvetica-Bold").text("Vendor Evaluation\nScorecard", 72, 140, { width: contentW });
+      doc.rect(72, 300, 80, 4).fill(orange);
+      doc.fill(darkText).fontSize(16).font("Helvetica-Bold").text(project.name, 72, 330, { width: contentW });
+      if (client) doc.fontSize(13).font("Helvetica").fillColor(gray).text(client.name, 72, 355);
+      doc.fontSize(10).font("Helvetica").fillColor(gray).text("Prepared by Avero Advisors", 72, 400);
+      doc.text(new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }), 72, 415);
+      doc.fontSize(8).fillColor(gray).text("CONFIDENTIAL", 72, pageH - 80, { width: contentW, align: "center" });
+
+      // ========== OUTCOMES OVERVIEW ==========
+      doc.addPage();
+      doc.fontSize(20).font("Helvetica-Bold").fillColor(blue).text("Strategic Outcomes", 72, 72);
+      doc.rect(72, 100, 50, 3).fill(orange);
+      doc.y = 115;
+
+      for (const o of allOutcomes) {
+        if (doc.y > 650) doc.addPage();
+        const oY = doc.y;
+        doc.rect(72, oY, 4, 14).fill(o.priority === "critical" ? "#dc2626" : o.priority === "high" ? "#ea580c" : o.priority === "medium" ? "#d97706" : blue);
+        doc.fontSize(10).font("Helvetica-Bold").fillColor(darkText).text(o.title, 84, oY + 1, { width: contentW - 80 });
+        doc.fontSize(8).font("Helvetica-Bold").fillColor(o.priority === "critical" ? "#dc2626" : orange).text(o.priority.toUpperCase(), 72 + contentW - 60, oY + 2, { width: 60, align: "right" });
+        doc.y = oY + 18;
+        if (o.description) {
+          doc.fontSize(8).font("Helvetica").fillColor(gray).text(o.description, 84, doc.y, { width: contentW - 12 });
+          doc.moveDown(0.2);
+        }
+        if (o.currentKpi && o.targetKpi) {
+          doc.fontSize(8).fillColor(gray).text(`KPI: ${o.currentKpi} → ${o.targetKpi} ${o.kpiUnit || ""}`, 84);
+        }
+        doc.moveDown(0.8);
+      }
+
+      // ========== SCORECARD MATRIX ==========
+      if (vendors.length > 0 && allOutcomes.length > 0) {
+        doc.addPage();
+        doc.fontSize(20).font("Helvetica-Bold").fillColor(blue).text("Vendor Scorecard", 72, 72);
+        doc.rect(72, 100, 50, 3).fill(orange);
+        doc.y = 115;
+
+        const priorityWeight: Record<string, number> = { critical: 4, high: 3, medium: 2, low: 1 };
+        const colW = Math.min(70, (contentW - 200) / vendors.length);
+
+        // Header
+        const hY = doc.y;
+        doc.rect(72, hY, contentW, 20).fill("#f1f3f5");
+        doc.fontSize(8).font("Helvetica-Bold").fillColor(gray).text("Outcome", 82, hY + 5, { width: 150 });
+        doc.text("Pri", 235, hY + 5, { width: 30 });
+        vendors.forEach((v, i) => {
+          doc.text(v.shortName || v.name.substring(0, 8), 270 + i * colW, hY + 5, { width: colW, align: "center" });
+        });
+        doc.y = hY + 24;
+
+        const vendorTotals: Record<number, { sum: number; weight: number }> = {};
+        vendors.forEach(v => { vendorTotals[v.id] = { sum: 0, weight: 0 }; });
+
+        for (const o of allOutcomes) {
+          if (doc.y > 700) doc.addPage();
+          const rY = doc.y;
+          doc.fontSize(8).font("Helvetica").fillColor(darkText).text(o.title.substring(0, 40), 82, rY + 2, { width: 150 });
+          doc.fontSize(7).fillColor(gray).text(o.priority.substring(0, 4), 235, rY + 3, { width: 30 });
+
+          const scenarios = allScenarios.filter(s => s.outcomeId === o.id);
+          vendors.forEach((v, i) => {
+            const scores = allScores.filter(s => scenarios.some(sc => sc.id === s.scenarioId) && s.vendorId === v.id);
+            const avg = scores.length > 0 ? scores.reduce((s, sc) => s + (sc.overallScore || 0), 0) / scores.length : 0;
+            const color = avg >= 4 ? "#16a34a" : avg >= 3 ? "#d97706" : avg > 0 ? "#dc2626" : gray;
+            doc.fontSize(9).font("Helvetica-Bold").fillColor(avg > 0 ? color : gray).text(avg > 0 ? avg.toFixed(1) : "—", 270 + i * colW, rY + 2, { width: colW, align: "center" });
+            if (avg > 0) {
+              const w = priorityWeight[o.priority] || 2;
+              vendorTotals[v.id].sum += avg * w;
+              vendorTotals[v.id].weight += w;
+            }
+          });
+
+          doc.y = rY + 16;
+          doc.moveTo(82, doc.y).lineTo(72 + contentW, doc.y).lineWidth(0.3).strokeColor(lightGray).stroke();
+          doc.y += 3;
+        }
+
+        // Totals row
+        doc.moveDown(0.5);
+        const tY = doc.y;
+        doc.rect(72, tY, contentW, 22).fill("#f1f3f5");
+        doc.fontSize(9).font("Helvetica-Bold").fillColor(darkText).text("Weighted Total", 82, tY + 5);
+        vendors.forEach((v, i) => {
+          const t = vendorTotals[v.id];
+          const avg = t.weight > 0 ? t.sum / t.weight : 0;
+          const color = avg >= 4 ? "#16a34a" : avg >= 3 ? "#d97706" : avg > 0 ? "#dc2626" : gray;
+          doc.fontSize(11).font("Helvetica-Bold").fillColor(color).text(avg > 0 ? avg.toFixed(1) : "—", 270 + i * colW, tY + 4, { width: colW, align: "center" });
+        });
+        doc.y = tY + 30;
+
+        doc.fontSize(8).fillColor(gray).text("Priority weighting: Critical (4x) | High (3x) | Medium (2x) | Low (1x)", 72);
+      }
+
+      // ========== VENDOR RANKING ==========
+      // Compute unified evaluation inline
+      const evaluation = storage.calculateEvaluation(projectId);
+      if (vendors.length > 0) {
+        if (doc.y > 550) doc.addPage();
+        doc.moveDown(2);
+        doc.fontSize(16).font("Helvetica-Bold").fillColor(blue).text("Unified Vendor Ranking");
+        doc.rect(72, doc.y + 4, 40, 2.5).fill(orange);
+        doc.moveDown(1);
+        doc.fontSize(8).fillColor(gray).text("Combined: 60% requirements matrix + 40% outcome evaluation");
+        doc.moveDown(0.8);
+
+        const ranked = vendors.map(v => {
+          const ev = evaluation.vendors.find((e: any) => e.vendorId === v.id);
+          const reqPct = ev ? Math.round((ev.weightedScore / (ev.maxPossibleScore || 1)) * 100) : 0;
+          let outWeightedSum = 0, outWeightTotal = 0;
+          for (const o of allOutcomes) {
+            const scenarios = allScenarios.filter(s => s.outcomeId === o.id);
+            const scores = allScores.filter(s => scenarios.some(sc => sc.id === s.scenarioId) && s.vendorId === v.id);
+            const avg = scores.length > 0 ? scores.reduce((s, sc) => s + (sc.overallScore || 0), 0) / scores.length : 0;
+            if (avg > 0) { const w = ({ critical: 4, high: 3, medium: 2, low: 1 } as any)[o.priority] || 2; outWeightedSum += avg * w; outWeightTotal += w; }
+          }
+          const outPct = outWeightTotal > 0 ? Math.round((outWeightedSum / outWeightTotal / 5) * 100) : null;
+          const combined = outPct !== null ? Math.round(reqPct * 0.6 + outPct * 0.4) : reqPct;
+          return { name: v.name, reqPct, outPct, combined };
+        }).sort((a, b) => b.combined - a.combined);
+
+        ranked.forEach((v, i) => {
+          if (doc.y > 700) doc.addPage();
+          const rY = doc.y;
+          const color = v.combined >= 80 ? "#16a34a" : v.combined >= 60 ? "#d97706" : "#dc2626";
+          // Rank circle
+          doc.circle(84, rY + 8, 10).fill(i === 0 ? orange : lightGray);
+          doc.fontSize(10).font("Helvetica-Bold").fillColor(i === 0 ? "#ffffff" : darkText).text(String(i + 1), 78, rY + 3, { width: 12, align: "center" });
+          doc.fontSize(11).font("Helvetica-Bold").fillColor(darkText).text(v.name, 102, rY + 2, { width: 200 });
+          doc.fontSize(8).font("Helvetica").fillColor(gray).text(`Req: ${v.reqPct}%${v.outPct !== null ? `  |  Out: ${v.outPct}%` : ""}`, 102, rY + 16);
+          doc.fontSize(16).font("Helvetica-Bold").fillColor(color).text(`${v.combined}%`, 72 + contentW - 60, rY + 4, { width: 60, align: "right" });
+          doc.y = rY + 32;
+        });
+      }
+
+      // ========== HEADERS & FOOTERS ==========
+      const pageCount = doc.bufferedPageRange().count;
+      for (let i = 0; i < pageCount; i++) {
+        doc.switchToPage(i);
+        if (i > 0) {
+          doc.moveTo(72, 56).lineTo(pageW - 72, 56).lineWidth(0.5).strokeColor(lightGray).stroke();
+          doc.fontSize(7).font("Helvetica").fillColor(gray);
+          doc.text("Avero Advisors", 72, 44, { width: contentW / 2 });
+          doc.text("Vendor Scorecard", pageW / 2, 44, { width: contentW / 2, align: "right" });
+        }
+        doc.moveTo(72, pageH - 56).lineTo(pageW - 72, pageH - 56).lineWidth(0.5).strokeColor(lightGray).stroke();
+        doc.fontSize(7).fillColor(gray);
+        if (i === 0) doc.text("CONFIDENTIAL", 72, pageH - 48, { width: contentW, align: "center" });
+        else { doc.text(project.name, 72, pageH - 48); doc.text(`Page ${i + 1} of ${pageCount}`, 72, pageH - 48, { width: contentW, align: "right" }); }
+      }
+
+      doc.end();
+    } catch (err: any) {
+      console.error("Scorecard PDF error:", err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // ==================== PROCESS DESCRIPTIONS ====================
 
   app.get("/api/projects/:id/processes", (req, res) => {
