@@ -18,12 +18,20 @@ interface ChatPanelProps {
   projectName: string;
 }
 
-const SUGGESTIONS = [
+const PROJECT_SUGGESTIONS = [
   "Summarize the current project health and top risks",
   "What are the critical issues that need attention?",
   "Write an executive summary for the steering committee",
   "What's the go-live readiness status?",
   "Compare vendor strengths and weaknesses",
+];
+
+const GENERAL_SUGGESTIONS = [
+  "What can Caliber help me with?",
+  "How do I set up a new project?",
+  "Walk me through the discovery process",
+  "What does a health check assessment involve?",
+  "How does the vendor evaluation work?",
 ];
 
 function renderMarkdown(text: string): JSX.Element {
@@ -308,10 +316,10 @@ export function ChatPanel({ projectId, projectName }: ChatPanelProps) {
                     <Sparkles className="w-6 h-6 text-accent" />
                   </div>
                   <h3 className="text-sm font-semibold text-foreground">How can I help?</h3>
-                  <p className="text-xs text-muted-foreground mt-1">Ask me anything about your project</p>
+                  <p className="text-xs text-muted-foreground mt-1">{projectId && projectId !== "0" ? "Ask me anything about your project" : "How can I help you get started?"}</p>
                 </div>
                 <div className="flex flex-wrap gap-2 justify-center px-2">
-                  {SUGGESTIONS.map((s, i) => (
+                  {(projectId && projectId !== "0" ? PROJECT_SUGGESTIONS : GENERAL_SUGGESTIONS).map((s, i) => (
                     <button
                       key={i}
                       onClick={() => handleSend(s)}
