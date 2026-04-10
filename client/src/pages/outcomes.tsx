@@ -48,20 +48,15 @@ export default function OutcomesPage() {
   const { data: project } = useQuery<any>({ queryKey: ["/api/projects", projectId], queryFn: () => apiRequest("GET", `/api/projects/${projectId}`).then(r => r.json()), enabled: !!projectId });
   const { data: outcomes = [], isLoading } = useQuery<any[]>({ queryKey: ["/api/projects", projectId, "outcomes"], queryFn: () => apiRequest("GET", `/api/projects/${projectId}/outcomes`).then(r => r.json()), enabled: !!projectId });
   const { data: allScenarios = [] } = useQuery<any[]>({ queryKey: ["/api/projects", projectId, "scenarios"], queryFn: () => apiRequest("GET", `/api/projects/${projectId}/scenarios`).then(r => r.json()), enabled: !!projectId });
-  const { data: scorecard } = useQuery<any>({ queryKey: ["/api/projects", projectId, "outcome-scorecard"], queryFn: () => apiRequest("GET", `/api/projects/${projectId}/outcome-scorecard`).then(r => r.json()), enabled: !!projectId });
-  const { data: allScores = [] } = useQuery<any[]>({ queryKey: ["/api/projects", projectId, "scenario-scores"], queryFn: () => apiRequest("GET", `/api/projects/${projectId}/scenario-scores`).then(r => r.json()), enabled: !!projectId });
 
   const { data: requirements = [] } = useQuery<any[]>({ queryKey: ["/api/projects", projectId, "requirements"], queryFn: () => apiRequest("GET", `/api/projects/${projectId}/requirements`).then(r => r.json()), enabled: !!projectId });
-  const { data: unifiedEval } = useQuery<any>({ queryKey: ["/api/projects", projectId, "unified-evaluation"], queryFn: () => apiRequest("GET", `/api/projects/${projectId}/unified-evaluation`).then(r => r.json()), enabled: !!projectId });
 
   const [outcomeDialog, setOutcomeDialog] = useState<{ open: boolean; editId?: number; form: any }>({ open: false, form: {} });
-  const [selectedVendorId, setSelectedVendorId] = useState<string>("");
 
   const invalidateAll = () => {
     queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "outcomes"] });
     queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "scenarios"] });
     queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "scenario-scores"] });
-    queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "outcome-scorecard"] });
     queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "unified-evaluation"] });
   };
 
@@ -91,11 +86,6 @@ export default function OutcomesPage() {
     onError: (e: any) => toast({ title: "Generation failed", description: e.message, variant: "destructive" }),
   });
 
-  const saveScore = useMutation({
-    mutationFn: (data: any) => apiRequest("POST", "/api/scenario-scores", { projectId, ...data }).then(r => r.json()),
-    onSuccess: () => invalidateAll(),
-  });
-
   return (
     <div className="flex flex-col h-full">
       <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-border/50 shrink-0">
@@ -118,8 +108,6 @@ export default function OutcomesPage() {
             <TabsList className="mb-4">
               <TabsTrigger value="outcomes">Outcomes</TabsTrigger>
               <TabsTrigger value="scripts">Demo Scripts</TabsTrigger>
-              <TabsTrigger value="scoring">Scoring</TabsTrigger>
-              <TabsTrigger value="scorecard">Scorecard</TabsTrigger>
             </TabsList>
 
             {/* TAB 1: OUTCOMES */}
@@ -303,183 +291,6 @@ export default function OutcomesPage() {
                 </div>
               )}
             </TabsContent>
-
-            {/* TAB 3: SCORING */}
-            <TabsContent value="scoring">
-              {scorecard?.vendorTotals?.length > 0 ? (
-                <div className="space-y-4">
-                  <div className="flex gap-2 items-center">
-                    <Select value={selectedVendorId} onValueChange={setSelectedVendorId}>
-                      <SelectTrigger className="w-48 h-8 text-xs"><SelectValue placeholder="Select vendor..." /></SelectTrigger>
-                      <SelectContent>
-                        {scorecard.vendorTotals.map((v: any) => (
-                          <SelectItem key={v.vendorId} value={String(v.vendorId)} className="text-xs">{v.vendorName}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {selectedVendorId && (
-                      <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5"
-                        onClick={() => {
-                          apiRequest("POST", `/api/projects/${projectId}/scenario-scores/auto-suggest`, { vendorId: parseInt(selectedVendorId) })
-                            .then(r => r.json())
-                            .then((data: any) => {
-                              invalidateAll();
-                              toast({ title: `${data.suggested} scores auto-filled from KB for ${data.vendorName}` });
-                            })
-                            .catch((e: any) => toast({ title: "Auto-score failed", description: e.message, variant: "destructive" }));
-                        }}
-                        data-testid="btn-auto-score"
-                      >
-                        <Sparkles className="w-3.5 h-3.5" />Auto-Score from KB
-                      </Button>
-                    )}
-                  </div>
-
-                  {!selectedVendorId ? (
-                    <Card className="p-8 text-center"><p className="text-sm text-muted-foreground">Select a vendor to start scoring.</p></Card>
-                  ) : (
-                    <div className="space-y-3">
-                      {allScenarios.map((s: any) => {
-                        const outcome = outcomes.find((o: any) => o.id === s.outcomeId);
-                        const existing = allScores.find((sc: any) => sc.scenarioId === s.id && sc.vendorId === parseInt(selectedVendorId));
-                        const dims = ["processFit", "automationLevel", "configComplexity", "userExperience", "dataVisibility"];
-                        const dimLabels: Record<string, string> = {
-                          processFit: "Process Fit", automationLevel: "Automation", configComplexity: "Config (5=OOB)",
-                          userExperience: "User Experience", dataVisibility: "Data Visibility",
-                        };
-
-                        return (
-                          <Card key={s.id} data-testid={`score-card-${s.id}`}>
-                            <CardContent className="p-4 space-y-3">
-                              <div>
-                                <p className="text-[10px] text-muted-foreground">{outcome?.title}</p>
-                                <h4 className="text-sm font-semibold">{s.title}</h4>
-                              </div>
-                              <div className="grid grid-cols-5 gap-2">
-                                {dims.map(dim => (
-                                  <div key={dim}>
-                                    <p className="text-[10px] text-muted-foreground mb-1">{dimLabels[dim]}</p>
-                                    <div className="flex gap-0.5">
-                                      {[1, 2, 3, 4, 5].map(v => (
-                                        <button key={v}
-                                          className={`w-6 h-6 rounded text-[10px] font-bold transition-colors ${(existing?.[dim] || 0) >= v ? SCORE_COLORS[v] + " text-white" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}
-                                          onClick={() => saveScore.mutate({ scenarioId: s.id, vendorId: parseInt(selectedVendorId), [dim]: v })}
-                                          data-testid={`score-${s.id}-${dim}-${v}`}
-                                        >{v}</button>
-                                      ))}
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                              {existing?.overallScore && (
-                                <div className="flex items-center gap-2">
-                                  <p className="text-xs text-muted-foreground">Overall: <span className="font-bold">{existing.overallScore}/5</span></p>
-                                  {existing?.evaluatedBy === "KB Auto-Suggest" && <Badge variant="outline" className="text-[8px]">KB suggested</Badge>}
-                                </div>
-                              )}
-                              <VendorKbHint scenarioId={s.id} vendorId={parseInt(selectedVendorId)} />
-                            </CardContent>
-                          </Card>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <Card className="p-8 text-center"><p className="text-sm text-muted-foreground">Generate outcomes and scenarios first, then select vendors in Vendor Evaluation to score them.</p></Card>
-              )}
-            </TabsContent>
-
-            {/* TAB 4: SCORECARD */}
-            <TabsContent value="scorecard">
-              {scorecard?.outcomes?.length > 0 && scorecard?.vendorTotals?.length > 0 ? (
-                <div className="space-y-6">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-xs">
-                      <thead>
-                        <tr className="border-b">
-                          <th className="text-left p-2 font-medium">Outcome</th>
-                          <th className="text-left p-2 font-medium w-16">Priority</th>
-                          {scorecard.vendorTotals.map((v: any) => (
-                            <th key={v.vendorId} className="text-center p-2 font-medium">{v.vendorName}</th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {scorecard.outcomes.map((o: any) => (
-                          <tr key={o.id} className="border-b">
-                            <td className="p-2 font-medium">{o.title}</td>
-                            <td className="p-2"><Badge className={`text-[9px] ${PRI_COLORS[o.priority] || ""}`}>{o.priority}</Badge></td>
-                            {o.vendors.map((v: any) => (
-                              <td key={v.vendorId} className="text-center p-2">
-                                {v.avgOverall ? (
-                                  <span className={`inline-flex w-8 h-8 items-center justify-center rounded-full text-white text-xs font-bold ${SCORE_COLORS[Math.round(v.avgOverall)] || "bg-gray-400"}`}>
-                                    {v.avgOverall.toFixed(1)}
-                                  </span>
-                                ) : <span className="text-muted-foreground">—</span>}
-                              </td>
-                            ))}
-                          </tr>
-                        ))}
-                        {/* Weighted total row */}
-                        <tr className="border-t-2 font-bold">
-                          <td className="p-2">Weighted Total</td>
-                          <td className="p-2"></td>
-                          {scorecard.vendorTotals.map((v: any) => (
-                            <td key={v.vendorId} className="text-center p-2">
-                              {v.weightedAvg ? (
-                                <span className={`inline-flex w-10 h-10 items-center justify-center rounded-full text-white text-sm font-bold ${SCORE_COLORS[Math.round(v.weightedAvg)] || "bg-gray-400"}`}>
-                                  {v.weightedAvg.toFixed(1)}
-                                </span>
-                              ) : "—"}
-                            </td>
-                          ))}
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-
-                  <div className="text-[10px] text-muted-foreground mb-6">
-                    Priority weighting: Critical (4x) | High (3x) | Medium (2x) | Low (1x)
-                  </div>
-
-                  {/* Unified Evaluation */}
-                  {unifiedEval?.vendors?.length > 0 && (
-                    <div className="space-y-4">
-                      <h3 className="text-sm font-semibold flex items-center gap-2"><BarChart3 className="w-4 h-4" />Unified Vendor Evaluation</h3>
-                      <p className="text-xs text-muted-foreground">Combined score: {unifiedEval.weights.requirements}% requirements matrix + {unifiedEval.weights.outcomes}% outcome evaluation</p>
-                      <div className="space-y-2">
-                        {unifiedEval.vendors.map((v: any) => (
-                          <div key={v.vendorId} className="flex items-center gap-3 p-3 rounded-lg border">
-                            <div className="flex-1">
-                              <p className="text-sm font-medium">{v.vendorName}</p>
-                              <div className="flex items-center gap-4 mt-1 text-[11px] text-muted-foreground">
-                                <span>Requirements: {v.requirementScore}%</span>
-                                {v.outcomeScore !== null && <span>Outcomes: {v.outcomeScore}%</span>}
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <span className={`text-2xl font-bold ${v.combinedScore >= 80 ? "text-emerald-600" : v.combinedScore >= 60 ? "text-amber-600" : "text-red-600"}`}>
-                                {v.combinedScore}%
-                              </span>
-                              <p className="text-[10px] text-muted-foreground">combined</p>
-                            </div>
-                            <div className="w-24 h-2 rounded-full bg-muted overflow-hidden">
-                              <div className={`h-full rounded-full ${v.combinedScore >= 80 ? "bg-emerald-500" : v.combinedScore >= 60 ? "bg-amber-500" : "bg-red-500"}`} style={{ width: `${v.combinedScore}%` }} />
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <Card className="p-8 text-center">
-                  <BarChart3 className="w-8 h-8 mx-auto text-muted-foreground/40 mb-3" />
-                  <p className="text-sm text-muted-foreground">Score vendors on scenarios to see the scorecard.</p>
-                </Card>
-              )}
-            </TabsContent>
           </Tabs>
         </div>
       </ScrollArea>
@@ -548,31 +359,3 @@ export default function OutcomesPage() {
   );
 }
 
-function VendorKbHint({ scenarioId, vendorId }: { scenarioId: number; vendorId: number }) {
-  const [open, setOpen] = useState(false);
-  const { data: context } = useQuery<any>({
-    queryKey: ["/api/scenarios", scenarioId, "vendor-context", vendorId],
-    queryFn: () => apiRequest("GET", `/api/scenarios/${scenarioId}/vendor-context/${vendorId}`).then(r => r.json()),
-    enabled: open && !!vendorId,
-    staleTime: 60000,
-  });
-
-  return (
-    <Collapsible open={open} onOpenChange={setOpen}>
-      <CollapsibleTrigger className="text-[10px] text-accent flex items-center gap-1 hover:underline mt-1">
-        <ChevronRight className={`w-3 h-3 transition-transform ${open ? "rotate-90" : ""}`} />
-        Vendor Knowledge Base
-      </CollapsibleTrigger>
-      <CollapsibleContent>
-        {context?.hasData ? (
-          <div className="mt-1.5 p-2 rounded bg-muted/30 text-[10px] text-muted-foreground space-y-1 max-h-32 overflow-y-auto">
-            {context.capabilities?.map((c: string, i: number) => <p key={i}>{c}</p>)}
-            {context.processDetails?.slice(0, 5).map((d: string, i: number) => <p key={`d${i}`} className="font-mono">{d}</p>)}
-          </div>
-        ) : (
-          <p className="mt-1 text-[10px] text-muted-foreground italic">No KB data for this vendor/area.</p>
-        )}
-      </CollapsibleContent>
-    </Collapsible>
-  );
-}

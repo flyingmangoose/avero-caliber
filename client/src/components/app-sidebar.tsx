@@ -1,4 +1,4 @@
-import { LayoutDashboard, FolderOpen, BookTemplate, Sun, Moon, BarChart3, PieChart, MessageSquare, Shield, Rocket, Stethoscope, BookOpen, Compass, ArrowRightLeft, Building2, Radar, Info, Target } from "lucide-react";
+import { LayoutDashboard, FolderOpen, BookTemplate, Sun, Moon, BarChart3, PieChart, MessageSquare, Shield, Rocket, Stethoscope, BookOpen, Compass, ArrowRightLeft, Building2, Radar, Info, Target, Trophy } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -167,6 +167,16 @@ export function AppSidebar() {
                       <BarChart3 className="w-4 h-4" />
                       <span>Vendor Evaluation</span>
                       {!hasModule("selection") && <Badge className="ml-auto text-[8px] px-1 py-0 bg-muted text-muted-foreground">SEL</Badge>}
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+
+                {/* Evaluation Scorecard */}
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={location === `/projects/${projectId}/scorecard`}>
+                    <Link href={`/projects/${projectId}/scorecard`} data-testid="nav-scorecard">
+                      <Trophy className="w-4 h-4" />
+                      <span>Scorecard</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
