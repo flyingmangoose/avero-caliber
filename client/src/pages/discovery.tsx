@@ -72,6 +72,7 @@ export default function DiscoveryPage() {
             <TabsList className="mb-4">
               <TabsTrigger value="profile" data-testid="tab-profile">Organization Profile</TabsTrigger>
               <TabsTrigger value="interviews" data-testid="tab-interviews">Process Interviews</TabsTrigger>
+              <TabsTrigger value="processes" data-testid="tab-processes">Processes</TabsTrigger>
               <TabsTrigger value="painpoints" data-testid="tab-painpoints">Pain Points</TabsTrigger>
               <TabsTrigger value="generate" data-testid="tab-generate">Generate Requirements</TabsTrigger>
             </TabsList>
@@ -85,6 +86,9 @@ export default function DiscoveryPage() {
               ) : (
                 <InterviewList projectId={projectId!} onSelect={setActiveInterview} />
               )}
+            </TabsContent>
+            <TabsContent value="processes">
+              <ProcessesTab projectId={projectId!} />
             </TabsContent>
             <TabsContent value="painpoints">
               <PainPointsTab projectId={projectId!} />
@@ -1182,6 +1186,145 @@ const FREQ_BADGE: Record<string, string> = {
   quarterly: "border-gray-400 text-gray-600 dark:border-gray-600 dark:text-gray-400",
   annual: "border-gray-400 text-gray-600 dark:border-gray-600 dark:text-gray-400",
 };
+
+/* ==================== Tab: Processes ==================== */
+
+function ProcessesTab({ projectId }: { projectId: string }) {
+  const { toast } = useToast();
+  const [showDiagram, setShowDiagram] = useState<number | null>(null);
+
+  const { data: processes = [], isLoading } = useQuery<any[]>({
+    queryKey: ["/api/projects", projectId, "processes"],
+    queryFn: () => apiRequest("GET", `/api/projects/${projectId}/processes`).then(r => r.json()),
+  });
+
+  const generateMutation = useMutation({
+    mutationFn: () => apiRequest("POST", `/api/projects/${projectId}/processes/generate`).then(r => r.json()),
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "processes"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "pain-points"] });
+      toast({ title: `${data.count} processes generated` });
+    },
+    onError: (e: any) => toast({ title: "Generation failed", description: e.message, variant: "destructive" }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => apiRequest("DELETE", `/api/processes/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "processes"] });
+      toast({ title: "Deleted" });
+    },
+  });
+
+  function parseJson(str: string | null | undefined, fallback: any = []) {
+    if (!str) return fallback;
+    try { return JSON.parse(str); } catch { return fallback; }
+  }
+
+  if (isLoading) return <div className="py-8 text-center text-sm text-muted-foreground">Loading...</div>;
+
+  return (
+    <div className="max-w-4xl space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">{processes.length} process{processes.length !== 1 ? "es" : ""} documented</p>
+        <Button size="sm" className="gap-1.5 text-xs" onClick={() => generateMutation.mutate()} disabled={generateMutation.isPending} data-testid="btn-generate-processes">
+          {generateMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+          {generateMutation.isPending ? "Generating..." : "Generate from Interviews"}
+        </Button>
+      </div>
+
+      {processes.length === 0 ? (
+        <Card className="p-8 text-center">
+          <Sparkles className="w-8 h-8 mx-auto text-muted-foreground/40 mb-3" />
+          <p className="text-sm font-medium">No processes documented yet</p>
+          <p className="text-xs text-muted-foreground mt-1">Complete interviews first, then generate process descriptions.</p>
+        </Card>
+      ) : (
+        <div className="space-y-4">
+          {processes.map((proc: any) => {
+            const steps = parseJson(proc.currentSteps);
+            const hasDiagram = !!proc.mermaidDiagram;
+
+            return (
+              <Card key={proc.id} data-testid={`process-${proc.id}`}>
+                <CardContent className="p-4 space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="text-sm font-semibold">{proc.processName}</h3>
+                        <Badge className="text-[9px] bg-accent/10 text-accent border-accent/20">{proc.functionalArea}</Badge>
+                        <Badge variant="outline" className="text-[9px]">{proc.status}</Badge>
+                      </div>
+                      {proc.description && <p className="text-xs text-muted-foreground">{proc.description}</p>}
+                    </div>
+                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive shrink-0" onClick={() => deleteMutation.mutate(proc.id)}><Trash2 className="w-3 h-3" /></Button>
+                  </div>
+
+                  {/* Process metadata */}
+                  <div className="flex gap-4 text-[11px] text-muted-foreground flex-wrap">
+                    {proc.avgDuration && <span>Duration: {proc.avgDuration}</span>}
+                    {proc.frequency && <span>Frequency: {proc.frequency}</span>}
+                    {proc.currentSystems && <span>Systems: {proc.currentSystems}</span>}
+                    {proc.currentActors && <span>Actors: {proc.currentActors}</span>}
+                  </div>
+
+                  {/* Process steps */}
+                  {steps.length > 0 && (
+                    <div className="space-y-1.5">
+                      <p className="text-[11px] font-medium">Current State Steps</p>
+                      {steps.map((step: any, i: number) => (
+                        <div key={i} className="flex items-start gap-2 text-xs">
+                          <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0 mt-0.5 ${step.isManual ? "bg-orange-100 text-orange-700 dark:bg-orange-950/40 dark:text-orange-400" : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"}`}>
+                            {step.step || i + 1}
+                          </span>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="font-medium">{step.description}</span>
+                              <Badge variant="outline" className="text-[8px]">{step.actor}</Badge>
+                              {step.system && <Badge variant="outline" className="text-[8px]">{step.system}</Badge>}
+                              {step.isManual && <Badge className="text-[8px] bg-orange-100 text-orange-700">Manual</Badge>}
+                            </div>
+                            {step.painPoints && step.painPoints.length > 0 && (
+                              <div className="flex gap-1 mt-0.5 flex-wrap">
+                                {step.painPoints.map((pp: string, j: number) => (
+                                  <span key={j} className="text-[10px] text-red-600 dark:text-red-400">⚠ {pp}</span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Mermaid diagram toggle */}
+                  {hasDiagram && (
+                    <div>
+                      <button className="text-[11px] text-accent flex items-center gap-1 hover:underline" onClick={() => setShowDiagram(showDiagram === proc.id ? null : proc.id)}>
+                        {showDiagram === proc.id ? "Hide" : "View"} Process Diagram
+                      </button>
+                      {showDiagram === proc.id && (
+                        <pre className="mt-2 p-3 rounded-lg bg-muted/40 text-[10px] font-mono overflow-x-auto whitespace-pre-wrap">{proc.mermaidDiagram}</pre>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Future state (if available) */}
+                  {proc.futureDescription && (
+                    <div className="p-3 rounded-lg bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800">
+                      <p className="text-[11px] font-medium text-emerald-700 dark:text-emerald-400 mb-1">Future State</p>
+                      <p className="text-xs text-muted-foreground">{proc.futureDescription}</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function PainPointsTab({ projectId }: { projectId: string }) {
   const { toast } = useToast();

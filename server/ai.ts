@@ -1142,6 +1142,78 @@ Return ONLY valid JSON.`, undefined, 16384);
   }
 }
 
+// ==================== PROCESS DESCRIPTIONS ====================
+
+export async function generateProcessDescriptions(
+  interviews: any[],
+  painPoints: any[],
+  orgProfile: any
+): Promise<{ processes: any[] }> {
+  const interviewSummary = interviews.filter(i => i.status === "completed" || i.findings).map(i => {
+    let findings = "";
+    try {
+      const data = i.messages ? JSON.parse(i.messages) : {};
+      if (data.answers) findings = Object.values(data.answers).map((a: any) => a.answer).filter(Boolean).join(". ");
+    } catch {}
+    return `[${i.functionalArea}] ${i.interviewee || "Interview"}: ${i.findings || findings || "No findings"}`;
+  }).join("\n\n");
+
+  const ppList = painPoints.map(p =>
+    `[${p.functionalArea}] ${p.description} (severity: ${p.severity || "medium"})${p.currentWorkaround ? " — Workaround: " + p.currentWorkaround : ""}`
+  ).join("\n");
+
+  const orgSummary = orgProfile
+    ? `${orgProfile.entityName || orgProfile.name || "Organization"} (${orgProfile.entityType || "government"})`
+    : "Government organization";
+
+  const text = await llmCall(`You are a senior business process analyst documenting current-state processes for a government ERP implementation.
+
+ORGANIZATION: ${orgSummary}
+
+INTERVIEW FINDINGS:
+${interviewSummary}
+
+KNOWN PAIN POINTS:
+${ppList}
+
+From these interviews and pain points, identify and document 4-8 key business processes. For each process:
+1. Give it a clear name (e.g., "Purchase Order Processing", "Month-End Financial Close")
+2. Write a 2-3 sentence description
+3. List 4-8 current-state steps with the actor (role), system used, whether it's manual, and any pain points at that step
+4. Identify the systems involved and actors/roles
+5. Estimate average duration and frequency
+6. Generate a Mermaid flowchart diagram showing the process flow
+
+Return JSON:
+{
+  "processes": [
+    {
+      "functionalArea": "Accounts Payable",
+      "processName": "Invoice Processing",
+      "description": "End-to-end process from invoice receipt to payment execution",
+      "currentSteps": [
+        {"step": 1, "actor": "AP Clerk", "system": "Manual/Email", "description": "Receive invoice via email or mail", "isManual": true, "painPoints": ["No automated capture"]},
+        {"step": 2, "actor": "AP Clerk", "system": "SAP", "description": "Manually enter invoice details into SAP", "isManual": true, "painPoints": ["Duplicate entry", "Data errors"]},
+        {"step": 3, "actor": "AP Supervisor", "system": "SAP", "description": "Review and approve invoice", "isManual": false, "painPoints": []},
+        {"step": 4, "actor": "AP Manager", "system": "SAP/Excel", "description": "Match to PO and receiving", "isManual": true, "painPoints": ["Manual 3-way match"]},
+        {"step": 5, "actor": "Treasury", "system": "SAP", "description": "Schedule and execute payment", "isManual": false, "painPoints": ["No early pay discount tracking"]}
+      ],
+      "currentSystems": "SAP, Email, Excel",
+      "currentActors": "AP Clerk, AP Supervisor, AP Manager, Treasury",
+      "avgDuration": "5-7 business days",
+      "frequency": "Daily (50-100 invoices/week)",
+      "mermaidDiagram": "graph TD\\n    A[Receive Invoice] --> B[Enter in SAP]\\n    B --> C{PO Match?}\\n    C -->|Yes| D[Approve]\\n    C -->|No| E[Return to Vendor]\\n    D --> F[Schedule Payment]\\n    F --> G[Execute Payment]"
+    }
+  ]
+}
+
+Make processes specific to government operations. Use realistic examples. Return ONLY valid JSON.`, undefined, 8192);
+
+  const jsonMatch = text.match(/\{[\s\S]*"processes"[\s\S]*\}/);
+  if (!jsonMatch) return { processes: [] };
+  try { return JSON.parse(jsonMatch[0]); } catch { return { processes: [] }; }
+}
+
 // ==================== OUTCOMES & SCENARIOS ====================
 
 export async function generateOutcomes(painPoints: any[], orgProfile: any): Promise<{ outcomes: any[] }> {

@@ -4376,6 +4376,88 @@ Write in professional consulting tone covering: overall posture assessment, key 
     res.json({ success: true });
   });
 
+  // ==================== PROCESS DESCRIPTIONS ====================
+
+  app.get("/api/projects/:id/processes", (req, res) => {
+    res.json(storage.getProcessDescriptions(parseInt(req.params.id)));
+  });
+
+  app.post("/api/projects/:id/processes", (req, res) => {
+    const process = storage.createProcessDescription({ projectId: parseInt(req.params.id), ...req.body });
+    res.json(process);
+  });
+
+  app.post("/api/projects/:id/processes/generate", async (req, res) => {
+    const projectId = parseInt(req.params.id);
+    const project = storage.getProject(projectId);
+    if (!project) return res.status(404).json({ error: "Project not found" });
+
+    const interviews = storage.getDiscoveryInterviews(projectId);
+    const completedInterviews = interviews.filter(i => i.status === "completed" || i.status === "in_progress");
+    if (completedInterviews.length === 0) return res.status(400).json({ error: "No completed interviews found." });
+
+    const painPoints = storage.getPainPoints(projectId);
+    const orgProfile = storage.getOrgProfile(projectId) || (project.clientId ? storage.getClient(project.clientId) : null);
+
+    try {
+      const { generateProcessDescriptions } = await import("./ai");
+      const result = await generateProcessDescriptions(completedInterviews, painPoints, orgProfile);
+
+      const created = [];
+      for (const p of result.processes) {
+        // Find source interview IDs by functional area
+        const sourceIds = completedInterviews.filter(i => i.functionalArea === p.functionalArea).map(i => i.id);
+        const proc = storage.createProcessDescription({
+          projectId, functionalArea: p.functionalArea, processName: p.processName,
+          description: p.description, currentSteps: p.currentSteps,
+          currentSystems: p.currentSystems, currentActors: p.currentActors,
+          avgDuration: p.avgDuration, frequency: p.frequency,
+          mermaidDiagram: p.mermaidDiagram,
+          sourceInterviewIds: sourceIds,
+        });
+        created.push(proc);
+
+        // Auto-create pain points from process steps
+        if (Array.isArray(p.currentSteps)) {
+          for (const step of p.currentSteps) {
+            if (step.painPoints && Array.isArray(step.painPoints)) {
+              for (const pp of step.painPoints) {
+                if (pp && typeof pp === "string" && pp.trim()) {
+                  // Check if similar pain point already exists
+                  const existing = painPoints.find(ep => ep.description?.toLowerCase().includes(pp.toLowerCase().substring(0, 20)));
+                  if (!existing) {
+                    storage.createPainPoint({
+                      projectId, functionalArea: p.functionalArea,
+                      description: pp, severity: "medium",
+                      sourceInterviewId: sourceIds[0] || null,
+                    });
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+
+      logAction(req, "generated_processes", projectId, `${created.length} processes from ${completedInterviews.length} interviews`);
+      res.json({ processes: created, count: created.length });
+    } catch (err: any) {
+      console.error("Process generation error:", err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.patch("/api/processes/:id", (req, res) => {
+    const updated = storage.updateProcessDescription(parseInt(req.params.id), req.body);
+    if (!updated) return res.status(404).json({ error: "Process not found" });
+    res.json(updated);
+  });
+
+  app.delete("/api/processes/:id", (req, res) => {
+    storage.deleteProcessDescription(parseInt(req.params.id));
+    res.json({ success: true });
+  });
+
   // ==================== OUTCOMES & SCENARIOS ====================
 
   app.get("/api/projects/:id/outcomes", (req, res) => {

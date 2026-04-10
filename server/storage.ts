@@ -40,6 +40,7 @@ import {
   type AssessmentHistory, assessmentHistory,
   type User, users,
   type ProjectMember, projectMembers,
+  type ProcessDescription, processDescriptions,
   type Outcome, outcomes,
   type DemoScenario, demoScenarios,
   type ScenarioScore, scenarioScores,
@@ -528,6 +529,26 @@ sqlite.exec(`
     created_at TEXT NOT NULL
   );
 
+  CREATE TABLE IF NOT EXISTS process_descriptions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    functional_area TEXT NOT NULL,
+    process_name TEXT NOT NULL,
+    description TEXT,
+    current_steps TEXT,
+    current_systems TEXT,
+    current_actors TEXT,
+    avg_duration TEXT,
+    frequency TEXT,
+    mermaid_diagram TEXT,
+    future_steps TEXT,
+    future_description TEXT,
+    future_mermaid_diagram TEXT,
+    status TEXT DEFAULT 'draft',
+    source_interview_ids TEXT,
+    created_at TEXT NOT NULL
+  );
+
   CREATE TABLE IF NOT EXISTS outcomes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
@@ -710,6 +731,13 @@ export interface IStorage {
   getUser(id: number): User | undefined;
   getUserByGoogleId(googleId: string): User | undefined;
   getAllUsers(): User[];
+
+  // Process Descriptions
+  createProcessDescription(data: any): ProcessDescription;
+  getProcessDescriptions(projectId: number): ProcessDescription[];
+  getProcessDescription(id: number): ProcessDescription | undefined;
+  updateProcessDescription(id: number, data: any): ProcessDescription | undefined;
+  deleteProcessDescription(id: number): void;
 
   // Outcomes
   createOutcome(data: any): Outcome;
@@ -1102,6 +1130,43 @@ export class DatabaseStorage implements IStorage {
 
   getAllUsers(): User[] {
     return db.select().from(users).where(eq(users.isActive, 1)).all();
+  }
+
+  // ==================== Process Descriptions ====================
+
+  createProcessDescription(data: any): ProcessDescription {
+    const stringify = (v: any) => typeof v === "string" ? v : JSON.stringify(v || []);
+    return db.insert(processDescriptions).values({
+      projectId: data.projectId, functionalArea: data.functionalArea, processName: data.processName,
+      description: data.description || null,
+      currentSteps: stringify(data.currentSteps), currentSystems: data.currentSystems || null,
+      currentActors: data.currentActors || null, avgDuration: data.avgDuration || null,
+      frequency: data.frequency || null, mermaidDiagram: data.mermaidDiagram || null,
+      futureSteps: stringify(data.futureSteps), futureDescription: data.futureDescription || null,
+      futureMermaidDiagram: data.futureMermaidDiagram || null,
+      status: data.status || "draft",
+      sourceInterviewIds: stringify(data.sourceInterviewIds),
+      createdAt: new Date().toISOString(),
+    }).returning().get();
+  }
+
+  getProcessDescriptions(projectId: number): ProcessDescription[] {
+    return db.select().from(processDescriptions).where(eq(processDescriptions.projectId, projectId)).all();
+  }
+
+  getProcessDescription(id: number): ProcessDescription | undefined {
+    return db.select().from(processDescriptions).where(eq(processDescriptions.id, id)).get();
+  }
+
+  updateProcessDescription(id: number, data: any): ProcessDescription | undefined {
+    if (data.currentSteps && typeof data.currentSteps !== "string") data.currentSteps = JSON.stringify(data.currentSteps);
+    if (data.futureSteps && typeof data.futureSteps !== "string") data.futureSteps = JSON.stringify(data.futureSteps);
+    if (data.sourceInterviewIds && typeof data.sourceInterviewIds !== "string") data.sourceInterviewIds = JSON.stringify(data.sourceInterviewIds);
+    return db.update(processDescriptions).set(data).where(eq(processDescriptions.id, id)).returning().get();
+  }
+
+  deleteProcessDescription(id: number): void {
+    db.delete(processDescriptions).where(eq(processDescriptions.id, id)).run();
   }
 
   // ==================== Outcomes ====================

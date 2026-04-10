@@ -674,6 +674,32 @@ export type InsertDiscoveryPainPoint = z.infer<typeof insertDiscoveryPainPointSc
 export type ProcessTransformation = typeof processTransformations.$inferSelect;
 export type InsertProcessTransformation = z.infer<typeof insertProcessTransformationSchema>;
 
+// ==================== PROCESS DESCRIPTIONS ====================
+
+export const processDescriptions = sqliteTable("process_descriptions", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  projectId: integer("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  functionalArea: text("functional_area").notNull(),
+  processName: text("process_name").notNull(),
+  description: text("description"),
+  currentSteps: text("current_steps"), // JSON: [{step, actor, system, description, painPoints, isManual}]
+  currentSystems: text("current_systems"),
+  currentActors: text("current_actors"),
+  avgDuration: text("avg_duration"),
+  frequency: text("frequency"),
+  mermaidDiagram: text("mermaid_diagram"),
+  futureSteps: text("future_steps"), // JSON: populated after future state
+  futureDescription: text("future_description"),
+  futureMermaidDiagram: text("future_mermaid_diagram"),
+  status: text("status").default("draft"),
+  sourceInterviewIds: text("source_interview_ids"), // JSON array
+  createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
+});
+
+export const insertProcessDescriptionSchema = createInsertSchema(processDescriptions).omit({ id: true, createdAt: true });
+export type ProcessDescription = typeof processDescriptions.$inferSelect;
+export type InsertProcessDescription = z.infer<typeof insertProcessDescriptionSchema>;
+
 // ==================== OUTCOMES & SCENARIOS ====================
 
 export const outcomes = sqliteTable("outcomes", {
