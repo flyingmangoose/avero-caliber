@@ -317,6 +317,22 @@ export default function OutcomesPage() {
                         ))}
                       </SelectContent>
                     </Select>
+                    {selectedVendorId && (
+                      <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5"
+                        onClick={() => {
+                          apiRequest("POST", `/api/projects/${projectId}/scenario-scores/auto-suggest`, { vendorId: parseInt(selectedVendorId) })
+                            .then(r => r.json())
+                            .then((data: any) => {
+                              invalidateAll();
+                              toast({ title: `${data.suggested} scores auto-filled from KB for ${data.vendorName}` });
+                            })
+                            .catch((e: any) => toast({ title: "Auto-score failed", description: e.message, variant: "destructive" }));
+                        }}
+                        data-testid="btn-auto-score"
+                      >
+                        <Sparkles className="w-3.5 h-3.5" />Auto-Score from KB
+                      </Button>
+                    )}
                   </div>
 
                   {!selectedVendorId ? (
@@ -356,7 +372,10 @@ export default function OutcomesPage() {
                                 ))}
                               </div>
                               {existing?.overallScore && (
-                                <p className="text-xs text-muted-foreground">Overall: <span className="font-bold">{existing.overallScore}/5</span></p>
+                                <div className="flex items-center gap-2">
+                                  <p className="text-xs text-muted-foreground">Overall: <span className="font-bold">{existing.overallScore}/5</span></p>
+                                  {existing?.evaluatedBy === "KB Auto-Suggest" && <Badge variant="outline" className="text-[8px]">KB suggested</Badge>}
+                                </div>
                               )}
                               <VendorKbHint scenarioId={s.id} vendorId={parseInt(selectedVendorId)} />
                             </CardContent>

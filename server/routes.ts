@@ -4577,6 +4577,91 @@ Write in professional consulting tone covering: overall posture assessment, key 
     });
   });
 
+  // Auto-suggest scores from Knowledge Base
+  app.post("/api/projects/:id/scenario-scores/auto-suggest", async (req, res) => {
+    const projectId = parseInt(req.params.id);
+    const { vendorId } = req.body;
+    if (!vendorId) return res.status(400).json({ error: "vendorId required" });
+
+    const vendor = storage.getVendors().find(v => v.id === vendorId);
+    if (!vendor) return res.status(404).json({ error: "Vendor not found" });
+
+    const allScenarios = storage.getDemoScenariosByProject(projectId);
+    const allOutcomes = storage.getOutcomes(projectId);
+    const capabilities = storage.getVendorCapabilities({ platform: vendor.shortName?.toLowerCase() });
+    const processDetails = storage.getProcessDetails({ platform: vendor.shortName?.toLowerCase() });
+
+    const suggested: any[] = [];
+
+    for (const scenario of allScenarios) {
+      // Check if already scored
+      const existing = storage.getScenarioScore(scenario.id, vendorId);
+      if (existing) continue; // Don't overwrite manual scores
+
+      const outcome = allOutcomes.find(o => o.id === scenario.outcomeId);
+      const area = (scenario.functionalArea || outcome?.category || "").toLowerCase();
+
+      // Find relevant capabilities
+      const relevantCaps = capabilities.filter(c =>
+        c.module?.toLowerCase().includes(area) ||
+        c.processArea?.toLowerCase().includes(area)
+      );
+
+      // Find relevant process details with scores
+      const relevantDetails = processDetails.filter(d =>
+        d.module?.toLowerCase().includes(area)
+      );
+
+      // Calculate suggested scores from KB data
+      let processFit = 3, automationLevel = 3, configComplexity = 3, userExperience = 3, dataVisibility = 3;
+
+      if (relevantCaps.length > 0) {
+        // Use average maturity rating as base
+        const avgMaturity = relevantCaps.filter(c => c.maturityRating).reduce((s, c) => s + (c.maturityRating || 3), 0) / Math.max(relevantCaps.filter(c => c.maturityRating).length, 1);
+        processFit = Math.round(avgMaturity);
+        userExperience = Math.round(avgMaturity);
+        dataVisibility = Math.round(avgMaturity);
+
+        // Check automation levels
+        const autoLevels = relevantCaps.map(c => c.automationLevel).filter(Boolean);
+        if (autoLevels.includes("fully_automated")) automationLevel = 5;
+        else if (autoLevels.includes("semi_automated")) automationLevel = 4;
+        else if (autoLevels.includes("configurable")) automationLevel = 3;
+        else if (autoLevels.includes("manual")) automationLevel = 2;
+
+        // Config complexity from bestFitFor/limitations
+        const hasLimitations = relevantCaps.some(c => {
+          try { return JSON.parse(c.limitations || "[]").length > 2; } catch { return false; }
+        });
+        configComplexity = hasLimitations ? 3 : 4;
+      }
+
+      if (relevantDetails.length > 0) {
+        // Use S/F/C/T/N scores to adjust
+        const scoreMap: Record<string, number> = { S: 5, F: 4, C: 3, T: 2, N: 1 };
+        const detailScores = relevantDetails.map(d => scoreMap[d.score || "C"] || 3);
+        const avgDetail = Math.round(detailScores.reduce((a, b) => a + b, 0) / detailScores.length);
+        processFit = Math.round((processFit + avgDetail) / 2);
+        configComplexity = Math.round((configComplexity + avgDetail) / 2);
+      }
+
+      // Clamp all values 1-5
+      const clamp = (v: number) => Math.max(1, Math.min(5, v));
+      const dims = { processFit: clamp(processFit), automationLevel: clamp(automationLevel), configComplexity: clamp(configComplexity), userExperience: clamp(userExperience), dataVisibility: clamp(dataVisibility) };
+      const overall = Math.round(Object.values(dims).reduce((a, b) => a + b, 0) / 5);
+
+      const score = storage.createScenarioScore({
+        projectId, scenarioId: scenario.id, vendorId,
+        ...dims, overallScore: overall,
+        evaluatedBy: "KB Auto-Suggest",
+      });
+      suggested.push(score);
+    }
+
+    logAction(req, "auto_suggested_scores", projectId, `${suggested.length} scores for ${vendor.name} from KB`);
+    res.json({ suggested: suggested.length, vendorName: vendor.name });
+  });
+
   // Outcome Scorecard (computed)
   app.get("/api/projects/:id/outcome-scorecard", (req, res) => {
     const projectId = parseInt(req.params.id);
