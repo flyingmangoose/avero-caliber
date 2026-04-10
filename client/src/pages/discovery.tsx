@@ -19,6 +19,41 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 
 const API_BASE = "";
 
+function MermaidDiagram({ chart }: { chart: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [rendered, setRendered] = useState(false);
+
+  useEffect(() => {
+    if (!ref.current || !chart) return;
+    let cancelled = false;
+    import("mermaid").then(({ default: mermaid }) => {
+      if (cancelled) return;
+      mermaid.initialize({ startOnLoad: false, theme: "neutral", securityLevel: "loose" });
+      const id = `mermaid-${Date.now()}`;
+      mermaid.render(id, chart).then(({ svg }) => {
+        if (!cancelled && ref.current) {
+          ref.current.innerHTML = svg;
+          setRendered(true);
+        }
+      }).catch(() => {
+        if (!cancelled && ref.current) {
+          ref.current.innerHTML = `<pre class="text-xs text-muted-foreground whitespace-pre-wrap">${chart}</pre>`;
+          setRendered(true);
+        }
+      });
+    });
+    return () => { cancelled = true; };
+  }, [chart]);
+
+  return (
+    <div className="mt-2 p-3 rounded-lg bg-muted/30 overflow-x-auto">
+      <div ref={ref} className="mermaid-container">
+        {!rendered && <p className="text-xs text-muted-foreground">Rendering diagram...</p>}
+      </div>
+    </div>
+  );
+}
+
 const ENTITY_TYPES = [
   { value: "city", label: "City" },
   { value: "county", label: "County" },
@@ -1304,7 +1339,7 @@ function ProcessesTab({ projectId }: { projectId: string }) {
                         {showDiagram === proc.id ? "Hide" : "View"} Process Diagram
                       </button>
                       {showDiagram === proc.id && (
-                        <pre className="mt-2 p-3 rounded-lg bg-muted/40 text-[10px] font-mono overflow-x-auto whitespace-pre-wrap">{proc.mermaidDiagram}</pre>
+                        <MermaidDiagram chart={proc.mermaidDiagram} />
                       )}
                     </div>
                   )}
