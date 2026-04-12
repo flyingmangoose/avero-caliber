@@ -23,8 +23,6 @@ const allowlist = [
   "passport",
   "passport-google-oauth20",
   "passport-local",
-  "better-sqlite3",
-  "better-sqlite3-session-store",
   "stripe",
   "uuid",
   "ws",
