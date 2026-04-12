@@ -1485,6 +1485,13 @@ function EvidenceLogTab({ contractId, projectId }: { contractId: number | null; 
     })
   );
 
+  // Fetch project documents (uploaded via Health Check or directly)
+  const { data: projectDocs } = useQuery<any[]>({
+    queryKey: ["/api/projects", projectId, "documents"],
+    queryFn: () => apiRequest("GET", `/api/projects/${projectId}/documents`).then(r => r.json()),
+    enabled: !!projectId,
+  });
+
   // Build deliverable lookup
   const deliverableMap = useMemo(() => {
     const map: Record<number, string> = {};
@@ -1492,19 +1499,49 @@ function EvidenceLogTab({ contractId, projectId }: { contractId: number | null; 
     return map;
   }, [deliverables]);
 
-  // Aggregate all evidence into a flat chronological list
+  // Map document types to evidence types
+  const docTypeToEvidenceType = (dt: string) => {
+    const map: Record<string, string> = {
+      status_report: "status_report", sow_contract: "document", budget_report: "document",
+      schedule_update: "document", test_results: "test_result", change_request: "document",
+      meeting_minutes: "meeting_notes", interview_notes: "meeting_notes", raid_log: "document",
+      risk_register: "document", other: "other",
+    };
+    return map[dt] || "document";
+  };
+
+  // Aggregate all evidence + project documents into a flat chronological list
   const allEvidence = useMemo(() => {
     const items: any[] = [];
     evidenceResults.forEach((result, idx) => {
       if (result.data) {
         result.data.forEach((e: any) => {
-          items.push({ ...e, deliverableName: deliverables[idx]?.name || "Unknown" });
+          items.push({ ...e, deliverableName: deliverables[idx]?.name || "Unknown", source: "evidence" });
         });
       }
     });
+    // Include project documents as evidence items
+    if (projectDocs) {
+      for (const doc of projectDocs) {
+        items.push({
+          id: `doc-${doc.id}`,
+          type: docTypeToEvidenceType(doc.documentType),
+          title: doc.fileName,
+          description: doc.aiAnalysis ? `AI-analyzed ${formatLabel(doc.documentType)}` : formatLabel(doc.documentType),
+          fileName: doc.fileName,
+          createdAt: doc.createdAt,
+          deliverableName: "Project Document",
+          assessmentResult: doc.analysisStatus === "completed" ? "supports_compliance" : null,
+          assessorNotes: doc.analysisStatus === "completed" ? "Auto-analyzed from uploaded document" : null,
+          source: "project_document",
+          documentType: doc.documentType,
+          analysisStatus: doc.analysisStatus,
+        });
+      }
+    }
     items.sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
     return items;
-  }, [evidenceResults, deliverables]);
+  }, [evidenceResults, deliverables, projectDocs]);
 
   const filteredEvidence = allEvidence.filter((e: any) => {
     if (typeFilter !== "all" && e.type !== typeFilter) return false;
@@ -1590,7 +1627,7 @@ function EvidenceLogTab({ contractId, projectId }: { contractId: number | null; 
       ) : (
         <div className="space-y-2">
           {filteredEvidence.map((e: any) => (
-            <Card key={e.id} className="p-3" data-testid={`evidence-card-${e.id}`}>
+            <Card key={e.id} className={`p-3 ${e.source === "project_document" ? "border-l-2 border-l-blue-400" : ""}`} data-testid={`evidence-card-${e.id}`}>
               <div className="flex items-start gap-3">
                 <div className="mt-0.5 shrink-0">
                   <EvidenceTypeIcon type={e.type} />
@@ -1599,22 +1636,33 @@ function EvidenceLogTab({ contractId, projectId }: { contractId: number | null; 
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-sm font-medium">{e.title}</span>
                     <Badge className={`text-xs ${EVIDENCE_TYPE_COLORS[e.type] || ""}`}>{formatLabel(e.type)}</Badge>
+                    {e.source === "project_document" && (
+                      <Badge variant="outline" className="text-xs text-blue-600 border-blue-300">Uploaded Doc</Badge>
+                    )}
                     {e.assessmentResult && (
                       <Badge className={`text-xs ${ASSESSMENT_RESULT_COLORS[e.assessmentResult] || ""}`}>{formatLabel(e.assessmentResult)}</Badge>
+                    )}
+                    {e.analysisStatus && (
+                      <Badge variant="outline" className={`text-xs ${e.analysisStatus === "completed" ? "text-green-600 border-green-300" : e.analysisStatus === "failed" ? "text-red-600 border-red-300" : "text-amber-600 border-amber-300"}`}>
+                        {e.analysisStatus === "completed" ? "Analyzed" : formatLabel(e.analysisStatus)}
+                      </Badge>
                     )}
                   </div>
                   <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
                     <span>{e.deliverableName}</span>
                     <span>·</span>
                     <span>{e.createdAt?.split("T")[0] || "—"}</span>
-                    {e.fileName && <><span>·</span><span>File: {e.fileName}</span></>}
+                    {e.fileName && e.source !== "project_document" && <><span>·</span><span>File: {e.fileName}</span></>}
+                    {e.documentType && <><span>·</span><span>{formatLabel(e.documentType)}</span></>}
                   </div>
                   {e.description && <p className="text-sm text-muted-foreground mt-1">{e.description}</p>}
                   {e.assessorNotes && <p className="text-sm text-foreground mt-1"><span className="font-semibold text-muted-foreground">Assessor notes:</span> {e.assessorNotes}</p>}
                 </div>
-                <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => deleteMutation.mutate(e.id)} data-testid={`delete-evidence-${e.id}`}>
-                  <Trash2 className="w-3.5 h-3.5" />
-                </Button>
+                {e.source !== "project_document" && (
+                  <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => deleteMutation.mutate(e.id)} data-testid={`delete-evidence-${e.id}`}>
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </Button>
+                )}
               </div>
             </Card>
           ))}

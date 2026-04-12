@@ -5804,6 +5804,48 @@ Write in professional consulting tone covering: overall posture assessment, key 
         } catch (synthErr: any) {
           console.error("Auto-synthesize error:", synthErr.message);
         }
+
+        // Auto-assess IVV checkpoints if contract exists
+        try {
+          const contracts = storage.getContractBaselines(projectId);
+          if (contracts.length > 0) {
+            const checkpoints = storage.getCheckpoints(contracts[0].id);
+            const pendingCheckpoints = checkpoints.filter(cp => cp.status !== "completed");
+            if (pendingCheckpoints.length > 0) {
+              const { assessCheckpoint, buildProjectContext: bpc2 } = await import("./ai");
+              const projectContext2 = bpc2(projectId);
+              const hcAssessments2 = storage.getHealthCheckAssessments(projectId);
+              const raidItems2 = storage.getRaidItems(projectId);
+              const scheduleItems2 = storage.getScheduleEntries(projectId);
+              const documents2 = storage.getProjectDocuments(projectId);
+
+              for (const cp of pendingCheckpoints) {
+                try {
+                  const cpResult = await assessCheckpoint({
+                    checkpointName: cp.name, checkpointPhase: cp.phase,
+                    projectContext: projectContext2, assessments: hcAssessments2,
+                    raidItems: raidItems2, scheduleItems: scheduleItems2, documents: documents2,
+                  });
+                  if (cpResult.dimensions.length > 0) {
+                    storage.saveCheckpointAssessment(cp.id, cpResult.dimensions);
+                  }
+                  storage.updateCheckpoint(cp.id, {
+                    overallAssessment: cpResult.overallAssessment,
+                    recommendations: cpResult.recommendations,
+                    findings: cpResult.findings,
+                    status: "completed",
+                  });
+                  console.log(`Auto-assessed checkpoint: ${cp.name}`);
+                } catch (cpErr: any) {
+                  console.error(`Auto-assess checkpoint ${cp.name} error:`, cpErr.message);
+                }
+              }
+              logAction(req, "auto_assessed_checkpoints", projectId, `${pendingCheckpoints.length} checkpoints assessed`);
+            }
+          }
+        } catch (ivvErr: any) {
+          console.error("Auto-assess IVV error:", ivvErr.message);
+        }
       }
 
       res.json(analysis);
