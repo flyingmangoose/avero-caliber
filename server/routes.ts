@@ -297,9 +297,10 @@ Return ONLY the JSON object.`;
       const fileBuffer = fs.readFileSync(req.file.path);
 
       if (req.file.originalname.endsWith(".pdf") || req.file.mimetype === "application/pdf") {
-        const pdfParse = require("pdf-parse");
-        const pdfData = await pdfParse(fileBuffer);
-        docText = pdfData.text || "";
+        const { PDFParse } = require("pdf-parse");
+        const pdfParser = new PDFParse(new Uint8Array(fileBuffer));
+        const pdfResult = await pdfParser.getText();
+        docText = pdfResult.pages ? pdfResult.pages.map((p: any) => p.text).join("\n\n") : "";
       } else {
         // DOCX or other — extract raw text
         docText = fileBuffer.toString("utf-8").replace(/[^\x20-\x7E\n\r\t]/g, " ").replace(/\s+/g, " ");
@@ -2013,9 +2014,10 @@ Only include fields that are clearly present in the document. Return ONLY valid 
     try {
       // Read PDF file
       const fileBuffer = fs.readFileSync(req.file.path);
-      const pdfParse = require("pdf-parse");
-      const pdfData = await pdfParse(fileBuffer);
-      const pdfText = pdfData.text;
+      const { PDFParse } = require("pdf-parse");
+      const pdfParser = new PDFParse(new Uint8Array(fileBuffer));
+      const pdfResult = await pdfParser.getText();
+      const pdfText = pdfResult.pages ? pdfResult.pages.map((p: any) => p.text).join("\n\n") : "";
 
       if (!pdfText || pdfText.trim().length === 0) {
         return res.status(400).json({ error: "Could not extract text from PDF" });
@@ -5543,10 +5545,10 @@ Write in professional consulting tone covering: overall posture assessment, key 
       if (ext === "txt" || ext === "csv" || ext === "md" || ext === "json") {
         rawText = fileBuffer.toString("utf-8");
       } else if (ext === "pdf") {
-        const pdfMod = require("pdf-parse");
-        const pdfParse = typeof pdfMod === "function" ? pdfMod : pdfMod.default;
-        const pdfData = await pdfParse(fileBuffer);
-        rawText = pdfData.text;
+        const { PDFParse } = require("pdf-parse");
+        const pdfParser = new PDFParse(new Uint8Array(fileBuffer));
+        const pdfResult = await pdfParser.getText();
+        rawText = pdfResult.pages ? pdfResult.pages.map((p: any) => p.text).join("\n\n") : "";
       } else if (ext === "docx" || ext === "doc") {
         const mammoth = require("mammoth");
         const result = await mammoth.extractRawText({ buffer: fileBuffer });
