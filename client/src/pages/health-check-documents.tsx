@@ -165,18 +165,18 @@ function DocumentRow({
           <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
           <div className="min-w-0">
             <p className="text-xs font-medium truncate">{doc.fileName}</p>
-            {doc.period && <p className="text-[10px] text-muted-foreground">{doc.period}</p>}
+            {doc.period && <p className="text-xs text-muted-foreground">{doc.period}</p>}
           </div>
         </div>
 
-        <Badge className={`text-[10px] shrink-0 ${typeInfo.color}`}>{typeInfo.label}</Badge>
+        <Badge className={`text-xs shrink-0 ${typeInfo.color}`}>{typeInfo.label}</Badge>
 
-        <Badge className={`text-[10px] shrink-0 capitalize ${STATUS_COLORS[doc.analysisStatus] ?? ""}`}>
+        <Badge className={`text-xs shrink-0 capitalize ${STATUS_COLORS[doc.analysisStatus] ?? ""}`}>
           {doc.analysisStatus === "processing" && <Loader2 className="w-2.5 h-2.5 mr-1 animate-spin inline" />}
           {doc.analysisStatus}
         </Badge>
 
-        <span className="text-[10px] text-muted-foreground shrink-0">{formatDate(doc.createdAt)}</span>
+        <span className="text-xs text-muted-foreground shrink-0">{formatDate(doc.createdAt)}</span>
 
         <div className="flex items-center gap-1 shrink-0">
           {doc.analysisStatus === "completed" && (
@@ -223,11 +223,11 @@ function DocumentRow({
           {/* Summary + health */}
           <div className="flex items-start gap-3">
             <div className="flex-1">
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">AI Summary</p>
+              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">AI Summary</p>
               <p className="text-xs leading-relaxed">{analysis.summary || "No summary available."}</p>
             </div>
             {analysis.overallHealth && (
-              <Badge className={`text-[10px] capitalize shrink-0 ${HEALTH_COLORS[analysis.overallHealth.toLowerCase()] ?? "bg-slate-100 text-slate-600"}`}>
+              <Badge className={`text-xs capitalize shrink-0 ${HEALTH_COLORS[analysis.overallHealth.toLowerCase()] ?? "bg-slate-100 text-slate-600"}`}>
                 {analysis.overallHealth.replace(/_/g, " ")}
               </Badge>
             )}
@@ -236,10 +236,10 @@ function DocumentRow({
           {/* Extracted item counts */}
           {hasItems && (
             <div className="flex flex-wrap gap-2">
-              {raidCount > 0    && <span className="text-[10px] bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 rounded px-2 py-0.5">{raidCount} RAID item{raidCount !== 1 ? "s" : ""}</span>}
-              {budgetCount > 0  && <span className="text-[10px] bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 rounded px-2 py-0.5">{budgetCount} budget item{budgetCount !== 1 ? "s" : ""}</span>}
-              {schedCount > 0   && <span className="text-[10px] bg-indigo-50 dark:bg-indigo-950/30 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 rounded px-2 py-0.5">{schedCount} milestone{schedCount !== 1 ? "s" : ""}</span>}
-              {findingCount > 0 && <span className="text-[10px] bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 rounded px-2 py-0.5">{findingCount} finding{findingCount !== 1 ? "s" : ""}</span>}
+              {raidCount > 0    && <span className="text-xs bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 rounded px-2 py-0.5">{raidCount} RAID item{raidCount !== 1 ? "s" : ""}</span>}
+              {budgetCount > 0  && <span className="text-xs bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 rounded px-2 py-0.5">{budgetCount} budget item{budgetCount !== 1 ? "s" : ""}</span>}
+              {schedCount > 0   && <span className="text-xs bg-indigo-50 dark:bg-indigo-950/30 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 rounded px-2 py-0.5">{schedCount} milestone{schedCount !== 1 ? "s" : ""}</span>}
+              {findingCount > 0 && <span className="text-xs bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 rounded px-2 py-0.5">{findingCount} finding{findingCount !== 1 ? "s" : ""}</span>}
             </div>
           )}
 
@@ -290,13 +290,13 @@ function ExtractedDetails({ analysis }: { analysis: AnalysisResult }) {
         >
           <div className="space-y-1">
             {analysis.raids.map((r: any, i: number) => (
-              <div key={i} className="text-[11px] flex gap-2 items-start py-1 border-b border-border/30 last:border-0">
-                <Badge variant="outline" className="text-[9px] capitalize shrink-0 mt-0.5">{r.type ?? "risk"}</Badge>
+              <div key={i} className="text-xs flex gap-2 items-start py-1 border-b border-border/30 last:border-0">
+                <Badge variant="outline" className="text-xs capitalize shrink-0 mt-0.5">{r.type ?? "risk"}</Badge>
                 <div>
                   <p className="font-medium">{r.title ?? r.description ?? "—"}</p>
                   {r.description && r.title && <p className="text-muted-foreground">{r.description}</p>}
                 </div>
-                {r.severity && <Badge className={`text-[9px] ml-auto shrink-0 capitalize ${HEALTH_COLORS[r.severity] ?? ""}`}>{r.severity}</Badge>}
+                {r.severity && <Badge className={`text-xs ml-auto shrink-0 capitalize ${HEALTH_COLORS[r.severity] ?? ""}`}>{r.severity}</Badge>}
               </div>
             ))}
           </div>
@@ -313,7 +313,7 @@ function ExtractedDetails({ analysis }: { analysis: AnalysisResult }) {
         >
           <div className="space-y-1">
             {analysis.budgetItems.map((b: any, i: number) => (
-              <div key={i} className="text-[11px] flex gap-2 items-center py-1 border-b border-border/30 last:border-0">
+              <div key={i} className="text-xs flex gap-2 items-center py-1 border-b border-border/30 last:border-0">
                 <p className="flex-1">{b.description ?? b.category ?? "—"}</p>
                 {b.amount != null && (
                   <span className="font-mono text-emerald-600 dark:text-emerald-400 shrink-0">
@@ -336,11 +336,11 @@ function ExtractedDetails({ analysis }: { analysis: AnalysisResult }) {
         >
           <div className="space-y-1">
             {analysis.scheduleItems.map((s: any, i: number) => (
-              <div key={i} className="text-[11px] flex gap-2 items-center py-1 border-b border-border/30 last:border-0">
+              <div key={i} className="text-xs flex gap-2 items-center py-1 border-b border-border/30 last:border-0">
                 <p className="flex-1">{s.milestone ?? s.name ?? "—"}</p>
                 {s.currentDate && <span className="text-muted-foreground shrink-0">{s.currentDate}</span>}
                 {s.status && (
-                  <Badge variant="outline" className={`text-[9px] capitalize shrink-0 ${s.status === "delayed" ? "border-red-500 text-red-500" : s.status === "at_risk" ? "border-amber-500 text-amber-500" : s.status === "completed" ? "border-emerald-500 text-emerald-500" : ""}`}>
+                  <Badge variant="outline" className={`text-xs capitalize shrink-0 ${s.status === "delayed" ? "border-red-500 text-red-500" : s.status === "at_risk" ? "border-amber-500 text-amber-500" : s.status === "completed" ? "border-emerald-500 text-emerald-500" : ""}`}>
                     {s.status.replace(/_/g, " ")}
                   </Badge>
                 )}
@@ -360,7 +360,7 @@ function ExtractedDetails({ analysis }: { analysis: AnalysisResult }) {
         >
           <div className="space-y-1">
             {analysis.findings.map((f: any, i: number) => (
-              <div key={i} className="text-[11px] py-1 border-b border-border/30 last:border-0">
+              <div key={i} className="text-xs py-1 border-b border-border/30 last:border-0">
                 <p>{typeof f === "string" ? f : (f.description ?? f.text ?? JSON.stringify(f))}</p>
               </div>
             ))}
@@ -389,7 +389,7 @@ function Collapsible({
   return (
     <div className="border border-border/40 rounded">
       <button
-        className="w-full flex items-center justify-between px-3 py-2 text-[11px] font-medium text-left hover:bg-muted/30 transition-colors"
+        className="w-full flex items-center justify-between px-3 py-2 text-xs font-medium text-left hover:bg-muted/30 transition-colors"
         onClick={onToggle}
         data-testid={testId}
       >
@@ -563,7 +563,7 @@ export function DocumentsTab({ projectId, onApplyComplete }: { projectId: number
             <p className="text-sm text-muted-foreground font-medium">
               {fileName ? fileName : "Drop files here or click to browse"}
             </p>
-            <p className="text-[11px] text-muted-foreground/60 mt-1">
+            <p className="text-xs text-muted-foreground/60 mt-1">
               Supports PDF, Word, Excel, PowerPoint, CSV, and text files
             </p>
           </div>
@@ -621,7 +621,7 @@ export function DocumentsTab({ projectId, onApplyComplete }: { projectId: number
 
           {/* Upload & Analyze button */}
           <div className="flex items-center justify-between pt-1">
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               AI will extract data, apply to health check, and update the assessment automatically.
             </p>
             <Button
@@ -647,7 +647,7 @@ export function DocumentsTab({ projectId, onApplyComplete }: { projectId: number
             <FileText className="w-4 h-4 text-accent" />
             Document Library
             {documents.length > 0 && (
-              <Badge variant="outline" className="text-[10px] ml-1">{documents.length}</Badge>
+              <Badge variant="outline" className="text-xs ml-1">{documents.length}</Badge>
             )}
           </CardTitle>
         </CardHeader>
@@ -661,7 +661,7 @@ export function DocumentsTab({ projectId, onApplyComplete }: { projectId: number
             <div className="text-center py-10">
               <FileText className="w-8 h-8 mx-auto mb-2 text-muted-foreground/30" />
               <p className="text-sm text-muted-foreground">No documents uploaded yet.</p>
-              <p className="text-[11px] text-muted-foreground/60 mt-1">
+              <p className="text-xs text-muted-foreground/60 mt-1">
                 Upload status reports, RAID logs, test results, and more to extract structured data.
               </p>
             </div>
@@ -669,11 +669,11 @@ export function DocumentsTab({ projectId, onApplyComplete }: { projectId: number
             <div className="space-y-2" data-testid="document-list">
               {/* Table header */}
               <div className="hidden sm:grid grid-cols-[1fr_auto_auto_auto_auto] gap-3 px-4 py-1.5">
-                <span className="text-[10px] text-muted-foreground uppercase tracking-wide">File</span>
-                <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Type</span>
-                <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Status</span>
-                <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Date</span>
-                <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Actions</span>
+                <span className="text-xs text-muted-foreground uppercase tracking-wide">File</span>
+                <span className="text-xs text-muted-foreground uppercase tracking-wide">Type</span>
+                <span className="text-xs text-muted-foreground uppercase tracking-wide">Status</span>
+                <span className="text-xs text-muted-foreground uppercase tracking-wide">Date</span>
+                <span className="text-xs text-muted-foreground uppercase tracking-wide">Actions</span>
               </div>
 
               {documents.map(doc => (

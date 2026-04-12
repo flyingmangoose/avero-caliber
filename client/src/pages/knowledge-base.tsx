@@ -62,7 +62,7 @@ function MaturityDots({ rating }: { rating: number | null }) {
 function PlatformBadge({ platform }: { platform: string }) {
   const color = PLATFORM_COLORS[platform] || "#888";
   const label = PLATFORM_LABELS[platform] || platform;
-  return <Badge className="text-[10px] text-white border-0" style={{ backgroundColor: color }}>{label}</Badge>;
+  return <Badge className="text-xs text-white border-0" style={{ backgroundColor: color }}>{label}</Badge>;
 }
 
 function parseJsonSafe(val: any): string[] {
@@ -182,7 +182,7 @@ export default function KnowledgeBasePage() {
                 <div className="text-center py-16">
                   <BookOpen className="w-12 h-12 mx-auto text-muted-foreground/30 mb-3" />
                   <p className="text-sm text-muted-foreground">No vendor capabilities loaded yet.</p>
-                  <p className="text-xs text-muted-foreground/60 mt-1">Click "Seed from Proposals" to extract knowledge from vendor proposal data.</p>
+                  <p className="text-sm text-muted-foreground/60 mt-1">Click "Seed from Proposals" to extract knowledge from vendor proposal data.</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-2 gap-3">
@@ -198,23 +198,23 @@ export default function KnowledgeBasePage() {
                             <div className="flex items-start gap-2 mb-1.5">
                               <PlatformBadge platform={cap.vendorPlatform} />
                               <div className="flex-1 min-w-0">
-                                <h4 className="text-xs font-semibold truncate">{cap.module}</h4>
-                                <p className="text-[10px] text-muted-foreground">{cap.processArea}</p>
+                                <h4 className="text-sm font-semibold truncate">{cap.module}</h4>
+                                <p className="text-sm text-muted-foreground">{cap.processArea}</p>
                               </div>
                               <div className="flex items-center gap-2 shrink-0">
                                 <MaturityDots rating={cap.maturityRating} />
                                 {cap.automationLevel && (
-                                  <Badge className={`text-[9px] px-1.5 py-0 ${AUTO_COLORS[cap.automationLevel] || "bg-muted text-muted-foreground"}`}>
+                                  <Badge className={`text-xs px-1.5 py-0 ${AUTO_COLORS[cap.automationLevel] || "bg-muted text-muted-foreground"}`}>
                                     {cap.automationLevel.replace(/_/g, " ")}
                                   </Badge>
                                 )}
                               </div>
                             </div>
                             {cap.workflowDescription && (
-                              <p className="text-[11px] text-muted-foreground line-clamp-3 mb-2">{cap.workflowDescription}</p>
+                              <p className="text-sm text-muted-foreground line-clamp-3 mb-2">{cap.workflowDescription}</p>
                             )}
                             <CollapsibleTrigger asChild>
-                              <Button variant="ghost" size="sm" className="h-5 text-[10px] text-muted-foreground p-0 gap-1" data-testid={`expand-cap-${cap.id}`}>
+                              <Button variant="ghost" size="sm" className="h-5 text-xs text-muted-foreground p-0 gap-1" data-testid={`expand-cap-${cap.id}`}>
                                 <ChevronDown className={`w-3 h-3 transition-transform ${isOpen ? "rotate-180" : ""}`} />
                                 {isOpen ? "Hide" : "View"} Details
                               </Button>
@@ -223,38 +223,38 @@ export default function KnowledgeBasePage() {
                               <div className="mt-2 pt-2 border-t border-border/50 space-y-2">
                                 {cap.workflowDescription && (
                                   <div>
-                                    <p className="text-[10px] font-semibold text-muted-foreground mb-0.5">Workflow</p>
-                                    <p className="text-[11px] whitespace-pre-line">{cap.workflowDescription}</p>
+                                    <p className="text-xs font-semibold text-muted-foreground mb-0.5">Workflow</p>
+                                    <p className="text-sm whitespace-pre-line">{cap.workflowDescription}</p>
                                   </div>
                                 )}
                                 {diffs.length > 0 && (
                                   <div>
-                                    <p className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 mb-0.5">Differentiators</p>
+                                    <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 mb-0.5">Differentiators</p>
                                     <ul className="space-y-0.5">{diffs.map((d: string, i: number) => (
-                                      <li key={i} className="text-[11px] flex gap-1.5"><span className="text-emerald-500 shrink-0">+</span><span>{d}</span></li>
+                                      <li key={i} className="text-sm flex gap-1.5"><span className="text-emerald-500 shrink-0">+</span><span>{d}</span></li>
                                     ))}</ul>
                                   </div>
                                 )}
                                 {lims.length > 0 && (
                                   <div>
-                                    <p className="text-[10px] font-semibold text-red-600 dark:text-red-400 mb-0.5">Limitations</p>
+                                    <p className="text-xs font-semibold text-red-600 dark:text-red-400 mb-0.5">Limitations</p>
                                     <ul className="space-y-0.5">{lims.map((l: string, i: number) => (
-                                      <li key={i} className="text-[11px] flex gap-1.5"><span className="text-red-500 shrink-0">-</span><span>{l}</span></li>
+                                      <li key={i} className="text-sm flex gap-1.5"><span className="text-red-500 shrink-0">-</span><span>{l}</span></li>
                                     ))}</ul>
                                   </div>
                                 )}
                                 {bestFit.length > 0 && (
                                   <div>
-                                    <p className="text-[10px] font-semibold text-muted-foreground mb-0.5">Best Fit For</p>
+                                    <p className="text-xs font-semibold text-muted-foreground mb-0.5">Best Fit For</p>
                                     <ul className="space-y-0.5">{bestFit.map((b: string, i: number) => (
-                                      <li key={i} className="text-[11px] text-muted-foreground">- {b}</li>
+                                      <li key={i} className="text-sm text-muted-foreground">- {b}</li>
                                     ))}</ul>
                                   </div>
                                 )}
                                 {cap.integrationNotes && (
                                   <div>
-                                    <p className="text-[10px] font-semibold text-muted-foreground mb-0.5">Integration Notes</p>
-                                    <p className="text-[11px] text-muted-foreground">{cap.integrationNotes}</p>
+                                    <p className="text-xs font-semibold text-muted-foreground mb-0.5">Integration Notes</p>
+                                    <p className="text-sm text-muted-foreground">{cap.integrationNotes}</p>
                                   </div>
                                 )}
                               </div>
@@ -317,26 +317,26 @@ export default function KnowledgeBasePage() {
                           <TableCell><PlatformBadge platform={cap.vendorPlatform} /></TableCell>
                           <TableCell className="text-center">
                             <span className={`text-sm font-bold ${mc}`}>{cap.maturityRating || "—"}</span>
-                            <span className="text-[10px] text-muted-foreground">/5</span>
+                            <span className="text-xs text-muted-foreground">/5</span>
                           </TableCell>
                           <TableCell>
                             {cap.automationLevel && (
-                              <Badge className={`text-[9px] ${AUTO_COLORS[cap.automationLevel] || "bg-muted text-muted-foreground"}`}>
+                              <Badge className={`text-xs ${AUTO_COLORS[cap.automationLevel] || "bg-muted text-muted-foreground"}`}>
                                 {cap.automationLevel.replace(/_/g, " ")}
                               </Badge>
                             )}
                           </TableCell>
-                          <TableCell className="text-[11px] max-w-xs">
+                          <TableCell className="text-sm max-w-xs">
                             <p className="line-clamp-3">{cap.workflowDescription || "—"}</p>
                           </TableCell>
-                          <TableCell className="text-[11px]">
+                          <TableCell className="text-xs">
                             {diffs.length > 0 ? (
                               <ul className="space-y-0.5">{diffs.slice(0, 3).map((d: string, i: number) => (
                                 <li key={i} className="flex gap-1"><span className="text-emerald-500 shrink-0">+</span><span className="line-clamp-1">{d}</span></li>
                               ))}{diffs.length > 3 && <li className="text-muted-foreground">+{diffs.length - 3} more</li>}</ul>
                             ) : "—"}
                           </TableCell>
-                          <TableCell className="text-[11px]">
+                          <TableCell className="text-xs">
                             {lims.length > 0 ? (
                               <ul className="space-y-0.5">{lims.slice(0, 3).map((l: string, i: number) => (
                                 <li key={i} className="flex gap-1"><span className="text-red-500 shrink-0">-</span><span className="line-clamp-1">{l}</span></li>

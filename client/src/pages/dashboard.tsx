@@ -113,7 +113,7 @@ function EntityTypeBadge({ type }: { type: string | null }) {
   const label = ENTITY_TYPE_LABELS[type] ?? type;
   const cls = ENTITY_BADGE_CLASS[type] ?? "bg-gray-100 text-gray-700 border-gray-200";
   return (
-    <Badge variant="outline" className={`text-[10px] font-semibold uppercase tracking-wide ${cls}`}>
+    <Badge variant="outline" className={`text-xs font-semibold uppercase tracking-wide ${cls}`}>
       {label}
     </Badge>
   );
@@ -125,7 +125,7 @@ function StatusBadge({ status }: { status: string }) {
       ? "bg-green-100 text-green-700 border-green-200"
       : "bg-gray-100 text-gray-600 border-gray-200";
   return (
-    <Badge variant="outline" className={`text-[10px] font-semibold uppercase tracking-wide ${cls}`}>
+    <Badge variant="outline" className={`text-xs font-semibold uppercase tracking-wide ${cls}`}>
       {status === "active" ? "Active" : status.charAt(0).toUpperCase() + status.slice(1)}
     </Badge>
   );
@@ -144,7 +144,7 @@ function ModuleBadges({ modulesJson }: { modulesJson: string }) {
         <Badge
           key={m}
           variant="outline"
-          className={`text-[9px] font-semibold uppercase tracking-wide ${MODULE_BADGE_CLASS[m] ?? "bg-gray-100 text-gray-600 border-gray-200"}`}
+          className={`text-xs font-semibold uppercase tracking-wide ${MODULE_BADGE_CLASS[m] ?? "bg-gray-100 text-gray-600 border-gray-200"}`}
         >
           {MODULE_LABELS[m] ?? m}
         </Badge>
@@ -313,7 +313,7 @@ export default function Dashboard() {
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">
             Clients & Projects
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-base text-muted-foreground mt-1">
             Manage your client engagements
           </p>
         </div>
@@ -329,24 +329,24 @@ export default function Dashboard() {
 
       {/* Stats Row */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="px-4 py-3 rounded-lg bg-muted/50">
-          <p className="text-xs text-muted-foreground mb-0.5">Clients</p>
-          <p className="text-xl font-semibold tracking-tight">{isLoading ? "—" : totalClients}</p>
+        <div className="px-5 py-4 rounded-lg bg-muted/50">
+          <p className="text-sm text-muted-foreground mb-1">Clients</p>
+          <p className="text-2xl font-semibold tracking-tight">{isLoading ? "—" : totalClients}</p>
         </div>
-        <div className="px-4 py-3 rounded-lg bg-muted/50">
-          <p className="text-xs text-muted-foreground mb-0.5">Active Projects</p>
-          <p className="text-xl font-semibold tracking-tight">{isLoading ? "—" : activeProjects}</p>
+        <div className="px-5 py-4 rounded-lg bg-muted/50">
+          <p className="text-sm text-muted-foreground mb-1">Active Projects</p>
+          <p className="text-2xl font-semibold tracking-tight">{isLoading ? "—" : activeProjects}</p>
         </div>
-        <div className="px-4 py-3 rounded-lg bg-muted/50">
-          <p className="text-xs text-muted-foreground mb-0.5">Total Projects</p>
-          <p className="text-xl font-semibold tracking-tight">{isLoading ? "—" : totalProjects}</p>
+        <div className="px-5 py-4 rounded-lg bg-muted/50">
+          <p className="text-sm text-muted-foreground mb-1">Total Projects</p>
+          <p className="text-2xl font-semibold tracking-tight">{isLoading ? "—" : totalProjects}</p>
         </div>
       </div>
 
       {/* Search */}
       <div className="relative">
         <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-        <Input className="pl-9 h-9 text-sm" placeholder="Search clients or projects..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+        <Input className="pl-9 h-10 text-sm" placeholder="Search clients or projects..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
       </div>
 
       {/* Client Cards */}
@@ -400,7 +400,7 @@ export default function Dashboard() {
                         {/* Client name + badges */}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-bold text-sm text-foreground truncate">
+                            <span className="font-bold text-base text-foreground truncate">
                               {client.name}
                             </span>
                             <EntityTypeBadge type={client.entityType} />
@@ -412,7 +412,7 @@ export default function Dashboard() {
                             )}
                           </div>
                           {/* Metadata row */}
-                          <div className="flex items-center gap-4 mt-1 text-[11px] text-muted-foreground flex-wrap">
+                          <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground flex-wrap">
                             {client.population != null && (
                               <span className="flex items-center gap-1">
                                 <Users className="w-3 h-3" />
@@ -446,7 +446,7 @@ export default function Dashboard() {
                       <div className="px-4 pb-4 pt-1 border-t border-border/50 space-y-3">
                         {/* Expanded header: domain link + action buttons */}
                         <div className="flex items-center justify-between gap-2 flex-wrap">
-                          <div className="flex items-center gap-3 flex-wrap text-xs text-muted-foreground">
+                          <div className="flex items-center gap-3 flex-wrap text-sm text-muted-foreground">
                             {client.domain && (
                               <a
                                 href={`https://${client.domain}`}
@@ -529,7 +529,7 @@ export default function Dashboard() {
                                   className="flex-1 min-w-0 flex items-center gap-2 no-underline"
                                   data-testid={`link-project-${project.id}`}
                                 >
-                                  <span className="text-sm font-medium truncate text-foreground group-hover:text-accent transition-colors">
+                                  <span className="text-base font-medium truncate text-foreground group-hover:text-accent transition-colors">
                                     {project.name}
                                   </span>
                                   <StatusBadge status={project.status} />
@@ -556,7 +556,7 @@ export default function Dashboard() {
                             ))}
                           </div>
                         ) : (
-                          <div className="text-center py-4 text-xs text-muted-foreground">
+                          <div className="text-center py-4 text-sm text-muted-foreground">
                             No projects yet.{" "}
                             <button
                               className="underline text-accent hover:text-accent/80"
@@ -585,8 +585,8 @@ export default function Dashboard() {
                 <line x1="7.5" y1="12" x2="12.5" y2="12" stroke="hsl(var(--background))" strokeWidth="1.8" strokeLinecap="round" />
               </svg>
             </div>
-            <h2 className="text-lg font-semibold">Welcome to Caliber</h2>
-            <p className="text-sm text-muted-foreground mt-1">Get started in three steps</p>
+            <h2 className="text-xl font-semibold">Welcome to Caliber</h2>
+            <p className="text-base text-muted-foreground mt-1">Get started in three steps</p>
           </div>
 
           <div className="space-y-3 text-left">
@@ -594,21 +594,21 @@ export default function Dashboard() {
               <span className="w-6 h-6 rounded-full bg-foreground text-background flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">1</span>
               <div className="flex-1">
                 <p className="text-sm font-medium">Create a client</p>
-                <p className="text-xs text-muted-foreground mt-0.5">Add your government entity with their website domain for automatic enrichment.</p>
+                <p className="text-sm text-muted-foreground mt-0.5">Add your government entity with their website domain for automatic enrichment.</p>
               </div>
             </div>
             <div className="flex items-start gap-4 p-4 rounded-lg border bg-card">
               <span className="w-6 h-6 rounded-full bg-muted text-muted-foreground flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">2</span>
               <div className="flex-1">
                 <p className="text-sm font-medium">Create a project</p>
-                <p className="text-xs text-muted-foreground mt-0.5">Choose engagement modules — Selection, IV&V, Health Check — based on your scope.</p>
+                <p className="text-sm text-muted-foreground mt-0.5">Choose engagement modules — Selection, IV&V, Health Check — based on your scope.</p>
               </div>
             </div>
             <div className="flex items-start gap-4 p-4 rounded-lg border bg-card">
               <span className="w-6 h-6 rounded-full bg-muted text-muted-foreground flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">3</span>
               <div className="flex-1">
                 <p className="text-sm font-medium">Load requirements or upload documents</p>
-                <p className="text-xs text-muted-foreground mt-0.5">Import requirements for vendor evaluation, or upload status reports for health check analysis.</p>
+                <p className="text-sm text-muted-foreground mt-0.5">Import requirements for vendor evaluation, or upload status reports for health check analysis.</p>
               </div>
             </div>
           </div>
@@ -780,7 +780,7 @@ export default function Dashboard() {
                     />
                     <div>
                       <span className="text-sm font-medium">{mod.label}</span>
-                      <p className="text-[11px] text-muted-foreground">{mod.desc}</p>
+                      <p className="text-sm text-muted-foreground">{mod.desc}</p>
                     </div>
                   </label>
                 ))}

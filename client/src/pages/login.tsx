@@ -4,8 +4,8 @@ export default function LoginPage() {
       <div className="w-full max-w-sm mx-auto px-6">
         <div className="text-center mb-10">
           <img src="/avero-logo.png" alt="Avero Advisors" className="h-16 mx-auto mb-6" />
-          <h1 className="text-lg font-semibold tracking-tight">Caliber</h1>
-          <p className="text-sm text-muted-foreground mt-1">Sign in to continue</p>
+          <h1 className="text-xl font-semibold tracking-tight">Caliber</h1>
+          <p className="text-base text-muted-foreground mt-1">Sign in to continue</p>
         </div>
 
         <a
@@ -21,7 +21,7 @@ export default function LoginPage() {
           Continue with Google
         </a>
 
-        <p className="text-[11px] text-muted-foreground text-center mt-8">
+        <p className="text-sm text-muted-foreground text-center mt-8">
           Powered by Avero Advisors
         </p>
       </div>

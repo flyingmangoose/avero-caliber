@@ -108,7 +108,7 @@ export default function TemplateLibrary() {
             <BookTemplate className="w-4 h-4 text-primary dark:text-accent" />
             Template Library
           </h2>
-          <p className="text-[11px] text-muted-foreground mt-0.5">
+          <p className="text-sm text-muted-foreground mt-0.5">
             {totalCount} pre-built requirements across {Object.keys(areaCounts).length} modules
           </p>
         </div>
@@ -124,7 +124,7 @@ export default function TemplateLibrary() {
             </button>
             {Object.entries(CATEGORIES).map(([cat, areas]) => (
               <div key={cat} className="mb-2">
-                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-2.5 py-1">{cat}</p>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2.5 py-1">{cat}</p>
                 {areas.map((area) => {
                   const count = areaCounts[area] || 0;
                   if (count === 0) return null;
@@ -140,7 +140,7 @@ export default function TemplateLibrary() {
                       data-testid={`button-template-module-${MODULE_PREFIXES[area]}`}
                     >
                       <span className="truncate">{area}</span>
-                      <span className={`text-[10px] font-mono ${selectedArea === area ? "opacity-80" : "text-muted-foreground"}`}>{count}</span>
+                      <span className={`text-xs font-mono ${selectedArea === area ? "opacity-80" : "text-muted-foreground"}`}>{count}</span>
                     </button>
                   );
                 })}
@@ -177,26 +177,26 @@ export default function TemplateLibrary() {
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/30">
-                  <TableHead className="text-[11px] font-semibold w-[60px]">Prefix</TableHead>
-                  {!selectedArea && <TableHead className="text-[11px] font-semibold w-[140px]">Module</TableHead>}
-                  <TableHead className="text-[11px] font-semibold w-[120px]">Sub Category</TableHead>
-                  <TableHead className="text-[11px] font-semibold">Description</TableHead>
-                  <TableHead className="w-[80px] text-[11px] font-semibold text-center">Criticality</TableHead>
+                  <TableHead className="text-xs font-semibold w-[60px]">Prefix</TableHead>
+                  {!selectedArea && <TableHead className="text-xs font-semibold w-[140px]">Module</TableHead>}
+                  <TableHead className="text-xs font-semibold w-[120px]">Sub Category</TableHead>
+                  <TableHead className="text-xs font-semibold">Description</TableHead>
+                  <TableHead className="w-[80px] text-xs font-semibold text-center">Criticality</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredTemplates.map((t, i) => (
                   <TableRow key={i} data-testid={`row-template-${i}`}>
                     <TableCell className="font-mono text-xs font-semibold text-primary dark:text-accent py-2">{t.prefix}</TableCell>
-                    {!selectedArea && <TableCell className="text-xs py-2">{t.functionalArea}</TableCell>}
-                    <TableCell className="text-xs text-muted-foreground py-2">{t.subCategory}</TableCell>
-                    <TableCell className="text-xs py-2 max-w-md">
+                    {!selectedArea && <TableCell className="text-sm py-2">{t.functionalArea}</TableCell>}
+                    <TableCell className="text-sm text-muted-foreground py-2">{t.subCategory}</TableCell>
+                    <TableCell className="text-sm py-2 max-w-md">
                       <p className="line-clamp-2">{t.description}</p>
                     </TableCell>
                     <TableCell className="text-center py-2">
                       <Badge
                         variant="outline"
-                        className={`text-[10px] font-semibold px-1.5 py-0 ${
+                        className={`text-xs font-semibold px-1.5 py-0 ${
                           t.criticality === "Critical"
                             ? "bg-primary/10 text-primary border-primary/20 dark:bg-accent/15 dark:text-accent dark:border-accent/25"
                             : "bg-muted text-muted-foreground border-muted"
@@ -213,7 +213,7 @@ export default function TemplateLibrary() {
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <BookTemplate className="w-12 h-12 text-muted-foreground/30 mb-3" />
               <h3 className="text-sm font-semibold mb-1">No templates match</h3>
-              <p className="text-xs text-muted-foreground">Try adjusting your search or selecting a different module.</p>
+              <p className="text-sm text-muted-foreground">Try adjusting your search or selecting a different module.</p>
             </div>
           )}
         </div>

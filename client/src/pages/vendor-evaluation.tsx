@@ -198,7 +198,7 @@ function getScoreBg(score: number): string {
 function ScoreBadge({ score }: { score: string }) {
   return (
     <span
-      className="inline-flex items-center justify-center rounded text-[10px] font-bold px-1.5 py-0.5 min-w-[22px]"
+      className="inline-flex items-center justify-center rounded text-xs font-bold px-1.5 py-0.5 min-w-[22px]"
       style={{ backgroundColor: `${SCORE_COLORS[score]}22`, color: SCORE_COLORS[score], border: `1px solid ${SCORE_COLORS[score]}44` }}
       title={SCORE_LABELS[score] || score}
     >
@@ -218,7 +218,7 @@ function formatCurrency(n: number): string {
 function CostBarChart({ data, dataKey, label }: { data: { name: string; value: number; color: string; isLowest: boolean }[]; dataKey: string; label: string }) {
   return (
     <div>
-      <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2 text-center">{label}</p>
+      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 text-center">{label}</p>
       <div className="h-[200px]" data-testid={`chart-cost-${dataKey}`}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} margin={{ top: 20, right: 8, left: 8, bottom: 4 }}>
@@ -275,7 +275,7 @@ function CostComparisonCard({ vendors, totalRequirements }: { vendors: VendorInf
   return (
     <Card data-testid="card-cost-comparison">
       <CardHeader className="pb-3">
-        <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
+        <CardTitle className="text-base font-semibold text-foreground flex items-center gap-2">
           <DollarSign className="w-4 h-4 text-accent" />
           Cost Comparison
           <span className="text-xs text-muted-foreground font-normal ml-1">From vendor proposals</span>
@@ -312,37 +312,37 @@ function CostComparisonCard({ vendors, totalRequirements }: { vendors: VendorInf
                     <td className="py-3 pr-4">
                       <div className="flex items-center gap-2">
                         <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: v.color }} />
-                        <span className="font-medium text-foreground text-xs">{v.name}</span>
+                        <span className="font-medium text-foreground text-sm">{v.name}</span>
                       </div>
                     </td>
                     <td className="py-3 pr-4">
-                      <span className="text-xs text-muted-foreground">{v.costs!.platform}</span>
+                      <span className="text-sm text-muted-foreground">{v.costs!.platform}</span>
                     </td>
                     <td className="py-3 pr-2 text-right">
-                      <span className={`text-xs font-semibold ${v.costs!.implementationTotal === minImpl ? "text-accent" : "text-foreground"}`} data-testid={`impl-cost-${v.shortName}`}>
-                        {v.costs!.implementationTotal === minImpl && <span className="mr-1 text-[10px]">★</span>}
+                      <span className={`text-sm font-semibold ${v.costs!.implementationTotal === minImpl ? "text-accent" : "text-foreground"}`} data-testid={`impl-cost-${v.shortName}`}>
+                        {v.costs!.implementationTotal === minImpl && <span className="mr-1 text-xs">★</span>}
                         {formatCurrency(v.costs!.implementationTotal)}
                       </span>
                     </td>
                     <td className="py-3 pr-2 text-right">
-                      <span className={`text-xs font-semibold ${v.costs!.ongoingAnnual === minAnnual ? "text-accent" : "text-foreground"}`} data-testid={`annual-cost-${v.shortName}`}>
-                        {v.costs!.ongoingAnnual === minAnnual && <span className="mr-1 text-[10px]">★</span>}
+                      <span className={`text-sm font-semibold ${v.costs!.ongoingAnnual === minAnnual ? "text-accent" : "text-foreground"}`} data-testid={`annual-cost-${v.shortName}`}>
+                        {v.costs!.ongoingAnnual === minAnnual && <span className="mr-1 text-xs">★</span>}
                         {formatCurrency(v.costs!.ongoingAnnual)}
                       </span>
                     </td>
                     <td className="py-3 pr-2 text-right">
-                      <span className={`text-xs font-semibold ${v.costs!.sevenYearTotal === minTco ? "text-accent" : "text-foreground"}`} data-testid={`tco-cost-${v.shortName}`}>
-                        {v.costs!.sevenYearTotal === minTco && <span className="mr-1 text-[10px]">★</span>}
+                      <span className={`text-sm font-semibold ${v.costs!.sevenYearTotal === minTco ? "text-accent" : "text-foreground"}`} data-testid={`tco-cost-${v.shortName}`}>
+                        {v.costs!.sevenYearTotal === minTco && <span className="mr-1 text-xs">★</span>}
                         {formatCurrency(v.costs!.sevenYearTotal)}
                       </span>
                     </td>
                     <td className="py-3 pr-2 text-right">
-                      <span className={`text-xs ${tcoDiff === 0 ? "text-accent font-semibold" : "text-muted-foreground"}`}>
+                      <span className={`text-sm ${tcoDiff === 0 ? "text-accent font-semibold" : "text-muted-foreground"}`}>
                         {tcoDiff === 0 ? "—" : `+${formatCurrency(tcoDiff)}`}
                       </span>
                     </td>
                     <td className="py-3 text-right">
-                      <span className={`text-xs ${tcoDiff === 0 ? "text-accent font-semibold" : "text-muted-foreground"}`}>
+                      <span className={`text-sm ${tcoDiff === 0 ? "text-accent font-semibold" : "text-muted-foreground"}`}>
                         {tcoDiff === 0 ? "Lowest" : `+${tcoPct.toFixed(1)}%`}
                       </span>
                     </td>
@@ -355,7 +355,7 @@ function CostComparisonCard({ vendors, totalRequirements }: { vendors: VendorInf
 
         {/* TCO Breakdown stacked bar */}
         <div>
-          <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">TCO Breakdown</p>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">TCO Breakdown</p>
           <div className="h-[180px]" data-testid="chart-tco-breakdown">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={tcoBreakdownData} margin={{ top: 8, right: 16, left: 8, bottom: 4 }}>
@@ -369,7 +369,7 @@ function CostComparisonCard({ vendors, totalRequirements }: { vendors: VendorInf
                         <div className="bg-popover border border-border rounded-lg px-3 py-2 shadow-lg">
                           <p className="text-sm font-semibold text-foreground mb-1">{label}</p>
                           {payload.map((p: any) => (
-                            <p key={p.dataKey} className="text-xs" style={{ color: p.color }}>{p.name}: {formatCurrency(p.value)}</p>
+                            <p key={p.dataKey} className="text-sm" style={{ color: p.color }}>{p.name}: {formatCurrency(p.value)}</p>
                           ))}
                         </div>
                       );
@@ -389,7 +389,7 @@ function CostComparisonCard({ vendors, totalRequirements }: { vendors: VendorInf
         {/* Cost per requirement KPI */}
         {totalRequirements && totalRequirements > 0 && (
           <div className="flex items-center gap-6 p-3 rounded-lg bg-muted/30 border border-border/50" data-testid="kpi-cost-per-requirement">
-            <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Cost per Requirement (7-Year TCO)</span>
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Cost per Requirement (7-Year TCO)</span>
             <div className="flex items-center gap-4 ml-auto">
               {sorted.map(v => (
                 <div key={v.id} className="flex items-center gap-1.5">
@@ -404,7 +404,7 @@ function CostComparisonCard({ vendors, totalRequirements }: { vendors: VendorInf
           </div>
         )}
 
-        <p className="text-[10px] text-muted-foreground">★ Lowest in category. Gold border = lowest cost. Implementation = one-time cost. Annual Ongoing = year 2+ software/support. 7-Year TCO = total cost of ownership over 7 years.</p>
+        <p className="text-sm text-muted-foreground">★ Lowest in category. Gold border = lowest cost. Implementation = one-time cost. Annual Ongoing = year 2+ software/support. 7-Year TCO = total cost of ownership over 7 years.</p>
       </CardContent>
     </Card>
   );
@@ -442,9 +442,9 @@ function VendorCard({
       </div>
       <div className="min-w-0 w-full">
         <div className="flex items-center gap-1.5 pr-5">
-          <p className="text-sm font-semibold text-foreground leading-tight truncate">{vendor.name}</p>
+          <p className="text-base font-semibold text-foreground leading-tight truncate">{vendor.name}</p>
           {vendor.platformType && (
-            <span className={`text-[9px] font-bold uppercase tracking-wider px-1.5 py-0 rounded-sm shrink-0 ${
+            <span className={`text-xs font-bold uppercase tracking-wider px-1.5 py-0 rounded-sm shrink-0 ${
               vendor.platformType === "erp" ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
               : vendor.platformType === "eam" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
               : "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
@@ -453,7 +453,7 @@ function VendorCard({
             </span>
           )}
         </div>
-        <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-2 leading-tight">{vendor.market}</p>
+        <p className="text-sm text-muted-foreground mt-0.5 line-clamp-2 leading-tight">{vendor.market}</p>
       </div>
     </button>
   );
@@ -577,17 +577,17 @@ function ScoringWeightsCard({
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
+            <CardTitle className="text-base font-semibold text-foreground flex items-center gap-2">
               <SlidersHorizontal className="w-4 h-4 text-accent" />
               Scoring Weights
               {isSaving && (
-                <span className="flex items-center gap-1 text-[11px] font-normal text-muted-foreground ml-2">
+                <span className="flex items-center gap-1 text-xs font-normal text-muted-foreground ml-2">
                   <Loader2 className="w-3 h-3 animate-spin" />
                   Saving...
                 </span>
               )}
             </CardTitle>
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="text-sm text-muted-foreground mt-1">
               Adjust module importance to reflect client priorities. Weights are normalized to percentages.
             </p>
           </div>
@@ -617,9 +617,9 @@ function ScoringWeightsCard({
                   >
                     <div>
                       <div className="text-sm font-medium">{preset.label}</div>
-                      <div className="text-xs text-muted-foreground">{preset.description}</div>
+                      <div className="text-sm text-muted-foreground">{preset.description}</div>
                       {!hasRelevantModules && (
-                        <div className="text-[10px] text-muted-foreground/60 mt-0.5">No matching modules in this project</div>
+                        <div className="text-sm text-muted-foreground/60 mt-0.5">No matching modules in this project</div>
                       )}
                     </div>
                   </DropdownMenuItem>
@@ -634,15 +634,15 @@ function ScoringWeightsCard({
           {categorizedModules.map(({ category, modules }) => (
             <div key={category}>
               <div className="flex items-center justify-between mb-2 pb-1 border-b border-border/40">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{category}</span>
-                <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-semibold text-accent border-accent/30">
+                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{category}</span>
+                <Badge variant="outline" className="text-xs px-1.5 py-0 font-semibold text-accent border-accent/30">
                   {getCategoryPercent(modules)}
                 </Badge>
               </div>
               <div className="space-y-2.5">
                 {modules.map(module => (
                   <div key={module} className="flex items-center gap-3" data-testid={`weight-row-${module.replace(/\s+/g, '-').toLowerCase()}`}>
-                    <span className="text-[11px] text-foreground/80 w-[140px] shrink-0 truncate" title={module}>{module}</span>
+                    <span className="text-sm text-foreground/80 w-[140px] shrink-0 truncate" title={module}>{module}</span>
                     <Slider
                       value={[weights[module] ?? 5]}
                       min={0}
@@ -652,8 +652,8 @@ function ScoringWeightsCard({
                       className="flex-1 min-w-[80px]"
                       data-testid={`slider-weight-${module.replace(/\s+/g, '-').toLowerCase()}`}
                     />
-                    <span className="text-[11px] font-semibold text-accent w-7 text-right shrink-0">{weights[module] ?? 5}</span>
-                    <span className="text-[10px] text-muted-foreground w-10 text-right shrink-0">{getEffectivePercent(module)}</span>
+                    <span className="text-xs font-semibold text-accent w-7 text-right shrink-0">{weights[module] ?? 5}</span>
+                    <span className="text-xs text-muted-foreground w-10 text-right shrink-0">{getEffectivePercent(module)}</span>
                   </div>
                 ))}
               </div>
@@ -716,7 +716,7 @@ function ModuleScoresTab({
             {filteredVendors.map(v => (
               <TableHead key={v.vendorId} className="text-xs text-center min-w-[90px]">
                 <span
-                  className="inline-block px-2 py-0.5 rounded text-[11px] font-semibold text-white"
+                  className="inline-block px-2 py-0.5 rounded text-xs font-semibold text-white"
                   style={{ backgroundColor: v.color }}
                 >
                   {v.vendorShortName.slice(0, 8)}
@@ -735,12 +735,12 @@ function ModuleScoresTab({
                   colSpan={2 + filteredVendors.length}
                   className="py-1.5 px-3"
                 >
-                  <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">{cat}</span>
+                  <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/60">{cat}</span>
                 </TableCell>
               </TableRow>,
               ...catModules.map(module => (
                 <TableRow key={module} className="hover:bg-muted/30">
-                  <TableCell className="py-2 text-xs font-medium text-foreground/90">{module}</TableCell>
+                  <TableCell className="py-2 text-sm font-medium text-foreground/90">{module}</TableCell>
                   <TableCell className="py-2 text-center">
                     <span className="text-xs font-semibold text-accent">{weights[module] ?? 5}</span>
                   </TableCell>
@@ -891,8 +891,8 @@ function GapAnalysisTab({
         {/* Module filter */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="h-7 text-[11px] gap-1" data-testid="filter-module">
-              Modules {moduleFilter.size > 0 && <Badge variant="secondary" className="text-[9px] px-1 py-0 ml-0.5">{moduleFilter.size}</Badge>}
+            <Button variant="outline" size="sm" className="h-7 text-xs gap-1" data-testid="filter-module">
+              Modules {moduleFilter.size > 0 && <Badge variant="secondary" className="text-xs px-1 py-0 ml-0.5">{moduleFilter.size}</Badge>}
               <ChevronDown className="w-3 h-3" />
             </Button>
           </DropdownMenuTrigger>
@@ -917,7 +917,7 @@ function GapAnalysisTab({
         {/* Criticality filter */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="h-7 text-[11px] gap-1" data-testid="filter-criticality">
+            <Button variant="outline" size="sm" className="h-7 text-xs gap-1" data-testid="filter-criticality">
               {critFilter === "all" ? "All Priority" : critFilter === "critical" ? "Critical Only" : "Desired Only"}
               <ChevronDown className="w-3 h-3" />
             </Button>
@@ -932,7 +932,7 @@ function GapAnalysisTab({
         {/* Gap type filter */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="h-7 text-[11px] gap-1" data-testid="filter-gap-type">
+            <Button variant="outline" size="sm" className="h-7 text-xs gap-1" data-testid="filter-gap-type">
               {gapTypeFilter === "all" ? "All Types" : GAP_TYPE_LABELS[gapTypeFilter] || gapTypeFilter}
               <ChevronDown className="w-3 h-3" />
             </Button>
@@ -950,8 +950,8 @@ function GapAnalysisTab({
         {/* Vendor filter */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="h-7 text-[11px] gap-1" data-testid="filter-vendor">
-              Vendors {vendorFilter.size > 0 && <Badge variant="secondary" className="text-[9px] px-1 py-0 ml-0.5">{vendorFilter.size}</Badge>}
+            <Button variant="outline" size="sm" className="h-7 text-xs gap-1" data-testid="filter-vendor">
+              Vendors {vendorFilter.size > 0 && <Badge variant="secondary" className="text-xs px-1 py-0 ml-0.5">{vendorFilter.size}</Badge>}
               <ChevronDown className="w-3 h-3" />
             </Button>
           </DropdownMenuTrigger>
@@ -973,11 +973,11 @@ function GapAnalysisTab({
         </DropdownMenu>
 
         <div className="ml-auto flex items-center gap-2">
-          <Button variant="outline" size="sm" className="h-7 text-[11px] gap-1" onClick={toggleAll} data-testid="toggle-expand-all">
+          <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={toggleAll} data-testid="toggle-expand-all">
             <ChevronsUpDown className="w-3 h-3" />
             {allExpanded ? "Collapse All" : "Expand All"}
           </Button>
-          <Button variant="outline" size="sm" className="h-7 text-[11px] gap-1" onClick={handleExportCsv} data-testid="button-export-csv">
+          <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={handleExportCsv} data-testid="button-export-csv">
             <Download className="w-3 h-3" />
             Export CSV
           </Button>
@@ -987,33 +987,33 @@ function GapAnalysisTab({
       {/* KPI summary cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3" data-testid="gap-kpi-row">
         <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
-          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Total Gaps</p>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total Gaps</p>
           <p className="text-xl font-bold text-foreground" data-testid="kpi-total-gaps">{totalGaps}</p>
         </div>
         <div className="p-3 rounded-lg bg-red-500/5 border border-red-500/20">
-          <p className="text-[10px] font-semibold text-red-400 uppercase tracking-wider">Critical Gaps</p>
+          <p className="text-xs font-semibold text-red-400 uppercase tracking-wider">Critical Gaps</p>
           <p className="text-xl font-bold text-red-400" data-testid="kpi-critical-gaps">{criticalGaps}</p>
         </div>
         <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
-          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">By Type</p>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">By Type</p>
           <div className="flex items-center gap-2 mt-1" data-testid="kpi-gap-types">
             {Object.entries(gapTypeCounts).map(([code, count]) => (
-              <Badge key={code} variant="outline" className="text-[10px] px-1.5 py-0" style={{ color: GAP_TYPE_COLORS[code], borderColor: `${GAP_TYPE_COLORS[code]}44` }}>
+              <Badge key={code} variant="outline" className="text-xs px-1.5 py-0" style={{ color: GAP_TYPE_COLORS[code], borderColor: `${GAP_TYPE_COLORS[code]}44` }}>
                 {code}: {count}
               </Badge>
             ))}
           </div>
         </div>
         <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
-          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Most Affected</p>
-          <p className="text-sm font-semibold text-foreground mt-1 truncate" data-testid="kpi-most-affected" title={mostAffectedModule}>{mostAffectedModule}</p>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Most Affected</p>
+          <p className="text-base font-semibold text-foreground mt-1 truncate" data-testid="kpi-most-affected" title={mostAffectedModule}>{mostAffectedModule}</p>
         </div>
       </div>
 
       {/* Gap comparison chart */}
       {gapChartData.length > 0 && (
         <div className="p-3 rounded-lg bg-muted/10 border border-border/40">
-          <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Gap Distribution by Vendor</p>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Gap Distribution by Vendor</p>
           <div className="h-[160px]" data-testid="chart-gap-comparison">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={gapChartData} layout="vertical" margin={{ top: 4, right: 16, left: 4, bottom: 4 }}>
@@ -1027,7 +1027,7 @@ function GapAnalysisTab({
                         <div className="bg-popover border border-border rounded-lg px-3 py-2 shadow-lg">
                           <p className="text-sm font-semibold text-foreground mb-1">{label}</p>
                           {payload.map((p: any) => (
-                            <p key={p.dataKey} className="text-xs" style={{ color: p.color }}>{p.name}: {p.value}</p>
+                            <p key={p.dataKey} className="text-sm" style={{ color: p.color }}>{p.name}: {p.value}</p>
                           ))}
                         </div>
                       );
@@ -1076,11 +1076,11 @@ function GapAnalysisTab({
                     data-testid={`gap-module-${module.replace(/\s+/g, '-').toLowerCase()}`}
                   >
                     <div className="flex items-center gap-3">
-                      <span className="text-sm font-semibold text-foreground">{module}</span>
+                      <span className="text-base font-semibold text-foreground">{module}</span>
                       {critCount > 0 && (
-                        <Badge variant="destructive" className="text-[10px] px-1.5 py-0">{critCount} critical</Badge>
+                        <Badge variant="destructive" className="text-xs px-1.5 py-0">{critCount} critical</Badge>
                       )}
-                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-muted-foreground">{gaps.length} total</Badge>
+                      <Badge variant="outline" className="text-xs px-1.5 py-0 text-muted-foreground">{gaps.length} total</Badge>
                     </div>
                     {isExpanded ? <ChevronDown className="w-4 h-4 text-muted-foreground" /> : <ChevronRight className="w-4 h-4 text-muted-foreground" />}
                   </button>
@@ -1090,11 +1090,11 @@ function GapAnalysisTab({
                       <Table>
                         <TableHeader>
                           <TableRow className="hover:bg-transparent bg-muted/20">
-                            <TableHead className="w-16 text-[11px]">Req #</TableHead>
-                            <TableHead className="text-[11px]">Requirement</TableHead>
-                            <TableHead className="w-20 text-[11px] text-center">Priority</TableHead>
+                            <TableHead className="w-16 text-xs">Req #</TableHead>
+                            <TableHead className="text-xs">Requirement</TableHead>
+                            <TableHead className="w-20 text-xs text-center">Priority</TableHead>
                             {filteredVendors.map(v => (
-                              <TableHead key={v.vendorId} className="w-16 text-[11px] text-center">{v.vendorShortName.slice(0, 7)}</TableHead>
+                              <TableHead key={v.vendorId} className="w-16 text-xs text-center">{v.vendorShortName.slice(0, 7)}</TableHead>
                             ))}
                           </TableRow>
                         </TableHeader>
@@ -1109,24 +1109,24 @@ function GapAnalysisTab({
                               className={`hover:bg-muted/20 ${gap.criticality === "Critical" ? "bg-red-500/3" : ""}`}
                               data-testid={`gap-row-${gap.reqNumber}`}
                             >
-                              <TableCell className="py-2 text-[11px] font-mono text-muted-foreground">{gap.reqNumber}</TableCell>
+                              <TableCell className="py-2 text-sm font-mono text-muted-foreground">{gap.reqNumber}</TableCell>
                               <TableCell className="py-2">
                                 <Tooltip>
                                   <TooltipTrigger asChild>
                                     <div>
-                                      <p className="text-[11px] text-foreground/90 leading-relaxed line-clamp-2">{gap.description}</p>
-                                      <p className="text-[10px] text-muted-foreground mt-0.5">{gap.subCategory}</p>
+                                      <p className="text-sm text-foreground/90 leading-relaxed line-clamp-2">{gap.description}</p>
+                                      <p className="text-sm text-muted-foreground mt-0.5">{gap.subCategory}</p>
                                     </div>
                                   </TooltipTrigger>
                                   <TooltipContent side="top" className="max-w-md">
-                                    <p className="text-xs">{gap.description}</p>
+                                    <p className="text-sm">{gap.description}</p>
                                   </TooltipContent>
                                 </Tooltip>
                               </TableCell>
                               <TableCell className="py-2 text-center">
                                 <Badge
                                   variant={gap.criticality === "Critical" ? "destructive" : "outline"}
-                                  className="text-[10px] px-1.5 py-0"
+                                  className="text-xs px-1.5 py-0"
                                 >
                                   {gap.criticality}
                                 </Badge>
@@ -1234,7 +1234,7 @@ function CustomCriteriaTab({ projectId, selectedVendors }: { projectId: number; 
       {/* Criteria Management */}
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold">Custom Criteria</h3>
+          <h3 className="text-base font-semibold">Custom Criteria</h3>
           <div className="flex gap-2">
             {availableTemplates.length > 0 && (
               <DropdownMenu>
@@ -1333,10 +1333,10 @@ function CustomCriteriaTab({ projectId, selectedVendors }: { projectId: number; 
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium">{c.name}</span>
-                        <Badge variant="outline" className="text-[10px]">Weight: {c.weight}/10</Badge>
+                        <span className="text-base font-medium">{c.name}</span>
+                        <Badge variant="outline" className="text-xs">Weight: {c.weight}/10</Badge>
                       </div>
-                      {c.description && <p className="text-xs text-muted-foreground mt-0.5">{c.description}</p>}
+                      {c.description && <p className="text-sm text-muted-foreground mt-0.5">{c.description}</p>}
                     </div>
                     <div className="flex items-center gap-1">
                       <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => { setFormName(c.name); setFormDescription(c.description); setFormWeight(c.weight); setEditingId(c.id); }} data-testid={`button-edit-criterion-${c.id}`}>
@@ -1362,7 +1362,7 @@ function CustomCriteriaTab({ projectId, selectedVendors }: { projectId: number; 
       {/* Scoring Matrix */}
       {criteria.length > 0 && selectedVendors.length > 0 && (
         <div>
-          <h3 className="text-sm font-semibold mb-3">Scoring Matrix</h3>
+          <h3 className="text-base font-semibold mb-3">Scoring Matrix</h3>
           <div className="border rounded-lg overflow-auto">
             <Table>
               <TableHeader>
@@ -1382,8 +1382,8 @@ function CustomCriteriaTab({ projectId, selectedVendors }: { projectId: number; 
               <TableBody>
                 {criteria.map((c) => (
                   <TableRow key={c.id}>
-                    <TableCell className="text-xs font-medium">{c.name}</TableCell>
-                    <TableCell className="text-xs text-center text-muted-foreground">{c.weight}</TableCell>
+                    <TableCell className="text-sm font-medium">{c.name}</TableCell>
+                    <TableCell className="text-sm text-center text-muted-foreground">{c.weight}</TableCell>
                     {selectedVendors.map((v) => {
                       const existingScore = c.scores.find(s => s.vendorId === v.id);
                       const scoreVal = existingScore?.score ?? 0;
@@ -1420,7 +1420,7 @@ function CustomCriteriaTab({ projectId, selectedVendors }: { projectId: number; 
       {/* Impact Summary */}
       {criteria.length > 0 && selectedVendors.length > 0 && (
         <div>
-          <h3 className="text-sm font-semibold mb-3">Custom Criteria Summary</h3>
+          <h3 className="text-base font-semibold mb-3">Custom Criteria Summary</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {selectedVendors.map((v) => {
               let totalWeightedScore = 0;
@@ -1444,7 +1444,7 @@ function CustomCriteriaTab({ projectId, selectedVendors }: { projectId: number; 
                     <div className="text-2xl font-bold" style={{ color: pct >= 80 ? "#22c55e" : pct >= 50 ? "#d4a853" : "#ef4444" }}>
                       {avgScore > 0 ? avgScore.toFixed(1) : "—"}
                     </div>
-                    <div className="text-[10px] text-muted-foreground">
+                    <div className="text-xs text-muted-foreground">
                       {totalWeight > 0 ? `${pct}% weighted avg` : "No scores"}
                     </div>
                   </CardContent>
@@ -1470,31 +1470,31 @@ function VendorIntelligenceDimension({ dim, label, score, scoreColor }: { dim: a
       <CollapsibleTrigger asChild>
         <button className="w-full text-left p-2 rounded-md hover:bg-muted/50 transition-colors" data-testid={`intelligence-dim-${dim.dimension}`}>
           <div className="flex items-center justify-between gap-1">
-            <span className="text-xs font-medium truncate">{label}</span>
-            <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded ${scoreColor}`}>{score}/10</span>
+            <span className="text-sm font-medium truncate">{label}</span>
+            <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${scoreColor}`}>{score}/10</span>
           </div>
-          {dim.summary && <p className="text-[11px] text-muted-foreground line-clamp-1 mt-0.5">{dim.summary}</p>}
+          {dim.summary && <p className="text-sm text-muted-foreground line-clamp-1 mt-0.5">{dim.summary}</p>}
         </button>
       </CollapsibleTrigger>
       <CollapsibleContent>
         <div className="px-2 pb-2 space-y-1.5">
-          {dim.summary && <p className="text-xs text-muted-foreground">{dim.summary}</p>}
+          {dim.summary && <p className="text-sm text-muted-foreground">{dim.summary}</p>}
           {evidence.length > 0 && (
             <div>
-              <span className="text-[10px] font-semibold text-muted-foreground uppercase">Evidence</span>
+              <span className="text-xs font-semibold text-muted-foreground uppercase">Evidence</span>
               <ul className="mt-0.5 space-y-0.5">
                 {evidence.map((e: string, i: number) => (
-                  <li key={i} className="text-[11px] text-muted-foreground pl-2 border-l-2 border-accent/30">{e}</li>
+                  <li key={i} className="text-sm text-muted-foreground pl-2 border-l-2 border-accent/30">{e}</li>
                 ))}
               </ul>
             </div>
           )}
           {concerns.length > 0 && (
             <div>
-              <span className="text-[10px] font-semibold text-red-500 uppercase">Concerns</span>
+              <span className="text-xs font-semibold text-red-500 uppercase">Concerns</span>
               <ul className="mt-0.5 space-y-0.5">
                 {concerns.map((c: string, i: number) => (
-                  <li key={i} className="text-[11px] text-red-500/80 pl-2 border-l-2 border-red-500/30">{c}</li>
+                  <li key={i} className="text-sm text-red-500/80 pl-2 border-l-2 border-red-500/30">{c}</li>
                 ))}
               </ul>
             </div>
@@ -1517,14 +1517,14 @@ function ProposalResultCard({ dimLabel, score, scoreColor, summary, evidence, co
   return (
     <div className="border border-border/40 rounded-lg p-3 space-y-2" data-testid={`proposal-dim-${dimLabel.toLowerCase().replace(/\s+/g, "-")}`}>
       <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold">{dimLabel}</span>
+        <span className="text-sm font-semibold">{dimLabel}</span>
         <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${scoreColor}`}>{score}/10</span>
       </div>
-      {summary && <p className="text-xs text-muted-foreground leading-relaxed">{summary}</p>}
+      {summary && <p className="text-sm text-muted-foreground leading-relaxed">{summary}</p>}
       {evidence.length > 0 && (
         <Collapsible open={showEvidence} onOpenChange={setShowEvidence}>
           <CollapsibleTrigger asChild>
-            <button className="text-[11px] font-medium text-accent hover:underline flex items-center gap-1" data-testid={`proposal-evidence-toggle-${dimLabel.toLowerCase().replace(/\s+/g, "-")}`}>
+            <button className="text-xs font-medium text-accent hover:underline flex items-center gap-1" data-testid={`proposal-evidence-toggle-${dimLabel.toLowerCase().replace(/\s+/g, "-")}`}>
               <ChevronRight className={`w-3 h-3 transition-transform ${showEvidence ? "rotate-90" : ""}`} />
               Evidence ({evidence.length})
             </button>
@@ -1532,7 +1532,7 @@ function ProposalResultCard({ dimLabel, score, scoreColor, summary, evidence, co
           <CollapsibleContent>
             <ul className="mt-1 space-y-1">
               {evidence.map((e, i) => (
-                <li key={i} className="text-[11px] text-muted-foreground pl-2 border-l-2 border-accent/30 italic">{e}</li>
+                <li key={i} className="text-sm text-muted-foreground pl-2 border-l-2 border-accent/30 italic">{e}</li>
               ))}
             </ul>
           </CollapsibleContent>
@@ -1541,7 +1541,7 @@ function ProposalResultCard({ dimLabel, score, scoreColor, summary, evidence, co
       {concerns.length > 0 && (
         <Collapsible open={showConcerns} onOpenChange={setShowConcerns}>
           <CollapsibleTrigger asChild>
-            <button className="text-[11px] font-medium text-red-500 hover:underline flex items-center gap-1" data-testid={`proposal-concerns-toggle-${dimLabel.toLowerCase().replace(/\s+/g, "-")}`}>
+            <button className="text-xs font-medium text-red-500 hover:underline flex items-center gap-1" data-testid={`proposal-concerns-toggle-${dimLabel.toLowerCase().replace(/\s+/g, "-")}`}>
               <ChevronRight className={`w-3 h-3 transition-transform ${showConcerns ? "rotate-90" : ""}`} />
               Concerns ({concerns.length})
             </button>
@@ -1549,7 +1549,7 @@ function ProposalResultCard({ dimLabel, score, scoreColor, summary, evidence, co
           <CollapsibleContent>
             <ul className="mt-1 space-y-1">
               {concerns.map((c, i) => (
-                <li key={i} className="text-[11px] text-red-500/80 pl-2 border-l-2 border-red-500/30">{c}</li>
+                <li key={i} className="text-sm text-red-500/80 pl-2 border-l-2 border-red-500/30">{c}</li>
               ))}
             </ul>
           </CollapsibleContent>
@@ -2006,7 +2006,7 @@ export default function VendorEvaluation() {
                     {generateScoresMutation.isPending ? "Generating Scores..." : "Auto-Generate Scores"}
                   </Button>
                 </div>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-sm text-muted-foreground">
                   {project?.stats?.totalRequirements
                     ? `Project has ${project.stats.totalRequirements} requirements loaded`
                     : "No requirements loaded yet — use \"Load Sample RFP Data\" to start"}
@@ -2018,10 +2018,10 @@ export default function VendorEvaluation() {
           {/* Vendor Selection Bar */}
           <Card data-testid="card-vendor-selection">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
+              <CardTitle className="text-base font-semibold text-foreground flex items-center gap-2">
                 <Building2 className="w-4 h-4 text-accent" />
                 Select Vendors to Compare
-                <Badge variant="outline" className="ml-auto text-[11px]">
+                <Badge variant="outline" className="ml-auto text-xs">
                   {selectedVendorIds.length} of {vendors.length} selected
                 </Badge>
               </CardTitle>
@@ -2044,10 +2044,10 @@ export default function VendorEvaluation() {
           {vendorsWithIntelligence.length > 0 && (
             <Card data-testid="card-vendor-intelligence">
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <CardTitle className="text-base font-semibold text-foreground flex items-center gap-2">
                   <Brain className="w-4 h-4 text-accent" />
                   Vendor Intelligence
-                  <Badge variant="outline" className="ml-auto text-[11px]">
+                  <Badge variant="outline" className="ml-auto text-xs">
                     {vendorsWithIntelligence.length} vendor{vendorsWithIntelligence.length !== 1 ? "s" : ""} analyzed
                   </Badge>
                 </CardTitle>
@@ -2064,8 +2064,8 @@ export default function VendorEvaluation() {
                   return (
                     <div key={vendor.id} className="border border-border/40 rounded-lg p-4" data-testid={`vendor-intelligence-${vendor.id}`}>
                       <div className="flex items-center gap-2 mb-3">
-                        <span className="text-sm font-semibold">{vendor.name}</span>
-                        <Badge variant="outline" className="text-[10px]">{vendor.platformType}</Badge>
+                        <span className="text-base font-semibold">{vendor.name}</span>
+                        <Badge variant="outline" className="text-xs">{vendor.platformType}</Badge>
                       </div>
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                         {/* Radar Chart */}
@@ -2092,7 +2092,7 @@ export default function VendorEvaluation() {
                         </div>
                       </div>
                       {dims[0]?.sourceDocument && (
-                        <p className="text-[11px] text-muted-foreground mt-3">
+                        <p className="text-sm text-muted-foreground mt-3">
                           Source: {dims[0].sourceDocument} &bull; Analyzed {new Date(dims[0].createdAt).toLocaleDateString()}
                         </p>
                       )}
@@ -2121,7 +2121,7 @@ export default function VendorEvaluation() {
           {hasScores && filteredEvaluation && chartData.length > 0 && (
             <Card data-testid="card-score-overview">
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <CardTitle className="text-base font-semibold text-foreground flex items-center gap-2">
                   <TrendingUp className="w-4 h-4 text-accent" />
                   Weighted Fit Score
                   <span className="text-xs text-muted-foreground font-normal ml-1">Scores reflect module weight configuration above</span>
@@ -2182,7 +2182,7 @@ export default function VendorEvaluation() {
                         className="w-2.5 h-2.5 rounded-full shrink-0"
                         style={{ backgroundColor: v.color }}
                       />
-                      <span className="text-xs text-foreground font-medium">{v.vendorName}</span>
+                      <span className="text-sm text-foreground font-medium">{v.vendorName}</span>
                       <span
                         className="text-sm font-bold ml-1"
                         style={{ color: getScoreColor(v.overallScore) }}
@@ -2210,7 +2210,7 @@ export default function VendorEvaluation() {
                       <AlertTriangle className="w-3.5 h-3.5 mr-1.5" />
                       Gap Analysis
                       {filteredEvaluation && filteredEvaluation.gaps.length > 0 && (
-                        <Badge variant="destructive" className="ml-2 text-[10px] px-1.5 py-0">
+                        <Badge variant="destructive" className="ml-2 text-xs px-1.5 py-0">
                           {filteredEvaluation.gaps.filter(g => g.criticality === "Critical").length}
                         </Badge>
                       )}
@@ -2248,19 +2248,19 @@ export default function VendorEvaluation() {
           <Card className="bg-muted/20 border-border/40">
             <CardContent className="py-3">
               <div className="flex flex-wrap items-center gap-4">
-                <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Score Key:</span>
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Score Key:</span>
                 {Object.entries(SCORE_LABELS).map(([code, label]) => (
                   <div key={code} className="flex items-center gap-1.5">
                     <ScoreBadge score={code} />
-                    <span className="text-[11px] text-muted-foreground">{label}</span>
+                    <span className="text-xs text-muted-foreground">{label}</span>
                   </div>
                 ))}
                 <div className="ml-auto flex items-center gap-4">
-                  <span className="text-[11px] text-muted-foreground">Fit Score:</span>
+                  <span className="text-xs text-muted-foreground">Fit Score:</span>
                   {[["≥80% Excellent", "#22c55e"], ["60–80% Good", "#d4a853"], ["<60% Gap Risk", "#ef4444"]].map(([label, color]) => (
                     <div key={label} className="flex items-center gap-1.5">
                       <div className="w-2 h-2 rounded-full" style={{ backgroundColor: color as string }} />
-                      <span className="text-[11px] text-muted-foreground">{label}</span>
+                      <span className="text-xs text-muted-foreground">{label}</span>
                     </div>
                   ))}
                 </div>
@@ -2312,7 +2312,7 @@ export default function VendorEvaluation() {
                   ) : (
                     <div>
                       <p className="text-sm text-muted-foreground">Click to select a PDF file</p>
-                      <p className="text-xs text-muted-foreground mt-1">PDF files only</p>
+                      <p className="text-sm text-muted-foreground mt-1">PDF files only</p>
                     </div>
                   )}
                   <input
@@ -2343,7 +2343,7 @@ export default function VendorEvaluation() {
             <div className="flex flex-col items-center py-12 gap-4">
               <Loader2 className="w-10 h-10 text-accent animate-spin" />
               <p className="text-sm font-medium text-foreground">{analysisStatusText}</p>
-              <p className="text-xs text-muted-foreground">This may take a minute for large documents</p>
+              <p className="text-sm text-muted-foreground">This may take a minute for large documents</p>
             </div>
           )}
 

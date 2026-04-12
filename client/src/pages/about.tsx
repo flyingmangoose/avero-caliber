@@ -6,7 +6,7 @@ export default function AboutPage() {
   return (
     <div className="flex flex-col h-full">
       <div className="px-6 py-4 border-b border-border/50 bg-card/50 backdrop-blur-sm shrink-0">
-        <h1 className="text-lg font-semibold text-foreground">About Caliber</h1>
+        <h1 className="text-xl font-semibold text-foreground">About Caliber</h1>
       </div>
 
       <ScrollArea className="flex-1">
@@ -17,13 +17,13 @@ export default function AboutPage() {
               <div className="flex items-center gap-3">
                 <img src="/avero-logo.png" alt="Avero Advisors" className="h-10" />
                 <div>
-                  <CardTitle className="text-sm">Caliber</CardTitle>
-                  <p className="text-xs text-muted-foreground">by Avero Advisors</p>
+                  <CardTitle className="text-base">Caliber</CardTitle>
+                  <p className="text-sm text-muted-foreground">by Avero Advisors</p>
                 </div>
               </div>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground leading-relaxed">
+              <p className="text-base text-muted-foreground leading-relaxed">
                 Caliber is a vendor evaluation and IV&V compliance platform purpose-built for government ERP consulting.
                 It helps consultants manage requirements, evaluate vendors, track project health, and ensure compliance
                 throughout the implementation lifecycle.
@@ -39,7 +39,7 @@ export default function AboutPage() {
             <CardContent className="space-y-4">
               <div className="flex gap-3">
                 <Lock className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
-                <p className="text-sm text-muted-foreground leading-relaxed">
+                <p className="text-base text-muted-foreground leading-relaxed">
                   Caliber uses enterprise-grade cloud AI infrastructure to perform document analysis, synthesis, and scoring.
                   All data is transmitted over encrypted connections (TLS 1.2+).
                 </p>
@@ -47,7 +47,7 @@ export default function AboutPage() {
 
               <div className="flex gap-3">
                 <FileCheck className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
-                <p className="text-sm text-muted-foreground leading-relaxed">
+                <p className="text-base text-muted-foreground leading-relaxed">
                   Caliber's AI providers operate under contractual data processing agreements that prohibit the use of your
                   data for model training or any purpose other than generating the requested analysis.
                 </p>
@@ -55,7 +55,7 @@ export default function AboutPage() {
 
               <div className="flex gap-3">
                 <Server className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-                <p className="text-sm text-muted-foreground leading-relaxed">
+                <p className="text-base text-muted-foreground leading-relaxed">
                   Data submitted for analysis is not retained by AI infrastructure providers beyond standard abuse-monitoring
                   windows (typically 30 days or less).
                 </p>
@@ -63,7 +63,7 @@ export default function AboutPage() {
 
               <div className="flex gap-3">
                 <Shield className="w-5 h-5 text-accent shrink-0 mt-0.5" />
-                <p className="text-sm text-muted-foreground leading-relaxed">
+                <p className="text-base text-muted-foreground leading-relaxed">
                   Caliber does not sell, share, or transfer client data to any third party outside of these processing agreements.
                 </p>
               </div>

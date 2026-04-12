@@ -128,8 +128,8 @@ export default function OutcomesPage() {
               {isLoading ? <Skeleton className="h-40 w-full" /> : outcomes.length === 0 ? (
                 <Card className="p-8 text-center">
                   <Sparkles className="w-8 h-8 mx-auto text-muted-foreground/40 mb-3" />
-                  <p className="text-sm font-medium">No outcomes defined yet</p>
-                  <p className="text-xs text-muted-foreground mt-1">Generate from discovery pain points or create manually.</p>
+                  <p className="text-base font-medium">No outcomes defined yet</p>
+                  <p className="text-sm text-muted-foreground mt-1">Generate from discovery pain points or create manually.</p>
                 </Card>
               ) : (
                 <div className="space-y-3">
@@ -141,11 +141,11 @@ export default function OutcomesPage() {
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex-1">
                               <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                <h3 className="text-sm font-semibold">{o.title}</h3>
-                                <Badge className={`text-[9px] ${CAT_COLORS[o.category] || CAT_COLORS.general}`}>{o.category.replace(/_/g, " ")}</Badge>
-                                <Badge className={`text-[9px] ${PRI_COLORS[o.priority] || ""}`}>{o.priority}</Badge>
+                                <h3 className="text-base font-semibold">{o.title}</h3>
+                                <Badge className={`text-xs ${CAT_COLORS[o.category] || CAT_COLORS.general}`}>{o.category.replace(/_/g, " ")}</Badge>
+                                <Badge className={`text-xs ${PRI_COLORS[o.priority] || ""}`}>{o.priority}</Badge>
                               </div>
-                              <p className="text-xs text-muted-foreground">{o.description}</p>
+                              <p className="text-sm text-muted-foreground">{o.description}</p>
                             </div>
                             <div className="flex gap-1 shrink-0">
                               <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setOutcomeDialog({ open: true, editId: o.id, form: { title: o.title, description: o.description, category: o.category, priority: o.priority, currentState: o.currentState || "", targetState: o.targetState || "", currentKpi: o.currentKpi || "", targetKpi: o.targetKpi || "", kpiUnit: o.kpiUnit || "" } })}><Edit2 className="w-3 h-3" /></Button>
@@ -155,8 +155,8 @@ export default function OutcomesPage() {
 
                           {(o.currentState || o.targetState) && (
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3">
-                              {o.currentState && <div className="p-2 rounded bg-red-50 dark:bg-red-950/20 text-xs"><span className="font-medium text-red-600 dark:text-red-400">Current: </span>{o.currentState}</div>}
-                              {o.targetState && <div className="p-2 rounded bg-emerald-50 dark:bg-emerald-950/20 text-xs"><span className="font-medium text-emerald-600 dark:text-emerald-400">Target: </span>{o.targetState}</div>}
+                              {o.currentState && <div className="px-2 py-1 rounded bg-red-50 dark:bg-red-950/20 text-sm"><span className="font-medium text-red-600 dark:text-red-400">Current: </span>{o.currentState}</div>}
+                              {o.targetState && <div className="px-2 py-1 rounded bg-emerald-50 dark:bg-emerald-950/20 text-sm"><span className="font-medium text-emerald-600 dark:text-emerald-400">Target: </span>{o.targetState}</div>}
                             </div>
                           )}
 
@@ -169,7 +169,7 @@ export default function OutcomesPage() {
                             </div>
                           )}
 
-                          <div className="flex items-center gap-3 mt-2 text-[11px] text-muted-foreground flex-wrap">
+                          <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground flex-wrap">
                             <span>{scenarioCount} scenario{scenarioCount !== 1 ? "s" : ""}</span>
                             {(() => {
                               const linkedIds = parseJson(o.linkedRequirementIds);
@@ -178,7 +178,7 @@ export default function OutcomesPage() {
                                 <span className="flex items-center gap-1 flex-wrap">
                                   <span className="text-muted-foreground/60">|</span>
                                   {linked.slice(0, 6).map((r: any) => (
-                                    <Badge key={r.id} variant="outline" className="text-[8px] px-1 py-0 font-mono">{r.reqNumber}</Badge>
+                                    <Badge key={r.id} variant="outline" className="text-[10px] px-1 py-0 font-mono">{r.reqNumber}</Badge>
                                   ))}
                                   {linked.length > 6 && <span>+{linked.length - 6} more</span>}
                                 </span>
@@ -197,7 +197,7 @@ export default function OutcomesPage() {
             <TabsContent value="scripts">
               {outcomes.length === 0 ? (
                 <Card className="p-8 text-center">
-                  <p className="text-sm text-muted-foreground">Create outcomes first to generate demo scripts.</p>
+                  <p className="text-base text-muted-foreground">Create outcomes first to generate demo scripts.</p>
                 </Card>
               ) : (
                 <div className="space-y-4">
@@ -207,16 +207,16 @@ export default function OutcomesPage() {
                       <Collapsible key={o.id} defaultOpen>
                         <CollapsibleTrigger className="flex items-center gap-2 w-full text-left p-2 rounded hover:bg-muted/30">
                           <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                          <span className="text-sm font-semibold flex-1">{o.title}</span>
-                          <Badge className={`text-[9px] ${PRI_COLORS[o.priority] || ""}`}>{o.priority}</Badge>
-                          <Button size="sm" className="h-7 text-[10px] gap-1" onClick={(e) => { e.stopPropagation(); generateScenarios.mutate(o.id); }} disabled={generateScenarios.isPending} data-testid={`btn-gen-scenarios-${o.id}`}>
+                          <span className="text-base font-semibold flex-1">{o.title}</span>
+                          <Badge className={`text-xs ${PRI_COLORS[o.priority] || ""}`}>{o.priority}</Badge>
+                          <Button size="sm" className="h-7 text-xs gap-1" onClick={(e) => { e.stopPropagation(); generateScenarios.mutate(o.id); }} disabled={generateScenarios.isPending} data-testid={`btn-gen-scenarios-${o.id}`}>
                             {generateScenarios.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
                             Generate
                           </Button>
                         </CollapsibleTrigger>
                         <CollapsibleContent>
                           {scenarios.length === 0 ? (
-                            <p className="text-xs text-muted-foreground pl-8 py-2">No scenarios yet. Click Generate above.</p>
+                            <p className="text-sm text-muted-foreground pl-8 py-2">No scenarios yet. Click Generate above.</p>
                           ) : (
                             <div className="space-y-3 pl-4 mt-2">
                               {scenarios.map((s: any) => {
@@ -226,35 +226,35 @@ export default function OutcomesPage() {
                                   <Card key={s.id} data-testid={`scenario-${s.id}`}>
                                     <CardContent className="p-4 space-y-3">
                                       <div className="flex items-center gap-2 flex-wrap">
-                                        <h4 className="text-sm font-semibold flex-1">{s.title}</h4>
-                                        <Badge variant="outline" className="text-[9px] gap-1"><Clock className="w-3 h-3" />{s.estimatedMinutes} min</Badge>
+                                        <h4 className="text-base font-semibold flex-1">{s.title}</h4>
+                                        <Badge variant="outline" className="text-xs gap-1"><Clock className="w-3 h-3" />{s.estimatedMinutes} min</Badge>
                                       </div>
 
                                       {s.narrative && (
-                                        <div className="p-3 rounded-lg bg-muted/40 border-l-2 border-primary text-xs italic text-muted-foreground leading-relaxed">
+                                        <div className="p-3 rounded-lg bg-muted/40 border-l-2 border-primary text-sm italic text-muted-foreground leading-relaxed">
                                           {s.narrative}
                                         </div>
                                       )}
 
                                       {s.setupInstructions && (
                                         <Collapsible>
-                                          <CollapsibleTrigger className="text-[11px] font-medium text-muted-foreground flex items-center gap-1 hover:text-foreground">
+                                          <CollapsibleTrigger className="text-sm font-medium text-muted-foreground flex items-center gap-1 hover:text-foreground">
                                             <ChevronRight className="w-3 h-3" />Setup Instructions
                                           </CollapsibleTrigger>
-                                          <CollapsibleContent className="text-xs text-muted-foreground mt-1 pl-4">{s.setupInstructions}</CollapsibleContent>
+                                          <CollapsibleContent className="text-sm text-muted-foreground mt-1 pl-4">{s.setupInstructions}</CollapsibleContent>
                                         </Collapsible>
                                       )}
 
                                       {walkthrough.length > 0 && (
                                         <div>
-                                          <p className="text-[11px] font-medium mb-1.5">Walkthrough</p>
+                                          <p className="text-sm font-medium mb-1.5">Walkthrough</p>
                                           <div className="space-y-1.5">
                                             {walkthrough.map((step: any, i: number) => (
-                                              <div key={i} className="flex gap-2 text-xs">
-                                                <span className="w-5 h-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[9px] font-bold shrink-0 mt-0.5">{step.step || i + 1}</span>
+                                              <div key={i} className="flex gap-2 text-sm">
+                                                <span className="w-5 h-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">{step.step || i + 1}</span>
                                                 <div>
                                                   <p>{step.instruction}</p>
-                                                  {step.whatToEvaluate && <p className="text-muted-foreground italic text-[11px]">Evaluate: {step.whatToEvaluate}</p>}
+                                                  {step.whatToEvaluate && <p className="text-muted-foreground italic text-sm">Evaluate: {step.whatToEvaluate}</p>}
                                                 </div>
                                               </div>
                                             ))}
@@ -264,10 +264,10 @@ export default function OutcomesPage() {
 
                                       {criteria.length > 0 && (
                                         <div>
-                                          <p className="text-[11px] font-medium mb-1.5">Success Criteria</p>
+                                          <p className="text-sm font-medium mb-1.5">Success Criteria</p>
                                           <div className="space-y-1">
                                             {criteria.map((c: any, i: number) => (
-                                              <div key={i} className="flex items-start gap-2 text-xs">
+                                              <div key={i} className="flex items-start gap-2 text-sm">
                                                 <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
                                                 <div>
                                                   <span>{c.criterion}</span>
@@ -298,7 +298,7 @@ export default function OutcomesPage() {
       {/* Outcome Dialog */}
       <Dialog open={outcomeDialog.open} onOpenChange={o => !o && setOutcomeDialog({ open: false, form: {} })}>
         <DialogContent>
-          <DialogHeader><DialogTitle className="text-sm">{outcomeDialog.editId ? "Edit" : "Add"} Outcome</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle className="text-base">{outcomeDialog.editId ? "Edit" : "Add"} Outcome</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div>
               <label className="text-xs text-muted-foreground">Title</label>

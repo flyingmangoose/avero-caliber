@@ -123,13 +123,13 @@ export default function AdminPage() {
           {/* Invite Users */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm flex items-center gap-2">
+              <CardTitle className="text-base flex items-center gap-2">
                 <UserPlus className="w-4 h-4" />
                 Invite External Users
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <p className="text-xs text-muted-foreground">
+              <p className="text-sm text-muted-foreground">
                 Users with <span className="font-medium">@averoadvisors.com</span> emails can sign in automatically.
                 Invite external users by adding their email below.
               </p>
@@ -155,7 +155,7 @@ export default function AdminPage() {
               {invitedEmails.length > 0 && (
                 <div className="space-y-1">
                   {invitedEmails.map((inv: any) => (
-                    <div key={inv.id} className="flex items-center justify-between p-2 rounded bg-muted/30 text-xs">
+                    <div key={inv.id} className="flex items-center justify-between p-2 rounded bg-muted/30 text-sm">
                       <span>{inv.email}</span>
                       <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
                         onClick={() => removeInviteMutation.mutate(inv.id)}>
@@ -171,7 +171,7 @@ export default function AdminPage() {
           {/* Registered Users + Project Access */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm flex items-center gap-2">
+              <CardTitle className="text-base flex items-center gap-2">
                 <Users className="w-4 h-4" />
                 Users & Project Access ({users.length})
               </CardTitle>
@@ -195,13 +195,13 @@ export default function AdminPage() {
                         )}
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium truncate">{user.name}</p>
-                          <p className="text-[11px] text-muted-foreground truncate">{user.email}</p>
+                          <p className="text-sm text-muted-foreground truncate">{user.email}</p>
                         </div>
                         {user.id === currentUser?.id ? (
-                          <Badge className="text-[10px]">You</Badge>
+                          <Badge className="text-xs">You</Badge>
                         ) : (
                           <Select value={user.role} onValueChange={(role) => updateRoleMutation.mutate({ userId: user.id, role })}>
-                            <SelectTrigger className="w-24 h-7 text-[10px]"><SelectValue /></SelectTrigger>
+                            <SelectTrigger className="w-24 h-7 text-xs"><SelectValue /></SelectTrigger>
                             <SelectContent>
                               <SelectItem value="admin" className="text-xs">Admin</SelectItem>
                               <SelectItem value="editor" className="text-xs">Editor</SelectItem>
@@ -271,30 +271,30 @@ function ActivityLogTab() {
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="text-sm flex items-center gap-2">
+        <CardTitle className="text-base flex items-center gap-2">
           <Activity className="w-4 h-4" />
           Activity Log ({activity.length})
         </CardTitle>
       </CardHeader>
       <CardContent>
         {activity.length === 0 ? (
-          <p className="text-xs text-muted-foreground text-center py-4">No activity recorded yet.</p>
+          <p className="text-sm text-muted-foreground text-center py-4">No activity recorded yet.</p>
         ) : (
           <div className="space-y-1">
             {activity.map((a: any) => (
               <div key={a.id} className="flex items-start gap-3 py-2 border-b border-border/30 last:border-0">
-                <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center text-[10px] font-medium shrink-0 mt-0.5">
+                <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center text-xs font-medium shrink-0 mt-0.5">
                   {a.userName?.[0]?.toUpperCase() || "?"}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-xs font-medium">{a.userName || "System"}</span>
-                    <span className="text-xs text-muted-foreground">{ACTION_LABELS[a.action] || a.action}</span>
-                    {a.projectId && <Badge variant="outline" className="text-[8px]">Project #{a.projectId}</Badge>}
+                    <span className="text-sm font-medium">{a.userName || "System"}</span>
+                    <span className="text-sm text-muted-foreground">{ACTION_LABELS[a.action] || a.action}</span>
+                    {a.projectId && <Badge variant="outline" className="text-[10px]">Project #{a.projectId}</Badge>}
                   </div>
-                  {a.details && <p className="text-[11px] text-muted-foreground truncate mt-0.5">{a.details}</p>}
+                  {a.details && <p className="text-sm text-muted-foreground truncate mt-0.5">{a.details}</p>}
                 </div>
-                <span className="text-[10px] text-muted-foreground shrink-0">
+                <span className="text-xs text-muted-foreground shrink-0">
                   {new Date(a.createdAt).toLocaleDateString()} {new Date(a.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                 </span>
               </div>
@@ -344,7 +344,7 @@ function UserProjectAccess({ userId, allProjects, assignProjectId, setAssignProj
 
   return (
     <div className="border-t border-border/30 bg-muted/10 p-3 space-y-3">
-      <p className="text-[11px] font-medium text-muted-foreground flex items-center gap-1.5">
+      <p className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
         <FolderOpen className="w-3 h-3" />Project Access
       </p>
 
@@ -352,9 +352,9 @@ function UserProjectAccess({ userId, allProjects, assignProjectId, setAssignProj
       {memberProjects.length > 0 ? (
         <div className="space-y-1">
           {memberProjects.map((p: any) => (
-            <div key={p.id} className="flex items-center gap-2 text-xs p-1.5 rounded bg-background">
+            <div key={p.id} className="flex items-center gap-2 text-sm p-1.5 rounded bg-background">
               <span className="flex-1 truncate">{p.clientName} / {p.name}</span>
-              <Badge variant="outline" className="text-[9px]">{p.memberRole}</Badge>
+              <Badge variant="outline" className="text-xs">{p.memberRole}</Badge>
               <Button variant="ghost" size="sm" className="h-5 w-5 p-0 text-muted-foreground hover:text-destructive" onClick={() => onRemove(p.id)}>
                 <X className="w-3 h-3" />
               </Button>
@@ -362,14 +362,14 @@ function UserProjectAccess({ userId, allProjects, assignProjectId, setAssignProj
           ))}
         </div>
       ) : (
-        <p className="text-[11px] text-muted-foreground italic">No project access assigned</p>
+        <p className="text-sm text-muted-foreground italic">No project access assigned</p>
       )}
 
       {/* Add to project */}
       {unassignedProjects.length > 0 && (
         <div className="flex gap-1.5">
           <Select value={assignProjectId} onValueChange={setAssignProjectId}>
-            <SelectTrigger className="flex-1 h-7 text-[10px]">
+            <SelectTrigger className="flex-1 h-7 text-xs">
               <SelectValue placeholder="Add to project..." />
             </SelectTrigger>
             <SelectContent>
@@ -381,14 +381,14 @@ function UserProjectAccess({ userId, allProjects, assignProjectId, setAssignProj
             </SelectContent>
           </Select>
           <Select value={assignRole} onValueChange={setAssignRole}>
-            <SelectTrigger className="w-20 h-7 text-[10px]"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-20 h-7 text-xs"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="owner" className="text-xs">Owner</SelectItem>
               <SelectItem value="editor" className="text-xs">Editor</SelectItem>
               <SelectItem value="viewer" className="text-xs">Viewer</SelectItem>
             </SelectContent>
           </Select>
-          <Button size="sm" className="h-7 text-[10px] gap-1 px-2" disabled={!assignProjectId || isAdding}
+          <Button size="sm" className="h-7 text-xs gap-1 px-2" disabled={!assignProjectId || isAdding}
             onClick={() => { onAdd(parseInt(assignProjectId), assignRole); }}>
             <Plus className="w-3 h-3" />
           </Button>

@@ -101,9 +101,9 @@ export default function EvaluationScorecardPage() {
                 <div className="space-y-4">
                   {/* Auto-score buttons per vendor */}
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-xs text-muted-foreground">Auto-score from KB:</span>
+                    <span className="text-sm text-muted-foreground">Auto-score from KB:</span>
                     {vendors.map((v: any) => (
-                      <Button key={v.vendorId} size="sm" variant="outline" className="h-7 text-[10px] gap-1"
+                      <Button key={v.vendorId} size="sm" variant="outline" className="h-7 text-xs gap-1"
                         onClick={() => autoSuggest(v.vendorId)}
                         disabled={autoSuggestingVendor === v.vendorId}
                       >
@@ -114,7 +114,7 @@ export default function EvaluationScorecardPage() {
                   </div>
 
                   <div className="overflow-x-auto">
-                    <table className="w-full text-xs">
+                    <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b bg-muted/30">
                           <th className="text-left p-2.5 font-medium min-w-[200px]">Outcome</th>
@@ -129,9 +129,9 @@ export default function EvaluationScorecardPage() {
                           <tr key={o.id} className="border-b hover:bg-muted/10">
                             <td className="p-2.5">
                               <p className="font-medium">{o.title}</p>
-                              {o.scenarioCount > 0 && <p className="text-muted-foreground text-[10px]">{o.scenarioCount} scenarios</p>}
+                              {o.scenarioCount > 0 && <p className="text-muted-foreground text-xs">{o.scenarioCount} scenarios</p>}
                             </td>
-                            <td className="p-2.5"><Badge className={`text-[9px] ${PRI_COLORS[o.priority] || ""}`}>{o.priority}</Badge></td>
+                            <td className="p-2.5"><Badge className={`text-xs ${PRI_COLORS[o.priority] || ""}`}>{o.priority}</Badge></td>
                             {o.vendors.map((v: any) => (
                               <td key={v.vendorId} className="text-center p-2.5">
                                 {v.avgOverall ? (
@@ -159,13 +159,13 @@ export default function EvaluationScorecardPage() {
                       </tbody>
                     </table>
                   </div>
-                  <p className="text-[10px] text-muted-foreground">Priority weighting: Critical (4x) | High (3x) | Medium (2x) | Low (1x)</p>
+                  <p className="text-sm text-muted-foreground">Priority weighting: Critical (4x) | High (3x) | Medium (2x) | Low (1x)</p>
                 </div>
               ) : (
                 <Card className="p-8 text-center">
                   <BarChart3 className="w-8 h-8 mx-auto text-muted-foreground/40 mb-3" />
-                  <p className="text-sm font-medium">No scorecard data yet</p>
-                  <p className="text-xs text-muted-foreground mt-1">Generate outcomes and scenarios in the Outcomes module, then auto-score vendors here.</p>
+                  <p className="text-base font-medium">No scorecard data yet</p>
+                  <p className="text-sm text-muted-foreground mt-1">Generate outcomes and scenarios in the Outcomes module, then auto-score vendors here.</p>
                 </Card>
               )}
             </TabsContent>
@@ -182,22 +182,22 @@ export default function EvaluationScorecardPage() {
                       <Collapsible key={o.id} defaultOpen>
                         <CollapsibleTrigger className="flex items-center gap-2 w-full text-left p-2 rounded hover:bg-muted/30">
                           <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                          <span className="text-sm font-semibold flex-1">{o.title}</span>
-                          <Badge className={`text-[9px] ${PRI_COLORS[o.priority] || ""}`}>{o.priority}</Badge>
+                          <span className="text-base font-semibold flex-1">{o.title}</span>
+                          <Badge className={`text-xs ${PRI_COLORS[o.priority] || ""}`}>{o.priority}</Badge>
                         </CollapsibleTrigger>
                         <CollapsibleContent>
                           <div className="space-y-3 mt-2">
                             {scenarios.map((s: any) => (
                               <Card key={s.id}>
                                 <CardContent className="p-4">
-                                  <p className="text-sm font-semibold mb-3">{s.title}</p>
+                                  <p className="text-base font-semibold mb-3">{s.title}</p>
                                   <div className="overflow-x-auto">
-                                    <table className="w-full text-xs">
+                                    <table className="w-full text-sm">
                                       <thead>
                                         <tr className="border-b">
-                                          <th className="text-left p-1.5 font-medium w-28">Vendor</th>
-                                          {dims.map(d => <th key={d} className="text-center p-1.5 font-medium text-[10px]">{dimLabels[d]}</th>)}
-                                          <th className="text-center p-1.5 font-medium">Overall</th>
+                                          <th className="text-left p-2 font-medium w-28">Vendor</th>
+                                          {dims.map(d => <th key={d} className="text-center p-2 font-medium text-xs">{dimLabels[d]}</th>)}
+                                          <th className="text-center p-2 font-medium">Overall</th>
                                         </tr>
                                       </thead>
                                       <tbody>
@@ -205,23 +205,23 @@ export default function EvaluationScorecardPage() {
                                           const score = allScores.find((sc: any) => sc.scenarioId === s.id && sc.vendorId === v.vendorId);
                                           return (
                                             <tr key={v.vendorId} className="border-b">
-                                              <td className="p-1.5 font-medium">
+                                              <td className="p-2 font-medium">
                                                 {v.vendorName}
-                                                {score?.evaluatedBy === "KB Auto-Suggest" && <Badge variant="outline" className="text-[7px] ml-1">KB</Badge>}
+                                                {score?.evaluatedBy === "KB Auto-Suggest" && <Badge variant="outline" className="text-[10px] ml-1">KB</Badge>}
                                               </td>
                                               {dims.map(dim => (
                                                 <td key={dim} className="text-center p-1">
                                                   <div className="flex gap-0.5 justify-center">
                                                     {[1, 2, 3, 4, 5].map(val => (
                                                       <button key={val}
-                                                        className={`w-5 h-5 rounded text-[9px] font-bold transition-colors ${(score?.[dim] || 0) >= val ? SCORE_COLORS[val] + " text-white" : "bg-muted text-muted-foreground/40 hover:bg-muted/80"}`}
+                                                        className={`w-5 h-5 rounded text-xs font-bold transition-colors ${(score?.[dim] || 0) >= val ? SCORE_COLORS[val] + " text-white" : "bg-muted text-muted-foreground/40 hover:bg-muted/80"}`}
                                                         onClick={() => saveScore.mutate({ scenarioId: s.id, vendorId: v.vendorId, [dim]: val })}
                                                       >{val}</button>
                                                     ))}
                                                   </div>
                                                 </td>
                                               ))}
-                                              <td className="text-center p-1.5">
+                                              <td className="text-center p-2">
                                                 {score?.overallScore ? (
                                                   <span className={`font-bold ${SCORE_TEXT[Math.round(score.overallScore)] || ""}`}>{score.overallScore}/5</span>
                                                 ) : <span className="text-muted-foreground">—</span>}
@@ -243,7 +243,7 @@ export default function EvaluationScorecardPage() {
                 </div>
               ) : (
                 <Card className="p-8 text-center">
-                  <p className="text-sm text-muted-foreground">Generate outcomes and scenarios first.</p>
+                  <p className="text-base text-muted-foreground">Generate outcomes and scenarios first.</p>
                 </Card>
               )}
             </TabsContent>
@@ -253,8 +253,8 @@ export default function EvaluationScorecardPage() {
               {unifiedEval?.vendors?.length > 0 ? (
                 <div className="space-y-6">
                   <div>
-                    <h3 className="text-sm font-semibold mb-1">Combined Vendor Ranking</h3>
-                    <p className="text-xs text-muted-foreground">{unifiedEval.weights.requirements}% requirements matrix + {unifiedEval.weights.outcomes}% outcome evaluation</p>
+                    <h3 className="text-base font-semibold mb-1">Combined Vendor Ranking</h3>
+                    <p className="text-sm text-muted-foreground">{unifiedEval.weights.requirements}% requirements matrix + {unifiedEval.weights.outcomes}% outcome evaluation</p>
                   </div>
 
                   <div className="space-y-3">
@@ -266,20 +266,20 @@ export default function EvaluationScorecardPage() {
                               {rank + 1}
                             </div>
                             <div className="flex-1">
-                              <p className="text-sm font-semibold">{v.vendorName}</p>
+                              <p className="text-base font-semibold">{v.vendorName}</p>
                               <div className="flex items-center gap-4 mt-1">
                                 <div className="flex items-center gap-1.5">
                                   <div className="w-16 h-1.5 rounded-full bg-muted overflow-hidden">
                                     <div className="h-full rounded-full bg-primary" style={{ width: `${v.requirementScore}%` }} />
                                   </div>
-                                  <span className="text-[10px] text-muted-foreground">Req: {v.requirementScore}%</span>
+                                  <span className="text-xs text-muted-foreground">Req: {v.requirementScore}%</span>
                                 </div>
                                 {v.outcomeScore !== null && (
                                   <div className="flex items-center gap-1.5">
                                     <div className="w-16 h-1.5 rounded-full bg-muted overflow-hidden">
                                       <div className="h-full rounded-full bg-accent" style={{ width: `${v.outcomeScore}%` }} />
                                     </div>
-                                    <span className="text-[10px] text-muted-foreground">Out: {v.outcomeScore}%</span>
+                                    <span className="text-xs text-muted-foreground">Out: {v.outcomeScore}%</span>
                                   </div>
                                 )}
                               </div>
@@ -298,7 +298,7 @@ export default function EvaluationScorecardPage() {
               ) : (
                 <Card className="p-8 text-center">
                   <Trophy className="w-8 h-8 mx-auto text-muted-foreground/40 mb-3" />
-                  <p className="text-sm text-muted-foreground">Complete requirements scoring and outcome evaluation to see the unified ranking.</p>
+                  <p className="text-base text-muted-foreground">Complete requirements scoring and outcome evaluation to see the unified ranking.</p>
                 </Card>
               )}
             </TabsContent>

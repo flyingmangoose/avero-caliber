@@ -191,7 +191,7 @@ export default function StakeholderFeedback() {
                     <Users className="w-5 h-5 text-blue-400" />
                   </div>
                   <div>
-                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Total Responses</p>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total Responses</p>
                     <p className="text-2xl font-bold text-foreground">{agg?.totalFeedback || 0}</p>
                   </div>
                 </div>
@@ -204,7 +204,7 @@ export default function StakeholderFeedback() {
                     <ThumbsUp className="w-5 h-5 text-green-400" />
                   </div>
                   <div>
-                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Approval Rate</p>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Approval Rate</p>
                     <p className="text-2xl font-bold text-foreground">{agg?.approvalRate || 0}%</p>
                   </div>
                 </div>
@@ -217,7 +217,7 @@ export default function StakeholderFeedback() {
                     <Flag className="w-5 h-5 text-amber-400" />
                   </div>
                   <div>
-                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Flagged for Discussion</p>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Flagged for Discussion</p>
                     <p className="text-2xl font-bold text-foreground">{agg?.flaggedCount || 0}</p>
                   </div>
                 </div>
@@ -230,7 +230,7 @@ export default function StakeholderFeedback() {
                     <LinkIcon className="w-5 h-5 text-purple-400" />
                   </div>
                   <div>
-                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Active Links</p>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Active Links</p>
                     <p className="text-2xl font-bold text-foreground">{activeLinksCount}</p>
                   </div>
                 </div>
@@ -244,7 +244,7 @@ export default function StakeholderFeedback() {
               <CardContent className="py-12 flex flex-col items-center text-center gap-3">
                 <MessageSquare className="w-10 h-10 text-muted-foreground/30" />
                 <p className="text-sm font-medium text-muted-foreground">No workshop links created yet</p>
-                <p className="text-xs text-muted-foreground">Create workshop links from the project view to collect stakeholder feedback.</p>
+                <p className="text-sm text-muted-foreground">Create workshop links from the project view to collect stakeholder feedback.</p>
               </CardContent>
             </Card>
           )}
@@ -254,10 +254,10 @@ export default function StakeholderFeedback() {
               {/* Stakeholder Activity table */}
               <Card data-testid="card-stakeholder-activity">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
+                  <CardTitle className="text-base font-semibold text-foreground flex items-center gap-2">
                     <Users className="w-4 h-4 text-accent" />
                     Stakeholder Activity
-                    <Badge variant="outline" className="ml-auto text-[11px]">{summary.links.length} links</Badge>
+                    <Badge variant="outline" className="ml-auto text-xs">{summary.links.length} links</Badge>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -293,20 +293,20 @@ export default function StakeholderFeedback() {
                               <div className="flex items-center gap-2">
                                 {isExpanded ? <ChevronDown className="w-3 h-3 text-muted-foreground" /> : <ChevronRight className="w-3 h-3 text-muted-foreground" />}
                                 <div>
-                                  <p className="text-xs font-medium text-foreground">{link.stakeholderName}</p>
-                                  {link.stakeholderEmail && <p className="text-[10px] text-muted-foreground">{link.stakeholderEmail}</p>}
+                                  <p className="text-sm font-medium text-foreground">{link.stakeholderName}</p>
+                                  {link.stakeholderEmail && <p className="text-sm text-muted-foreground">{link.stakeholderEmail}</p>}
                                 </div>
                               </div>
                             </TableCell>
                             <TableCell className="py-3">
                               <div className="flex flex-wrap gap-1">
                                 {link.modules.length === 0 ? (
-                                  <Badge variant="outline" className="text-[9px] px-1 py-0">All</Badge>
+                                  <Badge variant="outline" className="text-xs px-1 py-0">All</Badge>
                                 ) : link.modules.slice(0, 3).map(m => (
-                                  <Badge key={m} variant="outline" className="text-[9px] px-1 py-0">{m.length > 12 ? m.slice(0, 10) + "…" : m}</Badge>
+                                  <Badge key={m} variant="outline" className="text-xs px-1 py-0">{m.length > 12 ? m.slice(0, 10) + "…" : m}</Badge>
                                 ))}
                                 {link.modules.length > 3 && (
-                                  <Badge variant="outline" className="text-[9px] px-1 py-0">+{link.modules.length - 3}</Badge>
+                                  <Badge variant="outline" className="text-xs px-1 py-0">+{link.modules.length - 3}</Badge>
                                 )}
                               </div>
                             </TableCell>
@@ -323,7 +323,7 @@ export default function StakeholderFeedback() {
                               <span className="text-xs font-semibold text-amber-400">{link.feedbackStats.flagged}</span>
                             </TableCell>
                             <TableCell className="py-3 text-center">
-                              <Badge variant={link.isActive ? "outline" : "secondary"} className={`text-[10px] px-1.5 py-0 ${link.isActive ? "text-green-400 border-green-500/30" : "text-muted-foreground"}`}>
+                              <Badge variant={link.isActive ? "outline" : "secondary"} className={`text-xs px-1.5 py-0 ${link.isActive ? "text-green-400 border-green-500/30" : "text-muted-foreground"}`}>
                                 {link.isActive ? "Active" : "Inactive"}
                               </Badge>
                             </TableCell>
@@ -331,7 +331,7 @@ export default function StakeholderFeedback() {
                           ...(isExpanded ? [
                             <TableRow key={`${link.id}-detail`} className="bg-muted/10">
                               <TableCell colSpan={7} className="py-3">
-                                <div className="grid grid-cols-3 gap-4 text-xs pl-5">
+                                <div className="grid grid-cols-3 gap-4 text-sm pl-5">
                                   <div>
                                     <p className="text-muted-foreground">Created</p>
                                     <p className="font-medium">{new Date(link.createdAt).toLocaleDateString()}</p>
@@ -359,10 +359,10 @@ export default function StakeholderFeedback() {
               {agg && agg.topConcerns.length > 0 && (
                 <Card data-testid="card-concerns">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
+                    <CardTitle className="text-base font-semibold text-foreground flex items-center gap-2">
                       <Flag className="w-4 h-4 text-amber-400" />
                       Concerns & Flags
-                      <Badge variant="outline" className="ml-auto text-[11px] text-amber-400 border-amber-500/30">
+                      <Badge variant="outline" className="ml-auto text-xs text-amber-400 border-amber-500/30">
                         {agg.topConcerns.length} items
                       </Badge>
                     </CardTitle>
@@ -385,18 +385,18 @@ export default function StakeholderFeedback() {
                               data-testid={`concern-${concern.reqNumber}`}
                             >
                               <div className="flex items-center gap-3 flex-1 min-w-0">
-                                <span className="text-[11px] font-mono text-muted-foreground shrink-0">{concern.reqNumber}</span>
-                                <Badge variant="outline" className="text-[9px] px-1 py-0 shrink-0">{concern.module}</Badge>
-                                <span className="text-xs text-foreground/90 truncate">{concern.description}</span>
+                                <span className="text-xs font-mono text-muted-foreground shrink-0">{concern.reqNumber}</span>
+                                <Badge variant="outline" className="text-xs px-1 py-0 shrink-0">{concern.module}</Badge>
+                                <span className="text-sm text-foreground/90 truncate">{concern.description}</span>
                               </div>
                               <div className="flex items-center gap-2 shrink-0 ml-3">
                                 {concern.flagCount > 0 && (
-                                  <Badge className="text-[10px] px-1.5 py-0 bg-amber-500/15 text-amber-400 border border-amber-500/20">
+                                  <Badge className="text-xs px-1.5 py-0 bg-amber-500/15 text-amber-400 border border-amber-500/20">
                                     {concern.flagCount} flags
                                   </Badge>
                                 )}
                                 {concern.commentCount > 0 && (
-                                  <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                                  <Badge variant="outline" className="text-xs px-1.5 py-0">
                                     {concern.commentCount} comments
                                   </Badge>
                                 )}
@@ -407,8 +407,8 @@ export default function StakeholderFeedback() {
                               <div className="border-t border-border/50 px-4 py-3 space-y-2 bg-muted/10">
                                 {concern.comments.map((c, i) => (
                                   <div key={i} className="flex gap-2">
-                                    <span className="text-[11px] font-semibold text-accent shrink-0">{c.stakeholder}:</span>
-                                    <span className="text-[11px] text-foreground/80">{c.comment}</span>
+                                    <span className="text-sm font-semibold text-accent shrink-0">{c.stakeholder}:</span>
+                                    <span className="text-sm text-foreground/80">{c.comment}</span>
                                   </div>
                                 ))}
                               </div>
@@ -425,10 +425,10 @@ export default function StakeholderFeedback() {
               {agg && agg.criticalityChanges.length > 0 && (
                 <Card data-testid="card-criticality-disagreements">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
+                    <CardTitle className="text-base font-semibold text-foreground flex items-center gap-2">
                       <AlertTriangle className="w-4 h-4 text-amber-400" />
                       Criticality Disagreements
-                      <Badge variant="outline" className="ml-auto text-[11px]">{agg.criticalityChanges.length} changes</Badge>
+                      <Badge variant="outline" className="ml-auto text-xs">{agg.criticalityChanges.length} changes</Badge>
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -445,15 +445,15 @@ export default function StakeholderFeedback() {
                       <TableBody>
                         {agg.criticalityChanges.slice(0, 20).map((change, i) => (
                           <TableRow key={`${change.reqId}-${i}`} className="hover:bg-muted/30" data-testid={`crit-change-${change.reqNumber}`}>
-                            <TableCell className="py-2 text-[11px] font-mono text-muted-foreground">{change.reqNumber}</TableCell>
-                            <TableCell className="py-2 text-xs text-foreground/90">{change.module}</TableCell>
+                            <TableCell className="py-2 text-xs font-mono text-muted-foreground">{change.reqNumber}</TableCell>
+                            <TableCell className="py-2 text-sm text-foreground/90">{change.module}</TableCell>
                             <TableCell className="py-2 text-center">
-                              <Badge variant={change.originalCriticality === "Critical" ? "destructive" : "outline"} className="text-[10px] px-1.5 py-0">
+                              <Badge variant={change.originalCriticality === "Critical" ? "destructive" : "outline"} className="text-xs px-1.5 py-0">
                                 {change.originalCriticality}
                               </Badge>
                             </TableCell>
                             <TableCell className="py-2 text-center">
-                              <Badge variant={change.stakeholderCriticality === "Critical" ? "destructive" : "outline"} className="text-[10px] px-1.5 py-0">
+                              <Badge variant={change.stakeholderCriticality === "Critical" ? "destructive" : "outline"} className="text-xs px-1.5 py-0">
                                 {change.stakeholderCriticality}
                               </Badge>
                             </TableCell>
@@ -470,7 +470,7 @@ export default function StakeholderFeedback() {
               {moduleChartData.length > 0 && (
                 <Card data-testid="card-module-chart">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
+                    <CardTitle className="text-base font-semibold text-foreground flex items-center gap-2">
                       <MessageSquare className="w-4 h-4 text-accent" />
                       Module-Level Feedback
                     </CardTitle>
@@ -490,7 +490,7 @@ export default function StakeholderFeedback() {
                                   <div className="bg-popover border border-border rounded-lg px-3 py-2 shadow-lg">
                                     <p className="text-sm font-semibold text-foreground mb-1">{d?.fullName}</p>
                                     {payload.map((p: any) => (
-                                      <p key={p.dataKey} className="text-xs" style={{ color: p.color }}>{p.name}: {p.value}</p>
+                                      <p key={p.dataKey} className="text-sm" style={{ color: p.color }}>{p.name}: {p.value}</p>
                                     ))}
                                   </div>
                                 );
@@ -514,7 +514,7 @@ export default function StakeholderFeedback() {
               {agg && agg.consensusItems.length > 0 && (
                 <Card data-testid="card-consensus">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
+                    <CardTitle className="text-base font-semibold text-foreground flex items-center gap-2">
                       <CheckCircle2 className="w-4 h-4 text-green-400" />
                       Consensus Analysis
                       <span className="text-xs text-muted-foreground font-normal ml-1">Requirements with multiple stakeholder reviews</span>
@@ -523,19 +523,19 @@ export default function StakeholderFeedback() {
                   <CardContent>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                       <div className="p-3 rounded-lg bg-green-500/5 border border-green-500/20">
-                        <p className="text-[10px] font-semibold text-green-400 uppercase tracking-wider">All Approved</p>
+                        <p className="text-xs font-semibold text-green-400 uppercase tracking-wider">All Approved</p>
                         <p className="text-xl font-bold text-green-400" data-testid="consensus-all-approved">
                           {agg.consensusItems.filter(c => c.allApproved).length}
                         </p>
                       </div>
                       <div className="p-3 rounded-lg bg-red-500/5 border border-red-500/20">
-                        <p className="text-[10px] font-semibold text-red-400 uppercase tracking-wider">All Rejected</p>
+                        <p className="text-xs font-semibold text-red-400 uppercase tracking-wider">All Rejected</p>
                         <p className="text-xl font-bold text-red-400" data-testid="consensus-all-rejected">
                           {agg.consensusItems.filter(c => c.allRejected).length}
                         </p>
                       </div>
                       <div className="p-3 rounded-lg bg-amber-500/5 border border-amber-500/20">
-                        <p className="text-[10px] font-semibold text-amber-400 uppercase tracking-wider">Mixed / Disagreement</p>
+                        <p className="text-xs font-semibold text-amber-400 uppercase tracking-wider">Mixed / Disagreement</p>
                         <p className="text-xl font-bold text-amber-400" data-testid="consensus-mixed">
                           {agg.consensusItems.filter(c => c.mixed).length}
                         </p>
@@ -544,7 +544,7 @@ export default function StakeholderFeedback() {
 
                     {agg.consensusItems.filter(c => c.mixed).length > 0 && (
                       <div>
-                        <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Disagreements Requiring Discussion</p>
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Disagreements Requiring Discussion</p>
                         <Table>
                           <TableHeader>
                             <TableRow className="hover:bg-transparent">
@@ -557,11 +557,11 @@ export default function StakeholderFeedback() {
                           <TableBody>
                             {agg.consensusItems.filter(c => c.mixed).slice(0, 15).map(item => (
                               <TableRow key={item.reqId} className="hover:bg-muted/30" data-testid={`consensus-row-${item.reqNumber}`}>
-                                <TableCell className="py-2 text-[11px] font-mono text-muted-foreground">{item.reqNumber}</TableCell>
-                                <TableCell className="py-2 text-xs text-foreground/90">{item.module}</TableCell>
-                                <TableCell className="py-2 text-[11px] text-foreground/80 line-clamp-2">{item.description}</TableCell>
+                                <TableCell className="py-2 text-xs font-mono text-muted-foreground">{item.reqNumber}</TableCell>
+                                <TableCell className="py-2 text-sm text-foreground/90">{item.module}</TableCell>
+                                <TableCell className="py-2 text-sm text-foreground/80 line-clamp-2">{item.description}</TableCell>
                                 <TableCell className="py-2 text-center">
-                                  <Badge className="text-[10px] px-1.5 py-0 bg-amber-500/15 text-amber-400 border border-amber-500/20">
+                                  <Badge className="text-xs px-1.5 py-0 bg-amber-500/15 text-amber-400 border border-amber-500/20">
                                     Mixed
                                   </Badge>
                                 </TableCell>

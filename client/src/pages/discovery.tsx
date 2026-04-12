@@ -44,7 +44,7 @@ function MermaidDiagram({ chart }: { chart: string }) {
 
   if (error) {
     return (
-      <pre className="mt-2 p-3 rounded-lg bg-muted/30 text-[10px] font-mono overflow-x-auto whitespace-pre-wrap">{chart}</pre>
+      <pre className="mt-2 p-3 rounded-lg bg-muted/30 text-xs font-mono overflow-x-auto whitespace-pre-wrap">{chart}</pre>
     );
   }
 
@@ -106,7 +106,7 @@ export default function DiscoveryPage() {
         <h1 className="text-lg font-semibold text-foreground flex items-center gap-2">
           <Compass className="w-5 h-5 text-accent" />Discovery Wizard
         </h1>
-        <p className="text-xs text-muted-foreground mt-0.5">Guided organizational analysis to generate tailored requirements</p>
+        <p className="text-sm text-muted-foreground mt-0.5">Guided organizational analysis to generate tailored requirements</p>
       </div>
       <ScrollArea className="flex-1">
         <div className="p-6">
@@ -208,14 +208,14 @@ function OrgProfileTab({ projectId }: { projectId: string }) {
   return (
     <div className="max-w-3xl space-y-6">
       {profile?._fromClient && (
-        <div className="flex items-center gap-2 p-3 rounded-lg bg-accent/5 border border-accent/20 text-xs text-muted-foreground">
+        <div className="flex items-center gap-2 p-3 rounded-lg bg-accent/5 border border-accent/20 text-sm text-muted-foreground">
           <span className="font-medium text-accent">Auto-populated from Client Profile.</span>
           Edit below to customize for this project, then save.
         </div>
       )}
       <Card>
         <CardContent className="p-5 space-y-4">
-          <h3 className="text-sm font-semibold">Basic Information</h3>
+          <h3 className="text-base font-semibold">Basic Information</h3>
           <div className="grid grid-cols-3 gap-3">
             <div>
               <label className="text-xs text-muted-foreground mb-1 block">Entity Type</label>
@@ -252,7 +252,7 @@ function OrgProfileTab({ projectId }: { projectId: string }) {
           </div>
           <div>
             <label className="text-xs text-muted-foreground mb-1 block">Key Challenges Summary</label>
-            <Textarea className="text-xs min-h-[60px]" value={painSummary} onChange={e => setPainSummary(e.target.value)} data-testid="input-pain-summary" />
+            <Textarea className="text-sm min-h-[60px]" value={painSummary} onChange={e => setPainSummary(e.target.value)} data-testid="input-pain-summary" />
           </div>
         </CardContent>
       </Card>
@@ -260,7 +260,7 @@ function OrgProfileTab({ projectId }: { projectId: string }) {
       <Card>
         <CardContent className="p-5 space-y-3">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold">Current Systems</h3>
+            <h3 className="text-base font-semibold">Current Systems</h3>
             <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={addSystem} data-testid="btn-add-system">
               <Plus className="w-3 h-3" />Add System
             </Button>
@@ -268,19 +268,19 @@ function OrgProfileTab({ projectId }: { projectId: string }) {
           {systems.map((s, i) => (
             <div key={i} className="grid grid-cols-[1fr_1fr_1fr_80px_28px] gap-2 items-end">
               <div>
-                {i === 0 && <label className="text-[10px] text-muted-foreground mb-0.5 block">Name</label>}
+                {i === 0 && <label className="text-xs text-muted-foreground mb-0.5 block">Name</label>}
                 <Input className="h-7 text-xs" value={s.name} onChange={e => updateSystem(i, "name", e.target.value)} data-testid={`sys-name-${i}`} />
               </div>
               <div>
-                {i === 0 && <label className="text-[10px] text-muted-foreground mb-0.5 block">Module/Purpose</label>}
+                {i === 0 && <label className="text-xs text-muted-foreground mb-0.5 block">Module/Purpose</label>}
                 <Input className="h-7 text-xs" value={s.module} onChange={e => updateSystem(i, "module", e.target.value)} data-testid={`sys-module-${i}`} />
               </div>
               <div>
-                {i === 0 && <label className="text-[10px] text-muted-foreground mb-0.5 block">Vendor</label>}
+                {i === 0 && <label className="text-xs text-muted-foreground mb-0.5 block">Vendor</label>}
                 <Input className="h-7 text-xs" value={s.vendor} onChange={e => updateSystem(i, "vendor", e.target.value)} data-testid={`sys-vendor-${i}`} />
               </div>
               <div>
-                {i === 0 && <label className="text-[10px] text-muted-foreground mb-0.5 block">Years</label>}
+                {i === 0 && <label className="text-xs text-muted-foreground mb-0.5 block">Years</label>}
                 <Input className="h-7 text-xs" value={s.yearsInUse} onChange={e => updateSystem(i, "yearsInUse", e.target.value)} data-testid={`sys-years-${i}`} />
               </div>
               <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground hover:text-red-500" onClick={() => removeSystem(i)} data-testid={`sys-remove-${i}`}>
@@ -295,7 +295,7 @@ function OrgProfileTab({ projectId }: { projectId: string }) {
       <Card>
         <CardContent className="p-5 space-y-3">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold">Departments</h3>
+            <h3 className="text-base font-semibold">Departments</h3>
             <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={addDept} data-testid="btn-add-dept">
               <Plus className="w-3 h-3" />Add Department
             </Button>
@@ -303,11 +303,11 @@ function OrgProfileTab({ projectId }: { projectId: string }) {
           {departments.map((d, i) => (
             <div key={i} className="grid grid-cols-[1fr_100px_28px] gap-2 items-end">
               <div>
-                {i === 0 && <label className="text-[10px] text-muted-foreground mb-0.5 block">Department Name</label>}
+                {i === 0 && <label className="text-xs text-muted-foreground mb-0.5 block">Department Name</label>}
                 <Input className="h-7 text-xs" value={d.name} onChange={e => updateDept(i, "name", e.target.value)} data-testid={`dept-name-${i}`} />
               </div>
               <div>
-                {i === 0 && <label className="text-[10px] text-muted-foreground mb-0.5 block">Headcount</label>}
+                {i === 0 && <label className="text-xs text-muted-foreground mb-0.5 block">Headcount</label>}
                 <Input className="h-7 text-xs" type="number" value={d.headcount} onChange={e => updateDept(i, "headcount", e.target.value)} data-testid={`dept-hc-${i}`} />
               </div>
               <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground hover:text-red-500" onClick={() => removeDept(i)} data-testid={`dept-remove-${i}`}>
@@ -438,16 +438,16 @@ function QuestionCard({ question, index, answer, readOnly, onSave }: QuestionCar
       <CardContent className="p-4 space-y-3">
         {/* Question header */}
         <div className="flex items-start gap-3">
-          <span className="shrink-0 w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-[10px] font-bold mt-0.5">
+          <span className="shrink-0 w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-xs font-bold mt-0.5">
             {index + 1}
           </span>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1 flex-wrap">
-              <Badge className={`text-[10px] ${categoryColor(question.category)}`}>
+              <Badge className={`text-xs ${categoryColor(question.category)}`}>
                 {question.category}
               </Badge>
             </div>
-            <p className="text-sm font-semibold text-foreground leading-snug">
+            <p className="text-base font-semibold text-foreground leading-snug">
               {question.question}
             </p>
           </div>
@@ -456,7 +456,7 @@ function QuestionCard({ question, index, answer, readOnly, onSave }: QuestionCar
         {/* Collapsible probes + hints */}
         <Collapsible open={open} onOpenChange={setOpen}>
           <CollapsibleTrigger
-            className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
             data-testid={`btn-probes-${question.id}`}
           >
             <ChevronDown className={`w-3 h-3 transition-transform ${open ? "rotate-180" : ""}`} />
@@ -465,12 +465,12 @@ function QuestionCard({ question, index, answer, readOnly, onSave }: QuestionCar
           <CollapsibleContent className="mt-2 space-y-2 pl-1">
             {question.probes.length > 0 && (
               <div>
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">
                   Follow-up probes
                 </p>
                 <ul className="space-y-0.5">
                   {question.probes.map((p, pi) => (
-                    <li key={pi} className="text-xs text-foreground/80 flex gap-1.5">
+                    <li key={pi} className="text-sm text-foreground/80 flex gap-1.5">
                       <span className="text-accent mt-0.5">›</span>
                       {p}
                     </li>
@@ -479,7 +479,7 @@ function QuestionCard({ question, index, answer, readOnly, onSave }: QuestionCar
               </div>
             )}
             {question.whatToListenFor && (
-              <p className="text-[11px] italic text-muted-foreground border-l-2 border-accent/40 pl-2">
+              <p className="text-sm italic text-muted-foreground border-l-2 border-accent/40 pl-2">
                 {question.whatToListenFor}
               </p>
             )}
@@ -489,19 +489,19 @@ function QuestionCard({ question, index, answer, readOnly, onSave }: QuestionCar
         {/* Answer area */}
         <div className="space-y-2">
           {!editing && answer ? (
-            <div className="relative rounded-md bg-muted/50 border border-border/40 p-3">
+            <div className="relative rounded-md bg-muted/50 border border-border/40 p-4">
               {isFromTranscript && (
-                <Badge className="text-[9px] mb-2 bg-indigo-100 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-400">
+                <Badge className="text-xs mb-2 bg-indigo-100 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-400">
                   From transcript
                 </Badge>
               )}
-              <p className="text-xs text-foreground whitespace-pre-wrap">{answer.answer}</p>
+              <p className="text-sm text-foreground whitespace-pre-wrap">{answer.answer}</p>
               {answer.keyPoints.length > 0 && (
                 <div className="flex flex-wrap gap-1 mt-2">
                   {answer.keyPoints.map((kp, i) => (
                     <span
                       key={i}
-                      className="inline-block text-[9px] px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400"
+                      className="inline-block text-xs px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400"
                     >
                       {kp}
                     </span>
@@ -513,7 +513,7 @@ function QuestionCard({ question, index, answer, readOnly, onSave }: QuestionCar
                   {answer.painPoints.map((pp, i) => (
                     <span
                       key={i}
-                      className="inline-block text-[9px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400"
+                      className="inline-block text-xs px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400"
                     >
                       ⚠ {pp}
                     </span>
@@ -533,7 +533,7 @@ function QuestionCard({ question, index, answer, readOnly, onSave }: QuestionCar
             </div>
           ) : !readOnly ? (
             <Textarea
-              className="text-xs min-h-[80px] resize-none focus:ring-accent/50"
+              className="text-sm min-h-[80px] resize-none focus:ring-accent/50"
               placeholder="Type the client's response or key notes…"
               value={localAnswer}
               onChange={e => setLocalAnswer(e.target.value)}
@@ -554,7 +554,7 @@ function QuestionCard({ question, index, answer, readOnly, onSave }: QuestionCar
                 <button
                   key={opt.value}
                   onClick={() => setLocalStatus(opt.value)}
-                  className={`flex items-center gap-1 px-2 py-1 text-[10px] font-medium transition-colors ${
+                  className={`flex items-center gap-1 px-2 py-1 text-xs font-medium transition-colors ${
                     localStatus === opt.value
                       ? opt.value === "answered"
                         ? "bg-emerald-600 text-white"
@@ -574,7 +574,7 @@ function QuestionCard({ question, index, answer, readOnly, onSave }: QuestionCar
             {editing && localAnswer.trim() && (
               <Button
                 size="sm"
-                className="h-7 text-[10px] bg-primary hover:bg-primary/90 text-white"
+                className="h-7 text-xs bg-primary hover:bg-primary/90 text-white"
                 onClick={handleSave}
                 data-testid={`btn-save-${question.id}`}
               >
@@ -648,7 +648,7 @@ function ImportTranscriptDialog({
             <Upload className="w-4 h-4 text-accent" />
             Import Meeting Notes
           </DialogTitle>
-          <p className="text-xs text-muted-foreground mt-1">
+          <p className="text-sm text-muted-foreground mt-1">
             Paste your transcript from Fireflies, Otter, or other meeting capture tools. AI will
             extract answers and map them to interview questions.
           </p>
@@ -665,7 +665,7 @@ function ImportTranscriptDialog({
           />
 
           {result && (
-            <div className="rounded-md bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 p-3 text-xs text-emerald-700 dark:text-emerald-400">
+            <div className="rounded-md bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 p-3 text-sm text-emerald-700 dark:text-emerald-400">
               <CheckCircle className="w-3.5 h-3.5 inline mr-1" />
               <strong>{result.answers} answers extracted</strong>
               {result.followUps > 0 && `, ${result.followUps} follow-ups flagged`}.
@@ -766,21 +766,21 @@ function InterviewList({
             <CardContent className="p-4">
               <div className="flex items-start justify-between mb-2">
                 <div>
-                  <h4 className="text-sm font-semibold">{area}</h4>
+                  <h4 className="text-base font-semibold">{area}</h4>
                   {iv?.interviewee && (
-                    <p className="text-[10px] text-muted-foreground">
+                    <p className="text-xs text-muted-foreground">
                       {iv.interviewee}
                       {iv.role ? ` — ${iv.role}` : ""}
                     </p>
                   )}
                 </div>
-                <Badge className={`text-[10px] ${STATUS_STYLES[status]}`}>
+                <Badge className={`text-xs ${STATUS_STYLES[status]}`}>
                   {status.replace(/_/g, " ")}
                 </Badge>
               </div>
 
               {/* Progress indicator */}
-              <div className="flex items-center gap-3 text-[10px] text-muted-foreground mb-3">
+              <div className="flex items-center gap-3 text-xs text-muted-foreground mb-3">
                 {totalQ > 0 ? (
                   <span className="flex items-center gap-1">
                     <ClipboardList className="w-3 h-3" />
@@ -961,15 +961,15 @@ function GuidedInterview({
 
         {/* Functional area + interviewee */}
         <div className="flex-1 min-w-0">
-          <h3 className="text-sm font-semibold text-foreground truncate">
+          <h3 className="text-base font-semibold text-foreground truncate">
             {interview?.functionalArea}
           </h3>
-          <div className="flex items-center gap-1 text-[10px] text-muted-foreground flex-wrap">
+          <div className="flex items-center gap-1 text-xs text-muted-foreground flex-wrap">
             {/* Editable name */}
             {editingName ? (
               <input
                 autoFocus
-                className="text-[10px] border-b border-accent outline-none bg-transparent"
+                className="text-xs border-b border-accent outline-none bg-transparent"
                 value={intervieweeName}
                 onChange={e => setIntervieweeName(e.target.value)}
                 onBlur={() => setEditingName(false)}
@@ -993,7 +993,7 @@ function GuidedInterview({
                 {editingRole ? (
                   <input
                     autoFocus
-                    className="text-[10px] border-b border-accent outline-none bg-transparent"
+                    className="text-xs border-b border-accent outline-none bg-transparent"
                     value={intervieweeRole}
                     onChange={e => setIntervieweeRole(e.target.value)}
                     onBlur={() => setEditingRole(false)}
@@ -1019,7 +1019,7 @@ function GuidedInterview({
         {totalQ > 0 && (
           <div className="flex items-center gap-2 shrink-0 min-w-[160px]">
             <div className="flex-1">
-              <div className="flex justify-between text-[10px] text-muted-foreground mb-0.5">
+              <div className="flex justify-between text-xs text-muted-foreground mb-0.5">
                 <span>{answeredQ} of {totalQ} answered</span>
                 <span>{progressPct}%</span>
               </div>
@@ -1059,7 +1059,7 @@ function GuidedInterview({
             </Button>
           )}
           <Badge
-            className={`text-[10px] ${STATUS_STYLES[interview?.status ?? "not_started"]}`}
+            className={`text-xs ${STATUS_STYLES[interview?.status ?? "not_started"]}`}
             data-testid="badge-status"
           >
             {(interview?.status ?? "not_started").replace(/_/g, " ")}
@@ -1074,8 +1074,8 @@ function GuidedInterview({
             <Sparkles className="w-7 h-7 text-accent" />
           </div>
           <div>
-            <h4 className="text-sm font-semibold mb-1">No interview guide yet</h4>
-            <p className="text-xs text-muted-foreground max-w-xs">
+            <h4 className="text-base font-semibold mb-1">No interview guide yet</h4>
+            <p className="text-sm text-muted-foreground max-w-xs">
               Generate a tailored set of discovery questions for this functional area. Takes 5–10
               seconds.
             </p>
@@ -1096,8 +1096,8 @@ function GuidedInterview({
       {generatingGuide && (
         <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
           <Loader2 className="w-8 h-8 animate-spin text-accent" />
-          <p className="text-sm text-muted-foreground">Generating interview guide…</p>
-          <p className="text-[10px] text-muted-foreground">This may take 5–10 seconds</p>
+          <p className="text-base text-muted-foreground">Generating interview guide…</p>
+          <p className="text-sm text-muted-foreground">This may take 5–10 seconds</p>
         </div>
       )}
 
@@ -1107,14 +1107,14 @@ function GuidedInterview({
           {processSteps.length > 0 && (
             <Card>
               <CardContent className="p-4">
-                <h4 className="text-xs font-semibold mb-2">Process Steps</h4>
+                <h4 className="text-sm font-semibold mb-2">Process Steps</h4>
                 <div className="flex items-center gap-1 overflow-x-auto pb-2">
                   {processSteps.map((s: any, i: number) => (
                     <div key={i} className="flex items-center gap-1 shrink-0">
-                      <div className="w-7 h-7 rounded-full bg-accent/20 text-accent flex items-center justify-center text-[10px] font-bold">
+                      <div className="w-7 h-7 rounded-full bg-accent/20 text-accent flex items-center justify-center text-xs font-bold">
                         {s.step || i + 1}
                       </div>
-                      <div className="text-[10px] max-w-[120px]">
+                      <div className="text-sm max-w-[120px]">
                         <p className="font-medium truncate">{s.description}</p>
                         {s.system && (
                           <span className="text-muted-foreground">{s.system}</span>
@@ -1132,18 +1132,18 @@ function GuidedInterview({
 
           {painPoints.length > 0 && (
             <div>
-              <h4 className="text-xs font-semibold mb-2">Pain Points Extracted</h4>
+              <h4 className="text-sm font-semibold mb-2">Pain Points Extracted</h4>
               <div className="grid grid-cols-2 gap-2">
                 {painPoints.map((pp: any, i: number) => (
                   <div
                     key={i}
-                    className={`border-l-4 rounded-r p-3 ${
+                    className={`border-l-4 rounded-r p-4 ${
                       SEVERITY_COLORS[pp.severity] || SEVERITY_COLORS.low
                     }`}
                   >
                     <div className="flex items-center gap-2 mb-1">
                       <Badge
-                        className={`text-[9px] ${
+                        className={`text-xs ${
                           STATUS_STYLES[
                             pp.severity === "critical" ? "completed" : "in_progress"
                           ] || STATUS_STYLES.not_started
@@ -1152,12 +1152,12 @@ function GuidedInterview({
                         {pp.severity}
                       </Badge>
                       {pp.frequency && (
-                        <span className="text-[10px] text-muted-foreground">{pp.frequency}</span>
+                        <span className="text-xs text-muted-foreground">{pp.frequency}</span>
                       )}
                     </div>
-                    <p className="text-xs">{pp.description}</p>
+                    <p className="text-sm">{pp.description}</p>
                     {pp.impact && (
-                      <p className="text-[10px] text-muted-foreground mt-1">{pp.impact}</p>
+                      <p className="text-sm text-muted-foreground mt-1">{pp.impact}</p>
                     )}
                   </div>
                 ))}
@@ -1167,10 +1167,10 @@ function GuidedInterview({
 
           {additionalFindings.length > 0 && (
             <div>
-              <h4 className="text-xs font-semibold mb-2">Additional Findings</h4>
+              <h4 className="text-sm font-semibold mb-2">Additional Findings</h4>
               <ul className="space-y-1">
                 {additionalFindings.map((f, i) => (
-                  <li key={i} className="text-xs flex gap-1.5">
+                  <li key={i} className="text-sm flex gap-1.5">
                     <span className="text-accent mt-0.5">›</span>
                     {f}
                   </li>
@@ -1269,7 +1269,7 @@ function ProcessesTab({ projectId }: { projectId: string }) {
   return (
     <div className="max-w-4xl space-y-4">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">{processes.length} process{processes.length !== 1 ? "es" : ""} documented</p>
+        <p className="text-base text-muted-foreground">{processes.length} process{processes.length !== 1 ? "es" : ""} documented</p>
         <Button size="sm" className="gap-1.5 text-xs" onClick={() => generateMutation.mutate()} disabled={generateMutation.isPending} data-testid="btn-generate-processes">
           {generateMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
           {generateMutation.isPending ? "Generating..." : "Generate from Interviews"}
@@ -1279,8 +1279,8 @@ function ProcessesTab({ projectId }: { projectId: string }) {
       {processes.length === 0 ? (
         <Card className="p-8 text-center">
           <Sparkles className="w-8 h-8 mx-auto text-muted-foreground/40 mb-3" />
-          <p className="text-sm font-medium">No processes documented yet</p>
-          <p className="text-xs text-muted-foreground mt-1">Complete interviews first, then generate process descriptions.</p>
+          <p className="text-base font-medium">No processes documented yet</p>
+          <p className="text-sm text-muted-foreground mt-1">Complete interviews first, then generate process descriptions.</p>
         </Card>
       ) : (
         <div className="space-y-4">
@@ -1294,17 +1294,17 @@ function ProcessesTab({ projectId }: { projectId: string }) {
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <div className="flex items-center gap-2 mb-1">
-                        <h3 className="text-sm font-semibold">{proc.processName}</h3>
-                        <Badge className="text-[9px] bg-accent/10 text-accent border-accent/20">{proc.functionalArea}</Badge>
-                        <Badge variant="outline" className="text-[9px]">{proc.status}</Badge>
+                        <h3 className="text-base font-semibold">{proc.processName}</h3>
+                        <Badge className="text-xs bg-accent/10 text-accent border-accent/20">{proc.functionalArea}</Badge>
+                        <Badge variant="outline" className="text-xs">{proc.status}</Badge>
                       </div>
-                      {proc.description && <p className="text-xs text-muted-foreground">{proc.description}</p>}
+                      {proc.description && <p className="text-sm text-muted-foreground">{proc.description}</p>}
                     </div>
                     <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive shrink-0" onClick={() => deleteMutation.mutate(proc.id)}><Trash2 className="w-3 h-3" /></Button>
                   </div>
 
                   {/* Process metadata */}
-                  <div className="flex gap-4 text-[11px] text-muted-foreground flex-wrap">
+                  <div className="flex gap-4 text-xs text-muted-foreground flex-wrap">
                     {proc.avgDuration && <span>Duration: {proc.avgDuration}</span>}
                     {proc.frequency && <span>Frequency: {proc.frequency}</span>}
                     {proc.currentSystems && <span>Systems: {proc.currentSystems}</span>}
@@ -1314,23 +1314,23 @@ function ProcessesTab({ projectId }: { projectId: string }) {
                   {/* Process steps */}
                   {steps.length > 0 && (
                     <div className="space-y-1.5">
-                      <p className="text-[11px] font-medium">Current State Steps</p>
+                      <p className="text-sm font-medium">Current State Steps</p>
                       {steps.map((step: any, i: number) => (
-                        <div key={i} className="flex items-start gap-2 text-xs">
-                          <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0 mt-0.5 ${step.isManual ? "bg-orange-100 text-orange-700 dark:bg-orange-950/40 dark:text-orange-400" : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"}`}>
+                        <div key={i} className="flex items-start gap-2 text-sm">
+                          <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-0.5 ${step.isManual ? "bg-orange-100 text-orange-700 dark:bg-orange-950/40 dark:text-orange-400" : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"}`}>
                             {step.step || i + 1}
                           </span>
                           <div className="flex-1">
                             <div className="flex items-center gap-1.5 flex-wrap">
                               <span className="font-medium">{step.description}</span>
-                              <Badge variant="outline" className="text-[8px]">{step.actor}</Badge>
-                              {step.system && <Badge variant="outline" className="text-[8px]">{step.system}</Badge>}
-                              {step.isManual && <Badge className="text-[8px] bg-orange-100 text-orange-700">Manual</Badge>}
+                              <Badge variant="outline" className="text-[10px]">{step.actor}</Badge>
+                              {step.system && <Badge variant="outline" className="text-[10px]">{step.system}</Badge>}
+                              {step.isManual && <Badge className="text-[10px] bg-orange-100 text-orange-700">Manual</Badge>}
                             </div>
                             {step.painPoints && step.painPoints.length > 0 && (
                               <div className="flex gap-1 mt-0.5 flex-wrap">
                                 {step.painPoints.map((pp: string, j: number) => (
-                                  <span key={j} className="text-[10px] text-red-600 dark:text-red-400">⚠ {pp}</span>
+                                  <span key={j} className="text-xs text-red-600 dark:text-red-400">⚠ {pp}</span>
                                 ))}
                               </div>
                             )}
@@ -1344,13 +1344,13 @@ function ProcessesTab({ projectId }: { projectId: string }) {
                   {hasDiagram && (
                     <div>
                       <div className="flex items-center gap-3">
-                        <button className="text-[11px] text-accent flex items-center gap-1 hover:underline" onClick={() => setShowDiagram(showDiagram === proc.id ? null : proc.id)}>
+                        <button className="text-xs text-accent flex items-center gap-1 hover:underline" onClick={() => setShowDiagram(showDiagram === proc.id ? null : proc.id)}>
                           {showDiagram === proc.id ? "Hide" : "View"} Process Diagram
                         </button>
                         {showDiagram === proc.id && proc.swimlaneDiagram && (
                           <div className="flex gap-1">
-                            <button className={`text-[10px] px-2 py-0.5 rounded ${diagramMode !== "swimlane" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`} onClick={() => setDiagramMode("flow")}>Simple Flow</button>
-                            <button className={`text-[10px] px-2 py-0.5 rounded ${diagramMode === "swimlane" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`} onClick={() => setDiagramMode("swimlane")}>Swimlane</button>
+                            <button className={`text-xs px-2 py-0.5 rounded ${diagramMode !== "swimlane" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`} onClick={() => setDiagramMode("flow")}>Simple Flow</button>
+                            <button className={`text-xs px-2 py-0.5 rounded ${diagramMode === "swimlane" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`} onClick={() => setDiagramMode("swimlane")}>Swimlane</button>
                           </div>
                         )}
                       </div>
@@ -1363,8 +1363,8 @@ function ProcessesTab({ projectId }: { projectId: string }) {
                   {/* Future state (if available) */}
                   {proc.futureDescription && (
                     <div className="p-3 rounded-lg bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800">
-                      <p className="text-[11px] font-medium text-emerald-700 dark:text-emerald-400 mb-1">Future State</p>
-                      <p className="text-xs text-muted-foreground">{proc.futureDescription}</p>
+                      <p className="text-sm font-medium text-emerald-700 dark:text-emerald-400 mb-1">Future State</p>
+                      <p className="text-sm text-muted-foreground">{proc.futureDescription}</p>
                     </div>
                   )}
                 </CardContent>
@@ -1413,7 +1413,7 @@ function PainPointsTab({ projectId }: { projectId: string }) {
     return (
       <div className="text-center py-16">
         <AlertTriangle className="w-12 h-12 mx-auto text-muted-foreground/30 mb-3" />
-        <p className="text-sm text-muted-foreground">Complete at least one process interview to identify pain points.</p>
+        <p className="text-base text-muted-foreground">Complete at least one process interview to identify pain points.</p>
       </div>
     );
   }
@@ -1429,7 +1429,7 @@ function PainPointsTab({ projectId }: { projectId: string }) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <p className="text-xs text-muted-foreground">
+        <p className="text-sm text-muted-foreground">
           <span className="font-semibold text-foreground">{painPoints.length}</span> pain points across{" "}
           <span className="font-semibold text-foreground">{areas.length}</span> functional areas.{" "}
           <span className="font-semibold text-red-600 dark:text-red-400">{critHigh}</span> rated critical or high.
@@ -1477,16 +1477,16 @@ function PainPointsTab({ projectId }: { projectId: string }) {
                   <CollapsibleTrigger asChild>
                     <TableRow className="cursor-pointer hover:bg-muted/50" data-testid={`pp-row-${pp.id}`}>
                       <TableCell>
-                        <Badge variant="outline" className="text-[10px]">{pp.functionalArea}</Badge>
+                        <Badge variant="outline" className="text-xs">{pp.functionalArea}</Badge>
                       </TableCell>
-                      <TableCell className="text-xs">{pp.description}</TableCell>
+                      <TableCell className="text-sm">{pp.description}</TableCell>
                       <TableCell>
-                        <Badge className={`text-[10px] ${SEV_BADGE[pp.severity] || SEV_BADGE.low}`}>{pp.severity}</Badge>
+                        <Badge className={`text-xs ${SEV_BADGE[pp.severity] || SEV_BADGE.low}`}>{pp.severity}</Badge>
                       </TableCell>
                       <TableCell>
-                        {pp.frequency && <Badge variant="outline" className={`text-[10px] ${FREQ_BADGE[pp.frequency] || FREQ_BADGE.quarterly}`}>{pp.frequency}</Badge>}
+                        {pp.frequency && <Badge variant="outline" className={`text-xs ${FREQ_BADGE[pp.frequency] || FREQ_BADGE.quarterly}`}>{pp.frequency}</Badge>}
                       </TableCell>
-                      <TableCell className="text-xs text-muted-foreground truncate max-w-[180px]">{pp.impact}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground truncate max-w-[180px]">{pp.impact}</TableCell>
                       <TableCell>
                         <Input type="number" min={1} max={10} className="h-6 w-14 text-xs text-center"
                           value={priorities[pp.id] ?? ""} data-testid={`pp-priority-${pp.id}`}
@@ -1497,18 +1497,18 @@ function PainPointsTab({ projectId }: { projectId: string }) {
                   </CollapsibleTrigger>
                   <CollapsibleContent asChild>
                     <TableRow className="bg-muted/30">
-                      <TableCell colSpan={6} className="py-3">
-                        <div className="grid grid-cols-3 gap-4 text-xs">
+                      <TableCell colSpan={6} className="py-4">
+                        <div className="grid grid-cols-3 gap-4 text-sm">
                           <div>
-                            <p className="font-semibold text-[10px] text-muted-foreground mb-1">Full Impact</p>
+                            <p className="font-semibold text-xs text-muted-foreground mb-1">Full Impact</p>
                             <p>{pp.impact || "—"}</p>
                           </div>
                           <div>
-                            <p className="font-semibold text-[10px] text-muted-foreground mb-1">Current Workaround</p>
+                            <p className="font-semibold text-xs text-muted-foreground mb-1">Current Workaround</p>
                             <p>{pp.currentWorkaround || "None documented"}</p>
                           </div>
                           <div>
-                            <p className="font-semibold text-[10px] text-muted-foreground mb-1">Source</p>
+                            <p className="font-semibold text-xs text-muted-foreground mb-1">Source</p>
                             <p>Interview #{pp.sourceInterviewId || "—"} — {pp.functionalArea}</p>
                           </div>
                         </div>
@@ -1618,7 +1618,7 @@ function GenerateRequirementsTab({ projectId }: { projectId: string }) {
       {interviewsCompleted === 0 && (
         <div className="text-center py-12">
           <MessageSquare className="w-12 h-12 mx-auto text-muted-foreground/30 mb-3" />
-          <p className="text-sm text-muted-foreground">Complete discovery interviews first to generate requirements.</p>
+          <p className="text-base text-muted-foreground">Complete discovery interviews first to generate requirements.</p>
         </div>
       )}
 
@@ -1629,7 +1629,7 @@ function GenerateRequirementsTab({ projectId }: { projectId: string }) {
             data-testid="btn-generate-requirements">
             <Sparkles className="w-5 h-5" />Generate Requirements
           </Button>
-          <p className="text-xs text-muted-foreground mt-3 max-w-md mx-auto">
+          <p className="text-sm text-muted-foreground mt-3 max-w-md mx-auto">
             AI will analyze your discovery findings and vendor knowledge base to generate tailored requirements.
           </p>
         </div>
@@ -1639,7 +1639,7 @@ function GenerateRequirementsTab({ projectId }: { projectId: string }) {
       {generateMutation.isPending && (
         <div className="text-center py-12">
           <Loader2 className="w-10 h-10 mx-auto text-accent animate-spin mb-4" />
-          <p className="text-sm font-medium text-foreground animate-pulse">{LOADING_MESSAGES[loadingMsgIdx]}</p>
+          <p className="text-base font-medium text-foreground animate-pulse">{LOADING_MESSAGES[loadingMsgIdx]}</p>
         </div>
       )}
 
@@ -1651,8 +1651,8 @@ function GenerateRequirementsTab({ projectId }: { projectId: string }) {
               <CardContent className="p-4">
                 <div className="flex items-center gap-2 mb-3">
                   <Target className="w-4 h-4 text-accent" />
-                  <h4 className="text-sm font-semibold">{mod}</h4>
-                  <Badge variant="outline" className="text-[10px]">{items.length}</Badge>
+                  <h4 className="text-base font-semibold">{mod}</h4>
+                  <Badge variant="outline" className="text-xs">{items.length}</Badge>
                 </div>
                 <div className="space-y-2">
                   {items.map((r: any) => {
@@ -1660,18 +1660,18 @@ function GenerateRequirementsTab({ projectId }: { projectId: string }) {
                     const justMatch = comments.match(/Justification:\s*(.*?)(?:\nLinked|$)/s);
                     const painMatch = comments.match(/Linked pain point:\s*(.+)/);
                     return (
-                      <div key={r.id} className="border rounded p-3" data-testid={`gen-req-${r.id}`}>
+                      <div key={r.id} className="border rounded p-4" data-testid={`gen-req-${r.id}`}>
                         <div className="flex items-start gap-2">
-                          <Badge className="text-[9px] shrink-0 mt-0.5" variant="outline">{r.reqNumber}</Badge>
+                          <Badge className="text-xs shrink-0 mt-0.5" variant="outline">{r.reqNumber}</Badge>
                           <div className="flex-1 min-w-0">
-                            <p className="text-xs">{r.description}</p>
+                            <p className="text-sm">{r.description}</p>
                             <div className="flex items-center gap-2 mt-1">
-                              <Badge className={`text-[9px] ${r.criticality === "Critical" ? "bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400" : "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400"}`}>
+                              <Badge className={`text-xs ${r.criticality === "Critical" ? "bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400" : "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400"}`}>
                                 {r.criticality}
                               </Badge>
-                              {painMatch && <span className="text-[10px] text-muted-foreground">Pain point: {painMatch[1]}</span>}
+                              {painMatch && <span className="text-xs text-muted-foreground">Pain point: {painMatch[1]}</span>}
                             </div>
-                            {justMatch && <p className="text-[10px] text-muted-foreground italic mt-1">{justMatch[1].trim()}</p>}
+                            {justMatch && <p className="text-sm text-muted-foreground italic mt-1">{justMatch[1].trim()}</p>}
                           </div>
                         </div>
                       </div>

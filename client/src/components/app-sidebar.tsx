@@ -78,7 +78,7 @@ export function AppSidebar() {
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel className="text-sidebar-foreground/50 text-[10px] uppercase tracking-widest font-semibold">Navigation</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-sidebar-foreground/50 text-xs uppercase tracking-widest font-semibold">Navigation</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {navItems.map((item) => {
@@ -109,14 +109,14 @@ export function AppSidebar() {
             )}
             {!projectId && (
               <div className="px-3 py-2 mb-1 rounded-md bg-muted/40 mx-2">
-                <p className="text-[10px] text-muted-foreground text-center">Select or create a project to get started</p>
+                <p className="text-xs text-muted-foreground text-center">Select or create a project to get started</p>
               </div>
             )}
-            <SidebarGroupLabel className="text-sidebar-foreground/50 text-[10px] uppercase tracking-widest font-semibold">Project</SidebarGroupLabel>
+            <SidebarGroupLabel className="text-sidebar-foreground/50 text-xs uppercase tracking-widest font-semibold">Project</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu className={projectId ? "" : "opacity-40 pointer-events-none"}>
                 {/* ── DISCOVERY ── */}
-                <p className="text-[9px] font-semibold text-sidebar-foreground/40 uppercase tracking-widest px-2.5 pt-2 pb-0.5">Discovery</p>
+                <p className="text-xs font-semibold text-sidebar-foreground/40 uppercase tracking-widest px-2.5 pt-2 pb-0.5">Discovery</p>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={location === `/clients/${clientId}/profile`}>
                     <Link href={`/projects/${projectId}/client-profile`} data-testid="nav-client-profile">
@@ -143,7 +143,7 @@ export function AppSidebar() {
                 </SidebarMenuItem>
 
                 {/* ── SELECTION ── */}
-                <p className="text-[9px] font-semibold text-sidebar-foreground/40 uppercase tracking-widest px-2.5 pt-2 pb-0.5">Selection</p>
+                <p className="text-xs font-semibold text-sidebar-foreground/40 uppercase tracking-widest px-2.5 pt-2 pb-0.5">Selection</p>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={location === `/projects/${projectId}/outcomes`}>
                     <Link href={`/projects/${projectId}/outcomes`} data-testid="nav-outcomes">
@@ -186,7 +186,7 @@ export function AppSidebar() {
                 </SidebarMenuItem>
 
                 {/* ── IMPLEMENTATION ── */}
-                <p className="text-[9px] font-semibold text-sidebar-foreground/40 uppercase tracking-widest px-2.5 pt-2 pb-0.5">Implementation</p>
+                <p className="text-xs font-semibold text-sidebar-foreground/40 uppercase tracking-widest px-2.5 pt-2 pb-0.5">Implementation</p>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={location === `/projects/${projectId}/compliance`}>
                     <Link href={`/projects/${projectId}/compliance`} data-testid="nav-contract-compliance">

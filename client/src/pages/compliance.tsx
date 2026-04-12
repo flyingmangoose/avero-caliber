@@ -317,7 +317,7 @@ function KpiCards({ summary }: { summary: ComplianceSummary | undefined }) {
           <p className="text-xs font-semibold text-muted-foreground uppercase">Next Checkpoint</p>
           {nextCp ? (
             <>
-              <p className="text-sm font-semibold mt-1">{nextCp.name}</p>
+              <p className="text-base font-semibold mt-1">{nextCp.name}</p>
               <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1"><Calendar className="w-3 h-3" />{nextCp.scheduledDate || "No date set"}</p>
             </>
           ) : (
@@ -377,19 +377,19 @@ function PulseReportCard({ contractId }: { contractId: number }) {
               </span>
             </div>
             <div className="flex-1 min-w-0">
-              <span className="text-[11px] text-muted-foreground">Week ending {latest.weekEnding}</span>
-              <p className="text-xs mt-1 text-foreground/80 whitespace-pre-wrap">
+              <span className="text-xs text-muted-foreground">Week ending {latest.weekEnding}</span>
+              <p className="text-sm mt-1 text-foreground/80 whitespace-pre-wrap">
                 {expanded ? latest.narrative : (latest.narrative?.slice(0, 200) + (latest.narrative?.length > 200 ? "..." : ""))}
               </p>
               {latest.narrative?.length > 200 && (
-                <button className="text-[11px] text-accent mt-1 hover:underline" onClick={() => setExpanded(!expanded)}>
+                <button className="text-xs text-accent mt-1 hover:underline" onClick={() => setExpanded(!expanded)}>
                   {expanded ? "Show less" : "Read more"}
                 </button>
               )}
             </div>
           </div>
         ) : (
-          <p className="text-xs text-muted-foreground">No pulse reports yet. Generate your first report to see compliance posture.</p>
+          <p className="text-sm text-muted-foreground">No pulse reports yet. Generate your first report to see compliance posture.</p>
         )}
       </CardContent>
     </Card>
@@ -432,14 +432,14 @@ function EscalationBanner({ projectId }: { projectId: number }) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Bell className="w-4 h-4 text-red-500" />
-          <span className="text-sm font-semibold text-red-700 dark:text-red-400">
+          <span className="text-base font-semibold text-red-700 dark:text-red-400">
             {overdue.length} overdue escalation{overdue.length > 1 ? "s" : ""}
           </span>
           <span className="text-xs text-red-600/80 dark:text-red-400/80">— {mostCritical.title} ({mostCritical.severity})</span>
         </div>
         <div className="flex gap-1">
           {overdue.slice(0, 3).map((e: any) => (
-            <Button key={e.id} size="sm" variant="outline" className="h-6 text-[10px] border-red-300 text-red-700 hover:bg-red-100 dark:border-red-800 dark:text-red-400"
+            <Button key={e.id} size="sm" variant="outline" className="h-6 text-xs border-red-300 text-red-700 hover:bg-red-100 dark:border-red-800 dark:text-red-400"
               onClick={() => acknowledgeMutation.mutate(e.id)} data-testid={`ack-escalation-${e.id}`}>
               Ack: {e.title.slice(0, 20)}
             </Button>
@@ -577,7 +577,7 @@ function ContractBaselineTab({ projectId, contracts, vendors }: { projectId: num
         <CardContent className="pt-4 pb-4">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-sm font-semibold">{contract.contractName}</h3>
+              <h3 className="text-base font-semibold">{contract.contractName}</h3>
               <div className="flex gap-4 mt-1 text-xs text-muted-foreground">
                 {contract.totalValue && <span>Value: {contract.totalValue}</span>}
                 {contract.startDate && <span>Start: {contract.startDate}</span>}
@@ -650,13 +650,13 @@ function ContractBaselineTab({ projectId, contracts, vendors }: { projectId: num
                       </CollapsibleTrigger>
                     </TableCell>
                     <TableCell className="font-medium text-sm">{d.name}</TableCell>
-                    <TableCell><Badge className={`text-[10px] ${CATEGORY_COLORS[d.category] || ""}`}>{formatLabel(d.category)}</Badge></TableCell>
+                    <TableCell><Badge className={`text-xs ${CATEGORY_COLORS[d.category] || ""}`}>{formatLabel(d.category)}</Badge></TableCell>
                     <TableCell className="text-xs text-muted-foreground">{d.dueDate || "—"}</TableCell>
-                    <TableCell><Badge className={`text-[10px] ${PRIORITY_COLORS[d.priority] || ""}`}>{formatLabel(d.priority)}</Badge></TableCell>
+                    <TableCell><Badge className={`text-xs ${PRIORITY_COLORS[d.priority] || ""}`}>{formatLabel(d.priority)}</Badge></TableCell>
                     <TableCell>
                       <Select value={d.status} onValueChange={(val) => { updateDeliverableMutation.mutate({ id: d.id, data: { status: val, completedDate: val === "accepted" ? new Date().toISOString().split("T")[0] : d.completedDate } }); }}>
-                        <SelectTrigger className="h-6 w-[130px] text-[10px] px-2" data-testid={`status-select-${d.id}`}>
-                          <Badge className={`text-[10px] ${DELIVERABLE_STATUS_COLORS[d.status] || ""}`}>{formatLabel(d.status)}</Badge>
+                        <SelectTrigger className="h-6 w-[130px] text-xs px-2" data-testid={`status-select-${d.id}`}>
+                          <Badge className={`text-xs ${DELIVERABLE_STATUS_COLORS[d.status] || ""}`}>{formatLabel(d.status)}</Badge>
                         </SelectTrigger>
                         <SelectContent>
                           {["not_started", "in_progress", "delivered", "accepted", "at_risk", "non_compliant", "waived"].map(s => (
@@ -674,7 +674,7 @@ function ContractBaselineTab({ projectId, contracts, vendors }: { projectId: num
                   <CollapsibleContent asChild>
                     <TableRow>
                       <TableCell colSpan={7} className="bg-muted/30 px-8 py-3">
-                        <div className="space-y-2 text-xs">
+                        <div className="space-y-2 text-sm">
                           {d.description && <div><span className="font-semibold text-muted-foreground">Description:</span> <span className="text-foreground">{d.description}</span></div>}
                           {d.contractReference && <div><span className="font-semibold text-muted-foreground">Contract Ref:</span> <span className="text-foreground">{d.contractReference}</span></div>}
                           {d.notes && <div><span className="font-semibold text-muted-foreground">Notes:</span> <span className="text-foreground">{d.notes}</span></div>}
@@ -760,18 +760,18 @@ function DeliverableEvidence({ deliverableId, projectId }: { deliverableId: numb
   return (
     <div className="mt-2">
       <div className="flex items-center justify-between mb-1">
-        <span className="font-semibold text-muted-foreground text-[11px] uppercase">Evidence ({evidence?.length || 0})</span>
-        <Button variant="ghost" size="sm" className="h-6 text-[11px] gap-1" onClick={() => setUploadOpen(!uploadOpen)} data-testid={`upload-evidence-${deliverableId}`}>
+        <span className="font-semibold text-muted-foreground text-xs uppercase">Evidence ({evidence?.length || 0})</span>
+        <Button variant="ghost" size="sm" className="h-6 text-xs gap-1" onClick={() => setUploadOpen(!uploadOpen)} data-testid={`upload-evidence-${deliverableId}`}>
           <Upload className="w-3 h-3" /> Add
         </Button>
       </div>
       {evidence && evidence.length > 0 && (
         <div className="space-y-1">
           {evidence.map((e: any) => (
-            <div key={e.id} className="flex items-center gap-2 text-[11px]">
-              <Badge className={`text-[9px] ${EVIDENCE_TYPE_COLORS[e.type] || ""}`}>{formatLabel(e.type)}</Badge>
+            <div key={e.id} className="flex items-center gap-2 text-sm">
+              <Badge className={`text-xs ${EVIDENCE_TYPE_COLORS[e.type] || ""}`}>{formatLabel(e.type)}</Badge>
               <span>{e.title}</span>
-              {e.assessmentResult && <Badge variant="outline" className="text-[9px]">{formatLabel(e.assessmentResult)}</Badge>}
+              {e.assessmentResult && <Badge variant="outline" className="text-xs">{formatLabel(e.assessmentResult)}</Badge>}
             </div>
           ))}
         </div>
@@ -1001,13 +1001,13 @@ function CheckpointsTab({ contractId, projectId }: { contractId: number | null; 
               <CardContent className="pt-3 pb-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold">{cp.name}</span>
-                    <Badge className={`text-[10px] ${PHASE_COLORS[cp.phase] || ""}`}>{formatLabel(cp.phase)}</Badge>
-                    <Badge className={`text-[10px] ${CHECKPOINT_STATUS_COLORS[cp.status] || ""}`}>{formatLabel(cp.status)}</Badge>
+                    <span className="text-base font-semibold">{cp.name}</span>
+                    <Badge className={`text-xs ${PHASE_COLORS[cp.phase] || ""}`}>{formatLabel(cp.phase)}</Badge>
+                    <Badge className={`text-xs ${CHECKPOINT_STATUS_COLORS[cp.status] || ""}`}>{formatLabel(cp.status)}</Badge>
                   </div>
                   <div className="flex items-center gap-1">
-                    {cp.scheduledDate && <span className="text-[11px] text-muted-foreground flex items-center gap-1"><Calendar className="w-3 h-3" />{cp.scheduledDate}</span>}
-                    <Button variant="outline" size="sm" className="h-7 text-[10px] gap-1" onClick={() => autoAssessCheckpoint(cp.id)} disabled={autoAssessing === cp.id} data-testid={`auto-assess-${cp.id}`}>
+                    {cp.scheduledDate && <span className="text-xs text-muted-foreground flex items-center gap-1"><Calendar className="w-3 h-3" />{cp.scheduledDate}</span>}
+                    <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={() => autoAssessCheckpoint(cp.id)} disabled={autoAssessing === cp.id} data-testid={`auto-assess-${cp.id}`}>
                       {autoAssessing === cp.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
                       {autoAssessing === cp.id ? "Assessing..." : "Auto-Assess"}
                     </Button>
@@ -1017,12 +1017,12 @@ function CheckpointsTab({ contractId, projectId }: { contractId: number | null; 
                 </div>
                 <Collapsible open={expandedId === cp.id} onOpenChange={(open) => setExpandedId(open ? cp.id : null)}>
                   <CollapsibleTrigger asChild>
-                    <button className="text-[11px] text-accent mt-1 flex items-center gap-1 hover:underline" data-testid={`expand-checkpoint-${cp.id}`}>
+                    <button className="text-xs text-accent mt-1 flex items-center gap-1 hover:underline" data-testid={`expand-checkpoint-${cp.id}`}>
                       <ChevronRight className={`w-3 h-3 transition-transform ${expandedId === cp.id ? "rotate-90" : ""}`} />
                       Details
                     </button>
                   </CollapsibleTrigger>
-                  <CollapsibleContent className="mt-2 space-y-2 text-xs">
+                  <CollapsibleContent className="mt-2 space-y-2 text-sm">
                     {cp.overallAssessment && <div><span className="font-semibold text-muted-foreground">Assessment:</span> <span className="text-foreground">{cp.overallAssessment}</span></div>}
                     {cp.recommendations && (
                       <div>
@@ -1040,7 +1040,7 @@ function CheckpointsTab({ contractId, projectId }: { contractId: number | null; 
                             <li key={i} className="flex items-start gap-1.5">
                               {typeof f === "object" ? (
                                 <>
-                                  <Badge className={`text-[9px] mt-0.5 ${SEVERITY_COLORS[f.severity] || ""}`}>{f.severity}</Badge>
+                                  <Badge className={`text-xs mt-0.5 ${SEVERITY_COLORS[f.severity] || ""}`}>{f.severity}</Badge>
                                   <span>{f.description}{f.resolution ? ` — ${f.resolution}` : ""}</span>
                                 </>
                               ) : <span>{String(f)}</span>}
@@ -1059,15 +1059,15 @@ function CheckpointsTab({ contractId, projectId }: { contractId: number | null; 
                         <div className="mt-2 pt-2 border-t">
                           <div className="flex items-center gap-2 mb-2">
                             <span className="font-semibold text-muted-foreground">Structured Assessment:</span>
-                            <Badge className={`text-[10px] ${overallColor}`}>{overall}</Badge>
+                            <Badge className={`text-xs ${overallColor}`}>{overall}</Badge>
                           </div>
                           <div className="grid grid-cols-2 gap-1.5">
                             {expandedAssessment.map((a: any) => {
                               const dimLabel = ASSESSMENT_DIMENSIONS.find(d => d.key === a.dimension)?.label || a.dimension;
                               return (
                                 <div key={a.dimension} className="flex items-center gap-1.5 px-2 py-1 rounded border border-border/50 bg-muted/20">
-                                  <Badge className={`text-[9px] shrink-0 ${DIMENSION_RATING_COLORS[a.rating] || ""}`}>{formatLabel(a.rating)}</Badge>
-                                  <span className="text-[11px] truncate">{dimLabel}</span>
+                                  <Badge className={`text-xs shrink-0 ${DIMENSION_RATING_COLORS[a.rating] || ""}`}>{formatLabel(a.rating)}</Badge>
+                                  <span className="text-xs truncate">{dimLabel}</span>
                                 </div>
                               );
                             })}
@@ -1091,7 +1091,7 @@ function CheckpointsTab({ contractId, projectId }: { contractId: number | null; 
             {!editingId && (
               <div className="flex flex-wrap gap-1.5 mb-2">
                 {PRESETS.map(p => (
-                  <button key={p} className="text-[11px] px-2 py-1 rounded border border-border/60 hover:bg-muted/50" onClick={() => setForm(prev => ({ ...prev, name: p }))} data-testid={`preset-${p.toLowerCase().replace(/\s/g, "-")}`}>{p}</button>
+                  <button key={p} className="text-xs px-2 py-1 rounded border border-border/60 hover:bg-muted/50" onClick={() => setForm(prev => ({ ...prev, name: p }))} data-testid={`preset-${p.toLowerCase().replace(/\s/g, "-")}`}>{p}</button>
                 ))}
               </div>
             )}
@@ -1125,7 +1125,7 @@ function CheckpointsTab({ contractId, projectId }: { contractId: number | null; 
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-medium">{dim.label}</span>
                         <Select value={assessmentForm[dim.key]?.rating || ""} onValueChange={v => setAssessmentForm(prev => ({ ...prev, [dim.key]: { ...prev[dim.key], rating: v } }))}>
-                          <SelectTrigger className="w-40 h-7 text-[11px]" data-testid={`rating-${dim.key}`}><SelectValue placeholder="Rating" /></SelectTrigger>
+                          <SelectTrigger className="w-40 h-7 text-xs" data-testid={`rating-${dim.key}`}><SelectValue placeholder="Rating" /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="satisfactory"><span className="text-emerald-600">Satisfactory</span></SelectItem>
                             <SelectItem value="needs_attention"><span className="text-amber-600">Needs Attention</span></SelectItem>
@@ -1311,8 +1311,8 @@ function DeviationsTab({ contractId, projectId }: { contractId: number | null; p
       {allDeviations && allDeviations.length === 0 ? (
         <div className="flex flex-col items-center py-12 gap-3">
           <ShieldCheck className="w-12 h-12 text-muted-foreground/30" />
-          <p className="text-sm font-medium text-muted-foreground">No deviations logged</p>
-          <p className="text-xs text-muted-foreground">This is a good sign</p>
+          <p className="text-base font-medium text-muted-foreground">No deviations logged</p>
+          <p className="text-sm text-muted-foreground">This is a good sign</p>
         </div>
       ) : (
         <Card>
@@ -1343,15 +1343,15 @@ function DeviationsTab({ contractId, projectId }: { contractId: number | null; p
                       <TableCell>
                         <span className="flex items-center gap-1.5">
                           <SeverityIcon severity={d.severity} />
-                          <Badge className={`text-[10px] ${SEVERITY_COLORS[d.severity] || ""}`}>{formatLabel(d.severity)}</Badge>
+                          <Badge className={`text-xs ${SEVERITY_COLORS[d.severity] || ""}`}>{formatLabel(d.severity)}</Badge>
                         </span>
                       </TableCell>
                       <TableCell>
-                        <Badge className={`text-[10px] ${DEVIATION_CATEGORY_COLORS[d.category] || ""}`}>{formatLabel(d.category)}</Badge>
+                        <Badge className={`text-xs ${DEVIATION_CATEGORY_COLORS[d.category] || ""}`}>{formatLabel(d.category)}</Badge>
                       </TableCell>
                       <TableCell className="font-medium text-sm">{d.title}</TableCell>
                       <TableCell>
-                        <Badge className={`text-[10px] ${DEVIATION_STATUS_COLORS[d.status] || ""}`}>{formatLabel(d.status)}</Badge>
+                        <Badge className={`text-xs ${DEVIATION_STATUS_COLORS[d.status] || ""}`}>{formatLabel(d.status)}</Badge>
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">{d.createdAt?.split("T")[0] || "—"}</TableCell>
                       <TableCell>
@@ -1368,7 +1368,7 @@ function DeviationsTab({ contractId, projectId }: { contractId: number | null; p
                     <CollapsibleContent asChild>
                       <TableRow>
                         <TableCell colSpan={7} className="bg-muted/30 px-8 py-3">
-                          <div className="space-y-2 text-xs">
+                          <div className="space-y-2 text-sm">
                             <div><span className="font-semibold text-muted-foreground">Description:</span> <span className="text-foreground">{d.description}</span></div>
                             {d.contractReference && <div><span className="font-semibold text-muted-foreground">Contract Reference:</span> <span className="text-foreground">{d.contractReference}</span></div>}
                             {d.actualDelivery && <div><span className="font-semibold text-muted-foreground">Actual Delivery:</span> <span className="text-foreground">{d.actualDelivery}</span></div>}
@@ -1583,7 +1583,7 @@ function EvidenceLogTab({ contractId, projectId }: { contractId: number | null; 
       {allEvidence.length === 0 ? (
         <div className="flex flex-col items-center py-12 gap-3">
           <FileCheck className="w-12 h-12 text-muted-foreground/30" />
-          <p className="text-sm font-medium text-muted-foreground">No evidence collected yet</p>
+          <p className="text-base font-medium text-muted-foreground">No evidence collected yet</p>
         </div>
       ) : filteredEvidence.length === 0 ? (
         <div className="text-center py-8 text-sm text-muted-foreground">No evidence matches current filters</div>
@@ -1598,19 +1598,19 @@ function EvidenceLogTab({ contractId, projectId }: { contractId: number | null; 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-sm font-medium">{e.title}</span>
-                    <Badge className={`text-[10px] ${EVIDENCE_TYPE_COLORS[e.type] || ""}`}>{formatLabel(e.type)}</Badge>
+                    <Badge className={`text-xs ${EVIDENCE_TYPE_COLORS[e.type] || ""}`}>{formatLabel(e.type)}</Badge>
                     {e.assessmentResult && (
-                      <Badge className={`text-[10px] ${ASSESSMENT_RESULT_COLORS[e.assessmentResult] || ""}`}>{formatLabel(e.assessmentResult)}</Badge>
+                      <Badge className={`text-xs ${ASSESSMENT_RESULT_COLORS[e.assessmentResult] || ""}`}>{formatLabel(e.assessmentResult)}</Badge>
                     )}
                   </div>
-                  <div className="flex items-center gap-2 mt-1 text-[11px] text-muted-foreground">
+                  <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
                     <span>{e.deliverableName}</span>
                     <span>·</span>
                     <span>{e.createdAt?.split("T")[0] || "—"}</span>
                     {e.fileName && <><span>·</span><span>File: {e.fileName}</span></>}
                   </div>
-                  {e.description && <p className="text-xs text-muted-foreground mt-1">{e.description}</p>}
-                  {e.assessorNotes && <p className="text-xs text-foreground mt-1"><span className="font-semibold text-muted-foreground">Assessor notes:</span> {e.assessorNotes}</p>}
+                  {e.description && <p className="text-sm text-muted-foreground mt-1">{e.description}</p>}
+                  {e.assessorNotes && <p className="text-sm text-foreground mt-1"><span className="font-semibold text-muted-foreground">Assessor notes:</span> {e.assessorNotes}</p>}
                 </div>
                 <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => deleteMutation.mutate(e.id)} data-testid={`delete-evidence-${e.id}`}>
                   <Trash2 className="w-3.5 h-3.5" />
@@ -1864,13 +1864,13 @@ function IntegrationsTab({ projectId, contractId }: { projectId: number; contrac
               <CardContent className="pt-4 pb-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <Badge className={`text-[10px] text-white font-bold tracking-wider ${PLATFORM_COLORS[conn.platform]?.bg || "bg-gray-500"}`} data-testid={`platform-badge-${conn.id}`}>
+                    <Badge className={`text-xs text-white font-bold tracking-wider ${PLATFORM_COLORS[conn.platform]?.bg || "bg-gray-500"}`} data-testid={`platform-badge-${conn.id}`}>
                       {PLATFORM_COLORS[conn.platform]?.label || conn.platform.toUpperCase()}
                     </Badge>
-                    <span className="text-sm font-semibold">{conn.name}</span>
+                    <span className="text-base font-semibold">{conn.name}</span>
                     <span className="flex items-center gap-1.5">
                       <span className={`w-2 h-2 rounded-full ${STATUS_DOT_COLORS[conn.status] || "bg-gray-400"} ${conn.status === "active" ? "animate-pulse" : ""}`} />
-                      <Badge className={`text-[10px] ${CONNECTION_STATUS_COLORS[conn.status] || ""}`}>{formatLabel(conn.status)}</Badge>
+                      <Badge className={`text-xs ${CONNECTION_STATUS_COLORS[conn.status] || ""}`}>{formatLabel(conn.status)}</Badge>
                     </span>
                   </div>
                   <div className="flex items-center gap-1">
@@ -1894,7 +1894,7 @@ function IntegrationsTab({ projectId, contractId }: { projectId: number; contrac
                     </Button>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 mt-2 text-[11px] text-muted-foreground">
+                <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
                   <span>Last synced: {relativeTime(conn.lastSyncAt)}</span>
                   <span>·</span>
                   <span>{conn.syncItemCount || 0} items</span>
@@ -1908,7 +1908,7 @@ function IntegrationsTab({ projectId, contractId }: { projectId: number; contrac
                   )}
                 </div>
                 {conn.lastSyncMessage && (
-                  <p className="text-[11px] text-muted-foreground mt-1">{conn.lastSyncMessage}</p>
+                  <p className="text-sm text-muted-foreground mt-1">{conn.lastSyncMessage}</p>
                 )}
               </CardContent>
             </Card>
@@ -1918,8 +1918,8 @@ function IntegrationsTab({ projectId, contractId }: { projectId: number; contrac
         /* Empty State */
         <div className="flex flex-col items-center py-12 gap-4">
           <Plug className="w-12 h-12 text-muted-foreground/30" />
-          <p className="text-sm font-medium text-muted-foreground">No integrations connected</p>
-          <p className="text-xs text-muted-foreground text-center max-w-md">Connect your vendor's project management tool to automatically track deliverables.</p>
+          <p className="text-base font-medium text-muted-foreground">No integrations connected</p>
+          <p className="text-sm text-muted-foreground text-center max-w-md">Connect your vendor's project management tool to automatically track deliverables.</p>
           <div className="grid grid-cols-3 gap-3 mt-2 w-full max-w-xl">
             {(["jira", "smartsheet", "azure_devops"] as const).map(platform => (
               <Card
@@ -1929,10 +1929,10 @@ function IntegrationsTab({ projectId, contractId }: { projectId: number; contrac
                 data-testid={`connect-${platform}`}
               >
                 <CardContent className="pt-4 pb-4">
-                  <Badge className={`text-[10px] text-white font-bold tracking-wider mb-2 ${PLATFORM_COLORS[platform].bg}`}>
+                  <Badge className={`text-xs text-white font-bold tracking-wider mb-2 ${PLATFORM_COLORS[platform].bg}`}>
                     {PLATFORM_COLORS[platform].label}
                   </Badge>
-                  <p className="text-xs text-muted-foreground mt-2">{PLATFORM_DESCRIPTIONS[platform]}</p>
+                  <p className="text-sm text-muted-foreground mt-2">{PLATFORM_DESCRIPTIONS[platform]}</p>
                   <Button size="sm" className="mt-3 gap-1.5 bg-accent hover:bg-accent/90 text-accent-foreground text-xs w-full" data-testid={`button-connect-${platform}`}>
                     <Plus className="w-3 h-3" /> Connect
                   </Button>
@@ -1967,10 +1967,10 @@ function IntegrationsTab({ projectId, contractId }: { projectId: number; contrac
                     data-testid={`select-platform-${platform}`}
                   >
                     <CardContent className="pt-4 pb-4 text-center">
-                      <Badge className={`text-[10px] text-white font-bold tracking-wider ${PLATFORM_COLORS[platform].bg}`}>
+                      <Badge className={`text-xs text-white font-bold tracking-wider ${PLATFORM_COLORS[platform].bg}`}>
                         {PLATFORM_COLORS[platform].label}
                       </Badge>
-                      <p className="text-[11px] text-muted-foreground mt-2">{PLATFORM_DESCRIPTIONS[platform]}</p>
+                      <p className="text-sm text-muted-foreground mt-2">{PLATFORM_DESCRIPTIONS[platform]}</p>
                     </CardContent>
                   </Card>
                 ))}
@@ -2022,7 +2022,7 @@ function IntegrationsTab({ projectId, contractId }: { projectId: number; contrac
 
               {/* Test result feedback */}
               {testResult && (
-                <div className={`flex items-center gap-2 p-2 rounded text-xs ${testResult.valid ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400" : "bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-400"}`} data-testid="test-result">
+                <div className={`flex items-center gap-2 p-2 rounded text-sm ${testResult.valid ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400" : "bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-400"}`} data-testid="test-result">
                   {testResult.valid ? <Check className="w-4 h-4" /> : <X className="w-4 h-4" />}
                   <span>{testResult.message}{testResult.projectName ? ` — ${testResult.projectName}` : ""}</span>
                 </div>
@@ -2050,7 +2050,7 @@ function IntegrationsTab({ projectId, contractId }: { projectId: number; contrac
               <div className="flex items-center gap-2 p-3 rounded bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400" data-testid="connection-success">
                 <Check className="w-5 h-5" />
                 <div>
-                  <p className="text-sm font-medium">Connection successful!</p>
+                  <p className="text-base font-medium">Connection successful!</p>
                   {testResult?.projectName && <p className="text-xs">{previewTotal > 0 ? `${previewTotal} items found in ` : ""}{testResult.projectName}</p>}
                 </div>
               </div>
@@ -2068,7 +2068,7 @@ function IntegrationsTab({ projectId, contractId }: { projectId: number; contrac
                   {previewItems.slice(0, 5).map((item: any, idx: number) => (
                     <div key={idx} className="flex items-center gap-2 text-xs p-1.5 rounded bg-muted/30">
                       <span className="font-medium truncate flex-1">{item.title}</span>
-                      <Badge variant="outline" className="text-[9px]">{item.status}</Badge>
+                      <Badge variant="outline" className="text-xs">{item.status}</Badge>
                     </div>
                   ))}
                 </div>
@@ -2093,8 +2093,8 @@ function IntegrationsTab({ projectId, contractId }: { projectId: number; contrac
                 </div>
               </div>
               <div>
-                <p className="text-sm font-medium">Integration connected!</p>
-                <p className="text-xs text-muted-foreground mt-1">Click "Sync Now" to pull items into your compliance tracker.</p>
+                <p className="text-base font-medium">Integration connected!</p>
+                <p className="text-sm text-muted-foreground mt-1">Click "Sync Now" to pull items into your compliance tracker.</p>
               </div>
               <Button
                 className="w-full bg-accent hover:bg-accent/90 text-accent-foreground"
@@ -2252,7 +2252,7 @@ function GoLiveReadinessTab({ contractId }: { contractId: number | null }) {
                   </TableRow>
                   {cat.items.map(item => (
                     <TableRow key={item.key}>
-                      <TableCell className="text-xs py-1.5">{item.label}</TableCell>
+                      <TableCell className="text-sm py-1.5">{item.label}</TableCell>
                       <TableCell className="text-xs text-center py-1.5">{item.weight}</TableCell>
                       <TableCell className="py-1.5">
                         <input type="range" min="0" max="10" step="1" className="w-20 h-1.5 accent-amber-500"
@@ -2260,10 +2260,10 @@ function GoLiveReadinessTab({ contractId }: { contractId: number | null }) {
                           onChange={e => setScores(prev => ({ ...prev, [item.key]: { ...prev[item.key], score: parseInt(e.target.value), notes: prev[item.key]?.notes ?? "" } }))}
                           data-testid={`score-${item.key}`}
                         />
-                        <span className="text-[11px] ml-1 font-mono">{scores[item.key]?.score ?? 0}</span>
+                        <span className="text-xs ml-1 font-mono">{scores[item.key]?.score ?? 0}</span>
                       </TableCell>
                       <TableCell className="py-1.5">
-                        <Input className="h-6 text-[11px]" placeholder="Notes" value={scores[item.key]?.notes ?? ""}
+                        <Input className="h-6 text-xs" placeholder="Notes" value={scores[item.key]?.notes ?? ""}
                           onChange={e => setScores(prev => ({ ...prev, [item.key]: { ...prev[item.key], score: prev[item.key]?.score ?? 0, notes: e.target.value } }))}
                         />
                       </TableCell>
@@ -2393,8 +2393,8 @@ export default function CompliancePage() {
               <div className="flex flex-col items-center py-12 gap-4 text-center">
                 <Rocket className="w-10 h-10 text-muted-foreground/30" />
                 <div>
-                  <p className="text-sm font-medium">Go-Live Readiness has moved</p>
-                  <p className="text-xs text-muted-foreground mt-1">The Go-Live Readiness assessment now has its own page with AI-powered auto-scoring.</p>
+                  <p className="text-base font-medium">Go-Live Readiness has moved</p>
+                  <p className="text-sm text-muted-foreground mt-1">The Go-Live Readiness assessment now has its own page with AI-powered auto-scoring.</p>
                 </div>
                 <Link href={`/projects/${projectId}/go-live`}>
                   <Button className="gap-2 text-xs">

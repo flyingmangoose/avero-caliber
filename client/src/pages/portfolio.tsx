@@ -49,7 +49,7 @@ export default function Portfolio() {
     <div className="flex flex-col h-full">
       <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-border/50 shrink-0">
         <h1 className="text-lg font-semibold">Program Dashboard</h1>
-        <p className="text-xs text-muted-foreground mt-0.5">Cross-project health and status at a glance</p>
+        <p className="text-sm text-muted-foreground mt-0.5">Cross-project health and status at a glance</p>
       </div>
 
       <ScrollArea className="flex-1">
@@ -93,11 +93,11 @@ export default function Portfolio() {
                         <div className={`w-2.5 h-10 rounded-full shrink-0 ${HEALTH_BG[p.healthRating] || "bg-gray-300"}`} />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-sm font-semibold">{p.name}</span>
+                            <span className="text-base font-semibold">{p.name}</span>
                             {p.clientName && <span className="text-xs text-muted-foreground">— {p.clientName}</span>}
-                            {p.healthRating && <Badge className={`text-[9px] text-white ${HEALTH_BG[p.healthRating]}`}>{p.healthRating.toUpperCase()}</Badge>}
+                            {p.healthRating && <Badge className={`text-xs text-white ${HEALTH_BG[p.healthRating]}`}>{p.healthRating.toUpperCase()}</Badge>}
                           </div>
-                          <div className="flex items-center gap-3 mt-1 text-[11px] text-muted-foreground flex-wrap">
+                          <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground flex-wrap">
                             {p.openCritical > 0 && <span className="text-red-600 font-medium">{p.openCritical} critical</span>}
                             {p.openRisks > 0 && <span>{p.openRisks} risks</span>}
                             {p.budgetSpendPct !== null && <span><DollarSign className="w-3 h-3 inline" />{p.budgetSpendPct}%</span>}
@@ -114,17 +114,17 @@ export default function Portfolio() {
                           {/* Domain health tiles */}
                           {p.domains && p.domains.length > 0 && (
                             <div className="pt-3">
-                              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Health Assessment</p>
+                              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Health Assessment</p>
                               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
                                 {p.domains.map((d: any) => (
                                   <div key={d.domain} className={`p-2.5 rounded-lg border text-xs ${HEALTH_LIGHT[d.rating] || "bg-muted/30 border-border/40"}`}>
                                     <div className="flex items-center justify-between mb-1">
-                                      <span className="font-medium text-[10px]">{DOMAIN_LABELS[d.domain] || d.domain}</span>
-                                      <span className={`text-[9px] font-bold ${d.rating === "critical" || d.rating === "high" ? "text-red-600" : d.rating === "medium" ? "text-amber-600" : "text-emerald-600"}`}>
+                                      <span className="font-medium text-xs">{DOMAIN_LABELS[d.domain] || d.domain}</span>
+                                      <span className={`text-xs font-bold ${d.rating === "critical" || d.rating === "high" ? "text-red-600" : d.rating === "medium" ? "text-amber-600" : "text-emerald-600"}`}>
                                         {(d.rating || "—").toUpperCase()}
                                       </span>
                                     </div>
-                                    {d.summary && <p className="text-[9px] text-muted-foreground line-clamp-2">{d.summary}</p>}
+                                    {d.summary && <p className="text-sm text-muted-foreground line-clamp-2">{d.summary}</p>}
                                   </div>
                                 ))}
                               </div>
@@ -134,13 +134,13 @@ export default function Portfolio() {
                           {/* Top risks */}
                           {p.topRisks && p.topRisks.length > 0 && (
                             <div>
-                              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Top Risks & Issues</p>
+                              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Top Risks & Issues</p>
                               <div className="space-y-1">
                                 {p.topRisks.map((r: any, i: number) => (
                                   <div key={i} className="flex items-center gap-2 text-xs">
-                                    <Badge className={`text-[8px] ${r.severity === "critical" ? "bg-red-500 text-white" : "bg-orange-500 text-white"}`}>{r.severity}</Badge>
-                                    <Badge variant="outline" className="text-[8px]">{r.type}</Badge>
-                                    <span className="truncate">{r.title}</span>
+                                    <Badge className={`text-[10px] ${r.severity === "critical" ? "bg-red-500 text-white" : "bg-orange-500 text-white"}`}>{r.severity}</Badge>
+                                    <Badge variant="outline" className="text-[10px]">{r.type}</Badge>
+                                    <span className="truncate text-sm">{r.title}</span>
                                   </div>
                                 ))}
                               </div>
@@ -151,29 +151,29 @@ export default function Portfolio() {
                           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                             {p.budgetTotal > 0 && (
                               <div className="p-2.5 rounded-lg bg-muted/30">
-                                <p className="text-[10px] text-muted-foreground mb-0.5">Budget</p>
+                                <p className="text-xs text-muted-foreground mb-0.5">Budget</p>
                                 <p className="text-sm font-semibold">{p.budgetSpendPct}%</p>
-                                <p className="text-[9px] text-muted-foreground">${(p.budgetSpent || 0).toLocaleString()} of ${p.budgetTotal.toLocaleString()}</p>
+                                <p className="text-xs text-muted-foreground">${(p.budgetSpent || 0).toLocaleString()} of ${p.budgetTotal.toLocaleString()}</p>
                               </div>
                             )}
                             {p.totalMilestones > 0 && (
                               <div className="p-2.5 rounded-lg bg-muted/30">
-                                <p className="text-[10px] text-muted-foreground mb-0.5">Schedule</p>
+                                <p className="text-xs text-muted-foreground mb-0.5">Schedule</p>
                                 <p className="text-sm font-semibold">{p.totalMilestones} milestones</p>
-                                {p.delayedMilestones > 0 && <p className="text-[9px] text-red-600">{p.delayedMilestones} delayed</p>}
+                                {p.delayedMilestones > 0 && <p className="text-xs text-red-600">{p.delayedMilestones} delayed</p>}
                               </div>
                             )}
                             {p.requirementCount > 0 && (
                               <div className="p-2.5 rounded-lg bg-muted/30">
-                                <p className="text-[10px] text-muted-foreground mb-0.5">Requirements</p>
+                                <p className="text-xs text-muted-foreground mb-0.5">Requirements</p>
                                 <p className="text-sm font-semibold">{p.requirementCount}</p>
                               </div>
                             )}
                             {p.goLiveDate && (
                               <div className={`p-2.5 rounded-lg ${p.daysToGoLive && p.daysToGoLive <= 0 ? "bg-red-50 dark:bg-red-950/20" : "bg-muted/30"}`}>
-                                <p className="text-[10px] text-muted-foreground mb-0.5">Go-Live</p>
+                                <p className="text-xs text-muted-foreground mb-0.5">Go-Live</p>
                                 <p className="text-sm font-semibold">{p.goLiveDate}</p>
-                                {p.vendorName && <p className="text-[9px] text-muted-foreground">{p.vendorName}</p>}
+                                {p.vendorName && <p className="text-xs text-muted-foreground">{p.vendorName}</p>}
                               </div>
                             )}
                           </div>
@@ -182,26 +182,26 @@ export default function Portfolio() {
                           <div className="flex gap-2 flex-wrap">
                             {p.assessmentCount > 0 && (
                               <Link href={`/projects/${p.id}/health-check`}>
-                                <Button variant="outline" size="sm" className="h-7 text-[10px] gap-1">
+                                <Button variant="outline" size="sm" className="h-7 text-xs gap-1">
                                   <Stethoscope className="w-3 h-3" />Health Check<ArrowRight className="w-3 h-3" />
                                 </Button>
                               </Link>
                             )}
                             <Link href={`/projects/${p.id}/go-live`}>
-                              <Button variant="outline" size="sm" className="h-7 text-[10px] gap-1">
+                              <Button variant="outline" size="sm" className="h-7 text-xs gap-1">
                                 <Rocket className="w-3 h-3" />Go-Live<ArrowRight className="w-3 h-3" />
                               </Button>
                             </Link>
                             {p.requirementCount > 0 && (
                               <Link href={`/projects/${p.id}/evaluation`}>
-                                <Button variant="outline" size="sm" className="h-7 text-[10px] gap-1">
+                                <Button variant="outline" size="sm" className="h-7 text-xs gap-1">
                                   Vendor Evaluation<ArrowRight className="w-3 h-3" />
                                 </Button>
                               </Link>
                             )}
                             {p.outcomeCount > 0 && (
                               <Link href={`/projects/${p.id}/scorecard`}>
-                                <Button variant="outline" size="sm" className="h-7 text-[10px] gap-1">
+                                <Button variant="outline" size="sm" className="h-7 text-xs gap-1">
                                   Scorecard<ArrowRight className="w-3 h-3" />
                                 </Button>
                               </Link>

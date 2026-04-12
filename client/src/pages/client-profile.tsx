@@ -224,11 +224,11 @@ export default function ClientProfilePage() {
             <div className="space-y-2">
               <EditableField label="Entity Name" value={profile?.entityName || ""} onSave={v => save({ entityName: v })} large />
               <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">Type:</span>
+                <span className="text-sm text-muted-foreground">Type:</span>
                 <EditableField value={profile?.entityType || ""} onSave={v => save({ entityType: v })} badge />
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">State:</span>
+                <span className="text-sm text-muted-foreground">State:</span>
                 <EditableField value={profile?.state || ""} onSave={v => save({ state: v })} />
               </div>
               {profile?.domain && (
@@ -239,28 +239,28 @@ export default function ClientProfilePage() {
             </div>
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">Population:</span>
+                <span className="text-sm text-muted-foreground">Population:</span>
                 <EditableField value={profile?.population != null ? String(profile.population) : ""} onSave={v => save({ population: v ? parseInt(v.replace(/,/g, "")) : null })} format="number" />
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">Employees:</span>
+                <span className="text-sm text-muted-foreground">Employees:</span>
                 <EditableField value={profile?.employeeCount != null ? String(profile.employeeCount) : ""} onSave={v => save({ employeeCount: v ? parseInt(v.replace(/,/g, "")) : null })} format="number" />
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">Annual Budget:</span>
+                <span className="text-sm text-muted-foreground">Annual Budget:</span>
                 <EditableField value={profile?.annualBudget || ""} onSave={v => save({ annualBudget: v })} />
               </div>
             </div>
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">Mode:</span>
+                <span className="text-sm text-muted-foreground">Mode:</span>
                 <Badge className="bg-accent/20 text-accent border-accent/30">{project?.engagementMode === "self_service" ? "Self-Service" : "Consulting"}</Badge>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">Status:</span>
+                <span className="text-sm text-muted-foreground">Status:</span>
                 <Badge variant="outline">{project?.status || "draft"}</Badge>
               </div>
-              <div className="text-xs text-muted-foreground">Created: {project?.createdAt ? new Date(project.createdAt).toLocaleDateString() : "—"}</div>
+              <div className="text-sm text-muted-foreground">Created: {project?.createdAt ? new Date(project.createdAt).toLocaleDateString() : "—"}</div>
             </div>
           </div>
         </CardContent>
@@ -378,7 +378,7 @@ export default function ClientProfilePage() {
                   <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium truncate">{doc.filename}</div>
-                    <div className="text-xs text-muted-foreground">
+                    <div className="text-sm text-muted-foreground">
                       Uploaded {doc.uploadedAt ? new Date(doc.uploadedAt).toLocaleDateString() : "—"}
                       {doc.extractedFields?.length > 0 && ` · Extracted: ${doc.extractedFields.join(", ")}`}
                     </div>

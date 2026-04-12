@@ -183,7 +183,7 @@ function SynthesisSummary({ projectId, synthesis, assessmentMap, raidItems, budg
             <span className="text-xs text-muted-foreground">Open Risks</span>
           </div>
           <p className="text-2xl font-bold">{openRisks}</p>
-          {criticalItems > 0 && <p className="text-[10px] text-red-500 font-medium">{criticalItems} critical</p>}
+          {criticalItems > 0 && <p className="text-xs text-red-500 font-medium">{criticalItems} critical</p>}
         </Card>
         <Card className="p-3">
           <div className="flex items-center gap-2 mb-1">
@@ -198,7 +198,7 @@ function SynthesisSummary({ projectId, synthesis, assessmentMap, raidItems, budg
             <span className="text-xs text-muted-foreground">Budget</span>
           </div>
           <p className="text-2xl font-bold">{spendPct}%</p>
-          <p className="text-[10px] text-muted-foreground">spent of ${totalAuthorized.toLocaleString()}</p>
+          <p className="text-xs text-muted-foreground">spent of ${totalAuthorized.toLocaleString()}</p>
         </Card>
         <Card className="p-3">
           <div className="flex items-center gap-2 mb-1">
@@ -206,7 +206,7 @@ function SynthesisSummary({ projectId, synthesis, assessmentMap, raidItems, budg
             <span className="text-xs text-muted-foreground">Schedule</span>
           </div>
           <p className="text-2xl font-bold">{scheduleItems.length}</p>
-          <p className="text-[10px] text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             {delayedMilestones > 0 ? <span className="text-red-500">{delayedMilestones} delayed</span> : null}
             {delayedMilestones > 0 && atRiskMilestones > 0 ? ", " : null}
             {atRiskMilestones > 0 ? <span className="text-amber-500">{atRiskMilestones} at risk</span> : null}
@@ -218,7 +218,7 @@ function SynthesisSummary({ projectId, synthesis, assessmentMap, raidItems, budg
       {/* Contract/SOW Baseline */}
       <Card className="p-4">
         <div className="flex items-center justify-between mb-2">
-          <h3 className="text-sm font-semibold flex items-center gap-2"><FileText className="w-4 h-4 text-accent" />Contract Baseline</h3>
+          <h3 className="text-base font-semibold flex items-center gap-2"><FileText className="w-4 h-4 text-accent" />Contract Baseline</h3>
           <Button variant="outline" size="sm" className="text-xs h-7 gap-1" onClick={onEditBaseline}>
             <Edit2 className="w-3 h-3" />{baseline ? "Edit" : "Set Baseline"}
           </Button>
@@ -226,30 +226,30 @@ function SynthesisSummary({ projectId, synthesis, assessmentMap, raidItems, budg
         {baseline ? (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div>
-              <p className="text-[10px] text-muted-foreground">Contracted Amount</p>
-              <p className="text-sm font-semibold">{baseline.contractedAmount ? `$${baseline.contractedAmount.toLocaleString()}` : "—"}</p>
+              <p className="text-xs text-muted-foreground">Contracted Amount</p>
+              <p className="text-base font-semibold">{baseline.contractedAmount ? `$${baseline.contractedAmount.toLocaleString()}` : "—"}</p>
             </div>
             <div>
-              <p className="text-[10px] text-muted-foreground">Go-Live Date</p>
-              <p className="text-sm font-semibold">{baseline.goLiveDate || "—"}</p>
+              <p className="text-xs text-muted-foreground">Go-Live Date</p>
+              <p className="text-base font-semibold">{baseline.goLiveDate || "—"}</p>
               {baseline.goLiveDate && (() => {
                 const days = Math.ceil((new Date(baseline.goLiveDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-                return <p className={`text-[10px] font-medium ${days <= 0 ? "text-red-500" : days <= 90 ? "text-amber-500" : "text-muted-foreground"}`}>
+                return <p className={`text-xs font-medium ${days <= 0 ? "text-red-500" : days <= 90 ? "text-amber-500" : "text-muted-foreground"}`}>
                   {days > 0 ? `${days} days remaining` : `${Math.abs(days)} days past`}
                 </p>;
               })()}
             </div>
             <div>
-              <p className="text-[10px] text-muted-foreground">Contract Start</p>
-              <p className="text-sm font-semibold">{baseline.contractStartDate || "—"}</p>
+              <p className="text-xs text-muted-foreground">Contract Start</p>
+              <p className="text-base font-semibold">{baseline.contractStartDate || "—"}</p>
             </div>
             <div>
-              <p className="text-[10px] text-muted-foreground">Implementation Vendor</p>
-              <p className="text-sm font-semibold">{baseline.vendorName || "—"}</p>
+              <p className="text-xs text-muted-foreground">Implementation Vendor</p>
+              <p className="text-base font-semibold">{baseline.vendorName || "—"}</p>
             </div>
           </div>
         ) : (
-          <p className="text-xs text-muted-foreground italic">No baseline set. Define the contract parameters to ground health assessments in "what was promised vs. where we are."</p>
+          <p className="text-sm text-muted-foreground italic">No baseline set. Define the contract parameters to ground health assessments in "what was promised vs. where we are."</p>
         )}
       </Card>
 
@@ -276,7 +276,7 @@ function SynthesisSummary({ projectId, synthesis, assessmentMap, raidItems, budg
             <Card key={d.key} className="overflow-hidden">
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm flex items-center gap-2"><span>{d.icon}</span>{d.label}</CardTitle>
+                  <CardTitle className="text-base flex items-center gap-2"><span>{d.icon}</span>{d.label}</CardTitle>
                   <div className="flex items-center gap-1.5">
                     {trendDirection && (
                       <span title={`Was: ${lastChange.previousRating}`}>
@@ -286,25 +286,25 @@ function SynthesisSummary({ projectId, synthesis, assessmentMap, raidItems, budg
                         }
                       </span>
                     )}
-                    {rating && <Badge className={`text-[10px] ${RATING_COLORS[rating] || ""}`}>{rating.toUpperCase()}</Badge>}
+                    {rating && <Badge className={`text-xs ${RATING_COLORS[rating] || ""}`}>{rating.toUpperCase()}</Badge>}
                   </div>
                 </div>
               </CardHeader>
               <CardContent className="space-y-2">
                 {summary ? (
-                  <p className="text-xs text-muted-foreground">{summary}</p>
+                  <p className="text-sm text-muted-foreground">{summary}</p>
                 ) : (
-                  <p className="text-xs text-muted-foreground italic">{d.desc}</p>
+                  <p className="text-sm text-muted-foreground italic">{d.desc}</p>
                 )}
                 {Array.isArray(findings) && findings.length > 0 && (
-                  <div className="space-y-1.5 pt-1 border-t">
+                  <div className="space-y-2 pt-2 border-t">
                     {findings.slice(0, 3).map((f: any, i: number) => (
-                      <div key={i} className="flex items-start gap-2 text-[11px]">
-                        <Badge className={`text-[9px] shrink-0 mt-0.5 ${RATING_COLORS[f.severity] || "bg-muted text-muted-foreground"}`}>{f.severity}</Badge>
+                      <div key={i} className="flex items-start gap-2 text-sm">
+                        <Badge className={`text-xs shrink-0 mt-0.5 ${RATING_COLORS[f.severity] || "bg-muted text-muted-foreground"}`}>{f.severity}</Badge>
                         <span className="text-muted-foreground">{f.finding || f.recommendation || JSON.stringify(f)}</span>
                       </div>
                     ))}
-                    {findings.length > 3 && <p className="text-[10px] text-muted-foreground/60">+{findings.length - 3} more findings</p>}
+                    {findings.length > 3 && <p className="text-xs text-muted-foreground/60">+{findings.length - 3} more findings</p>}
                   </div>
                 )}
               </CardContent>
@@ -320,15 +320,15 @@ function SynthesisSummary({ projectId, synthesis, assessmentMap, raidItems, budg
           {synthesis.topRisks?.length > 0 && (
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm flex items-center gap-2"><AlertTriangle className="w-4 h-4 text-amber-500" />Top Risks</CardTitle>
+                <CardTitle className="text-base flex items-center gap-2"><AlertTriangle className="w-4 h-4 text-amber-500" />Top Risks</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
                 {synthesis.topRisks.map((risk: any, i: number) => (
                   <div key={i} className="flex items-start gap-2">
-                    <Badge className={`text-[9px] shrink-0 mt-0.5 ${RATING_COLORS[risk.severity] || ""}`}>{risk.severity}</Badge>
+                    <Badge className={`text-xs shrink-0 mt-0.5 ${RATING_COLORS[risk.severity] || ""}`}>{risk.severity}</Badge>
                     <div>
-                      <p className="text-xs font-medium">{risk.title}</p>
-                      <p className="text-[11px] text-muted-foreground">{risk.impact}</p>
+                      <p className="text-sm font-medium">{risk.title}</p>
+                      <p className="text-sm text-muted-foreground">{risk.impact}</p>
                     </div>
                   </div>
                 ))}
@@ -340,13 +340,13 @@ function SynthesisSummary({ projectId, synthesis, assessmentMap, raidItems, budg
           {synthesis.recommendedActions?.length > 0 && (
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm flex items-center gap-2"><ArrowRight className="w-4 h-4 text-accent" />Recommended Actions</CardTitle>
+                <CardTitle className="text-base flex items-center gap-2"><ArrowRight className="w-4 h-4 text-accent" />Recommended Actions</CardTitle>
               </CardHeader>
               <CardContent>
                 <ol className="space-y-1.5">
                   {synthesis.recommendedActions.map((action: string, i: number) => (
-                    <li key={i} className="flex items-start gap-2 text-xs text-muted-foreground">
-                      <span className="text-[10px] font-bold text-foreground shrink-0 mt-0.5 bg-muted rounded-full w-4 h-4 flex items-center justify-center">{i + 1}</span>
+                    <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
+                      <span className="text-xs font-bold text-foreground shrink-0 mt-0.5 bg-muted rounded-full w-4 h-4 flex items-center justify-center">{i + 1}</span>
                       {action}
                     </li>
                   ))}
@@ -365,9 +365,9 @@ function SynthesisSummary({ projectId, synthesis, assessmentMap, raidItems, budg
               <div className="flex items-center gap-2 mb-1">
                 <DollarSign className="w-4 h-4 text-emerald-500" />
                 <span className="text-xs font-medium">Budget Status</span>
-                <Badge variant="outline" className="text-[9px] ml-auto">{synthesis.budgetStatus.health?.replace(/_/g, " ")}</Badge>
+                <Badge variant="outline" className="text-xs ml-auto">{synthesis.budgetStatus.health?.replace(/_/g, " ")}</Badge>
               </div>
-              <p className="text-xs text-muted-foreground">{synthesis.budgetStatus.summary}</p>
+              <p className="text-sm text-muted-foreground">{synthesis.budgetStatus.summary}</p>
             </Card>
           )}
           {synthesis.scheduleStatus && (
@@ -375,9 +375,9 @@ function SynthesisSummary({ projectId, synthesis, assessmentMap, raidItems, budg
               <div className="flex items-center gap-2 mb-1">
                 <Calendar className="w-4 h-4 text-blue-500" />
                 <span className="text-xs font-medium">Schedule Status</span>
-                <Badge variant="outline" className="text-[9px] ml-auto">{synthesis.scheduleStatus.health?.replace(/_/g, " ")}</Badge>
+                <Badge variant="outline" className="text-xs ml-auto">{synthesis.scheduleStatus.health?.replace(/_/g, " ")}</Badge>
               </div>
-              <p className="text-xs text-muted-foreground">{synthesis.scheduleStatus.summary}</p>
+              <p className="text-sm text-muted-foreground">{synthesis.scheduleStatus.summary}</p>
             </Card>
           )}
         </div>
@@ -623,13 +623,13 @@ export default function HealthCheckPage() {
                     <Card key={d.key} className="cursor-pointer hover:border-accent/50 transition-colors" onClick={() => openAssessDialog(d.key)} data-testid={`domain-card-${d.key}`}>
                       <CardHeader className="pb-2">
                         <div className="flex items-center justify-between">
-                          <CardTitle className="text-sm flex items-center gap-2"><span>{d.icon}</span>{d.label}</CardTitle>
-                          {a?.overallRating && <Badge className={`text-[10px] ${RATING_COLORS[a.overallRating] || ""}`}>{a.overallRating.toUpperCase()}</Badge>}
+                          <CardTitle className="text-base flex items-center gap-2"><span>{d.icon}</span>{d.label}</CardTitle>
+                          {a?.overallRating && <Badge className={`text-xs ${RATING_COLORS[a.overallRating] || ""}`}>{a.overallRating.toUpperCase()}</Badge>}
                         </div>
                       </CardHeader>
                       <CardContent>
-                        <p className="text-xs text-muted-foreground">{a?.summary || d.desc}</p>
-                        {a?.assessedBy && <p className="text-[10px] text-muted-foreground/60 mt-2">Assessed by {a.assessedBy}</p>}
+                        <p className="text-sm text-muted-foreground">{a?.summary || d.desc}</p>
+                        {a?.assessedBy && <p className="text-xs text-muted-foreground/60 mt-2">Assessed by {a.assessedBy}</p>}
                       </CardContent>
                     </Card>
                   );
@@ -640,7 +640,7 @@ export default function HealthCheckPage() {
             {/* TAB 2: RAID Log */}
             <TabsContent value="raid">
               <div className="flex justify-between items-center mb-3">
-                <h3 className="text-sm font-semibold flex items-center gap-2"><AlertTriangle className="w-4 h-4 text-amber-500" />RAID Log ({raidItems.length})</h3>
+                <h3 className="text-base font-semibold flex items-center gap-2"><AlertTriangle className="w-4 h-4 text-amber-500" />RAID Log ({raidItems.length})</h3>
                 <Button size="sm" className="bg-accent hover:bg-accent/90 text-accent-foreground text-xs gap-1" onClick={() => setRaidDialog({ open: true, form: emptyRaid() })} data-testid="button-add-raid">
                   <Plus className="w-3 h-3" />Add Item
                 </Button>
@@ -703,11 +703,11 @@ export default function HealthCheckPage() {
                     <TableBody>
                       {filtered.map((item: any) => (
                         <TableRow key={item.id}>
-                          <TableCell><Badge variant="outline" className="text-[10px] uppercase">{item.type}</Badge></TableCell>
-                          <TableCell className="text-xs">{item.title}</TableCell>
-                          <TableCell>{item.severity && <Badge className={`text-[10px] ${RATING_COLORS[item.severity] || "bg-muted text-muted-foreground"}`}>{item.severity}</Badge>}</TableCell>
-                          <TableCell><Badge variant="outline" className="text-[10px]">{item.status}</Badge></TableCell>
-                          <TableCell className="text-xs text-muted-foreground">{item.owner || "—"}</TableCell>
+                          <TableCell><Badge variant="outline" className="text-xs uppercase">{item.type}</Badge></TableCell>
+                          <TableCell className="text-sm">{item.title}</TableCell>
+                          <TableCell>{item.severity && <Badge className={`text-xs ${RATING_COLORS[item.severity] || "bg-muted text-muted-foreground"}`}>{item.severity}</Badge>}</TableCell>
+                          <TableCell><Badge variant="outline" className="text-xs">{item.status}</Badge></TableCell>
+                          <TableCell className="text-sm text-muted-foreground">{item.owner || "—"}</TableCell>
                           <TableCell>
                             <div className="flex gap-1">
                               <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => openRaidEdit(item)} data-testid={`edit-raid-${item.id}`}><Edit2 className="w-3 h-3" /></Button>
@@ -728,7 +728,7 @@ export default function HealthCheckPage() {
                 {/* Budget Section */}
                 <div>
                   <div className="flex justify-between items-center mb-3">
-                    <h3 className="text-sm font-semibold flex items-center gap-2"><DollarSign className="w-4 h-4 text-emerald-500" />Budget</h3>
+                    <h3 className="text-base font-semibold flex items-center gap-2"><DollarSign className="w-4 h-4 text-emerald-500" />Budget</h3>
                     <Button size="sm" className="bg-accent hover:bg-accent/90 text-accent-foreground text-xs gap-1" onClick={() => setBudgetDialog({ open: true, form: emptyBudget() })} data-testid="button-add-budget">
                       <Plus className="w-3 h-3" />Add Entry
                     </Button>
@@ -741,14 +741,14 @@ export default function HealthCheckPage() {
                       { label: "Actual Spend", value: budgetSummary.totalActualSpend },
                     ].map(s => (
                       <Card key={s.label} className="p-2">
-                        <p className="text-[10px] text-muted-foreground">{s.label}</p>
-                        <p className="text-sm font-semibold">${(s.value || 0).toLocaleString()}</p>
+                        <p className="text-xs text-muted-foreground">{s.label}</p>
+                        <p className="text-base font-semibold">${(s.value || 0).toLocaleString()}</p>
                       </Card>
                     ))}
                   </div>
                   <Card className={`p-2 mb-3 ${budgetSummary.variance >= 0 ? "border-emerald-500/30" : "border-red-500/30"}`}>
-                    <p className="text-[10px] text-muted-foreground">Variance</p>
-                    <p className={`text-sm font-bold ${budgetSummary.variance >= 0 ? "text-emerald-500" : "text-red-500"}`}>${(budgetSummary.variance || 0).toLocaleString()}</p>
+                    <p className="text-xs text-muted-foreground">Variance</p>
+                    <p className={`text-base font-bold ${budgetSummary.variance >= 0 ? "text-emerald-500" : "text-red-500"}`}>${(budgetSummary.variance || 0).toLocaleString()}</p>
                   </Card>
                   {budgetEntries.length > 0 && (
                     <div className="overflow-x-auto"><Table>
@@ -761,9 +761,9 @@ export default function HealthCheckPage() {
                       <TableBody>
                         {budgetEntries.map((e: any) => (
                           <TableRow key={e.id}>
-                            <TableCell><Badge variant="outline" className="text-[10px]">{e.category?.replace(/_/g, " ")}</Badge></TableCell>
-                            <TableCell className="text-xs">{e.description}</TableCell>
-                            <TableCell className="text-xs text-right font-mono">${Number(e.amount || 0).toLocaleString()}</TableCell>
+                            <TableCell><Badge variant="outline" className="text-xs">{e.category?.replace(/_/g, " ")}</Badge></TableCell>
+                            <TableCell className="text-sm">{e.description}</TableCell>
+                            <TableCell className="text-sm text-right font-mono">${Number(e.amount || 0).toLocaleString()}</TableCell>
                             <TableCell>
                               <div className="flex gap-1">
                                 <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => openBudgetEdit(e)} data-testid={`edit-budget-${e.id}`}><Edit2 className="w-3 h-3" /></Button>
@@ -780,7 +780,7 @@ export default function HealthCheckPage() {
                 {/* Schedule Section */}
                 <div>
                   <div className="flex justify-between items-center mb-3">
-                    <h3 className="text-sm font-semibold flex items-center gap-2"><Calendar className="w-4 h-4 text-blue-500" />Schedule Milestones</h3>
+                    <h3 className="text-base font-semibold flex items-center gap-2"><Calendar className="w-4 h-4 text-blue-500" />Schedule Milestones</h3>
                     <Button size="sm" className="bg-accent hover:bg-accent/90 text-accent-foreground text-xs gap-1" onClick={() => setScheduleDialog({ open: true, form: emptySchedule() })} data-testid="button-add-schedule">
                       <Plus className="w-3 h-3" />Add Milestone
                     </Button>
@@ -799,11 +799,11 @@ export default function HealthCheckPage() {
                       <TableBody>
                         {scheduleItems.map((s: any) => (
                           <TableRow key={s.id}>
-                            <TableCell className="text-xs font-medium">{s.milestone}</TableCell>
-                            <TableCell className="text-xs text-muted-foreground">{s.originalDate || "—"}</TableCell>
-                            <TableCell className="text-xs">{s.currentDate || "—"}</TableCell>
+                            <TableCell className="text-sm font-medium">{s.milestone}</TableCell>
+                            <TableCell className="text-sm text-muted-foreground">{s.originalDate || "—"}</TableCell>
+                            <TableCell className="text-sm">{s.currentDate || "—"}</TableCell>
                             <TableCell>
-                              <Badge variant="outline" className={`text-[10px] ${s.status === "delayed" ? "border-red-500 text-red-500" : s.status === "at_risk" ? "border-amber-500 text-amber-500" : s.status === "completed" ? "border-emerald-500 text-emerald-500" : ""}`}>
+                              <Badge variant="outline" className={`text-xs ${s.status === "delayed" ? "border-red-500 text-red-500" : s.status === "at_risk" ? "border-amber-500 text-amber-500" : s.status === "completed" ? "border-emerald-500 text-emerald-500" : ""}`}>
                                 {s.status?.replace(/_/g, " ")}
                               </Badge>
                             </TableCell>
@@ -831,7 +831,7 @@ export default function HealthCheckPage() {
       {/* Assessment Dialog */}
       <Dialog open={assessDialog.open} onOpenChange={o => !o && setAssessDialog({ open: false, form: emptyAssessment() })}>
         <DialogContent data-testid="dialog-assessment">
-          <DialogHeader><DialogTitle className="text-sm">
+          <DialogHeader><DialogTitle className="text-base">
             {DOMAINS.find(d => d.key === assessDialog.form.domain)?.label || "Assessment"}
           </DialogTitle></DialogHeader>
           <div className="space-y-3">
@@ -844,33 +844,33 @@ export default function HealthCheckPage() {
             </div>
             <div>
               <label className="text-xs text-muted-foreground">Summary</label>
-              <Textarea className="text-xs" rows={2} value={assessDialog.form.summary} onChange={e => setAssessDialog(p => ({ ...p, form: { ...p.form, summary: e.target.value } }))} data-testid="input-assessment-summary" />
+              <Textarea className="text-sm" rows={2} value={assessDialog.form.summary} onChange={e => setAssessDialog(p => ({ ...p, form: { ...p.form, summary: e.target.value } }))} data-testid="input-assessment-summary" />
             </div>
             <div>
               <div className="flex items-center justify-between mb-1">
                 <label className="text-xs text-muted-foreground">Findings</label>
-                <Button variant="ghost" size="sm" className="h-6 text-[10px] gap-1" onClick={() => setFindingsEntries(prev => [...prev, { severity: "medium", finding: "", evidence: "", recommendation: "" }])}>
+                <Button variant="ghost" size="sm" className="h-6 text-xs gap-1" onClick={() => setFindingsEntries(prev => [...prev, { severity: "medium", finding: "", evidence: "", recommendation: "" }])}>
                   <Plus className="w-3 h-3" />Add Finding
                 </Button>
               </div>
               {findingsEntries.length === 0 ? (
-                <p className="text-[11px] text-muted-foreground italic py-2">No findings. Click "Add Finding" to add structured entries.</p>
+                <p className="text-xs text-muted-foreground italic py-2">No findings. Click "Add Finding" to add structured entries.</p>
               ) : (
                 <div className="space-y-2 max-h-[240px] overflow-y-auto">
                   {findingsEntries.map((entry, idx) => (
                     <div key={idx} className="border rounded p-2 space-y-1.5 bg-muted/20">
                       <div className="flex items-center gap-2">
                         <Select value={entry.severity} onValueChange={v => setFindingsEntries(prev => prev.map((e, i) => i === idx ? { ...e, severity: v } : e))}>
-                          <SelectTrigger className="h-6 text-[10px] w-[90px]"><SelectValue /></SelectTrigger>
+                          <SelectTrigger className="h-6 text-xs w-[90px]"><SelectValue /></SelectTrigger>
                           <SelectContent>{SEVERITIES.map(s => <SelectItem key={s} value={s} className="text-xs capitalize">{s}</SelectItem>)}</SelectContent>
                         </Select>
-                        <Input className="h-6 text-[11px] flex-1" placeholder="Finding" value={entry.finding} onChange={e => setFindingsEntries(prev => prev.map((en, i) => i === idx ? { ...en, finding: e.target.value } : en))} />
+                        <Input className="h-6 text-xs flex-1" placeholder="Finding" value={entry.finding} onChange={e => setFindingsEntries(prev => prev.map((en, i) => i === idx ? { ...en, finding: e.target.value } : en))} />
                         <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-destructive shrink-0" onClick={() => setFindingsEntries(prev => prev.filter((_, i) => i !== idx))}>
                           <Trash2 className="w-3 h-3" />
                         </Button>
                       </div>
-                      <Input className="h-6 text-[11px]" placeholder="Evidence (what was observed)" value={entry.evidence} onChange={e => setFindingsEntries(prev => prev.map((en, i) => i === idx ? { ...en, evidence: e.target.value } : en))} />
-                      <Input className="h-6 text-[11px]" placeholder="Recommendation" value={entry.recommendation} onChange={e => setFindingsEntries(prev => prev.map((en, i) => i === idx ? { ...en, recommendation: e.target.value } : en))} />
+                      <Input className="h-6 text-xs" placeholder="Evidence (what was observed)" value={entry.evidence} onChange={e => setFindingsEntries(prev => prev.map((en, i) => i === idx ? { ...en, evidence: e.target.value } : en))} />
+                      <Input className="h-6 text-xs" placeholder="Recommendation" value={entry.recommendation} onChange={e => setFindingsEntries(prev => prev.map((en, i) => i === idx ? { ...en, recommendation: e.target.value } : en))} />
                     </div>
                   ))}
                 </div>
@@ -896,7 +896,7 @@ export default function HealthCheckPage() {
       {/* RAID Dialog */}
       <Dialog open={raidDialog.open} onOpenChange={o => !o && setRaidDialog({ open: false, form: emptyRaid() })}>
         <DialogContent data-testid="dialog-raid">
-          <DialogHeader><DialogTitle className="text-sm">{raidDialog.editId ? "Edit" : "Add"} RAID Item</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle className="text-base">{raidDialog.editId ? "Edit" : "Add"} RAID Item</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -920,7 +920,7 @@ export default function HealthCheckPage() {
             </div>
             <div>
               <label className="text-xs text-muted-foreground">Description</label>
-              <Textarea className="text-xs" rows={2} value={raidDialog.form.description} onChange={e => setRaidDialog(p => ({ ...p, form: { ...p.form, description: e.target.value } }))} data-testid="input-raid-description" />
+              <Textarea className="text-sm" rows={2} value={raidDialog.form.description} onChange={e => setRaidDialog(p => ({ ...p, form: { ...p.form, description: e.target.value } }))} data-testid="input-raid-description" />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -948,7 +948,7 @@ export default function HealthCheckPage() {
       {/* Budget Dialog */}
       <Dialog open={budgetDialog.open} onOpenChange={o => !o && setBudgetDialog({ open: false, form: emptyBudget() })}>
         <DialogContent data-testid="dialog-budget">
-          <DialogHeader><DialogTitle className="text-sm">{budgetDialog.editId ? "Edit" : "Add"} Budget Entry</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle className="text-base">{budgetDialog.editId ? "Edit" : "Add"} Budget Entry</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div>
               <label className="text-xs text-muted-foreground">Category</label>
@@ -988,7 +988,7 @@ export default function HealthCheckPage() {
       {/* Schedule Dialog */}
       <Dialog open={scheduleDialog.open} onOpenChange={o => !o && setScheduleDialog({ open: false, form: emptySchedule() })}>
         <DialogContent data-testid="dialog-schedule">
-          <DialogHeader><DialogTitle className="text-sm">{scheduleDialog.editId ? "Edit" : "Add"} Schedule Milestone</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle className="text-base">{scheduleDialog.editId ? "Edit" : "Add"} Schedule Milestone</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div>
               <label className="text-xs text-muted-foreground">Milestone</label>
@@ -1029,8 +1029,8 @@ export default function HealthCheckPage() {
       <AlertDialog open={deleteConfirm.open} onOpenChange={o => !o && setDeleteConfirm({ open: false, type: "", id: 0, label: "" })}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-sm">Delete {deleteConfirm.type}?</AlertDialogTitle>
-            <AlertDialogDescription className="text-xs">
+            <AlertDialogTitle className="text-base">Delete {deleteConfirm.type}?</AlertDialogTitle>
+            <AlertDialogDescription className="text-sm">
               This will permanently delete "{deleteConfirm.label}". This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -1044,7 +1044,7 @@ export default function HealthCheckPage() {
       {/* Baseline Dialog */}
       <Dialog open={baselineDialog.open} onOpenChange={o => !o && setBaselineDialog({ open: false, form: emptyBaseline() })}>
         <DialogContent data-testid="dialog-baseline">
-          <DialogHeader><DialogTitle className="text-sm">Contract / SOW Baseline</DialogTitle><DialogDescription className="text-xs text-muted-foreground">Define the contract parameters to ground health assessments.</DialogDescription></DialogHeader>
+          <DialogHeader><DialogTitle className="text-base">Contract / SOW Baseline</DialogTitle><DialogDescription className="text-sm text-muted-foreground">Define the contract parameters to ground health assessments.</DialogDescription></DialogHeader>
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -1068,7 +1068,7 @@ export default function HealthCheckPage() {
             </div>
             <div>
               <label className="text-xs text-muted-foreground">Notes</label>
-              <Textarea className="text-xs" rows={2} placeholder="Key contract terms, scope boundaries, etc." value={baselineDialog.form.notes} onChange={e => setBaselineDialog(p => ({ ...p, form: { ...p.form, notes: e.target.value } }))} data-testid="input-baseline-notes" />
+              <Textarea className="text-sm" rows={2} placeholder="Key contract terms, scope boundaries, etc." value={baselineDialog.form.notes} onChange={e => setBaselineDialog(p => ({ ...p, form: { ...p.form, notes: e.target.value } }))} data-testid="input-baseline-notes" />
             </div>
           </div>
           <DialogFooter>

@@ -281,7 +281,7 @@ export function ChatPanel({ projectId, projectName }: ChatPanelProps) {
               <Sparkles className="w-5 h-5 text-accent" />
               <div>
                 <h2 className="text-sm font-semibold">Caliber AI</h2>
-                <p className="text-[11px] text-muted-foreground truncate max-w-[200px]">{projectName}</p>
+                <p className="text-xs text-muted-foreground truncate max-w-[200px]">{projectName}</p>
               </div>
             </div>
             <div className="flex items-center gap-1">
@@ -315,8 +315,8 @@ export function ChatPanel({ projectId, projectName }: ChatPanelProps) {
                   <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-accent/10 mb-3">
                     <Sparkles className="w-6 h-6 text-accent" />
                   </div>
-                  <h3 className="text-sm font-semibold text-foreground">How can I help?</h3>
-                  <p className="text-xs text-muted-foreground mt-1">{projectId && projectId !== "0" ? "Ask me anything about your project" : "How can I help you get started?"}</p>
+                  <h3 className="text-base font-semibold text-foreground">How can I help?</h3>
+                  <p className="text-sm text-muted-foreground mt-1">{projectId && projectId !== "0" ? "Ask me anything about your project" : "How can I help you get started?"}</p>
                 </div>
                 <div className="flex flex-wrap gap-2 justify-center px-2">
                   {(projectId && projectId !== "0" ? PROJECT_SUGGESTIONS : GENERAL_SUGGESTIONS).map((s, i) => (

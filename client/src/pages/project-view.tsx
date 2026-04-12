@@ -106,7 +106,7 @@ function VendorResponseBadge({ code }: { code: string | null }) {
   return (
     <Tooltip>
       <TooltipTrigger>
-        <Badge variant="outline" className={`text-[10px] font-bold px-1.5 py-0 ${VENDOR_RESPONSE_COLORS[code] || ""}`}>
+        <Badge variant="outline" className={`text-xs font-bold px-1.5 py-0 ${VENDOR_RESPONSE_COLORS[code] || ""}`}>
           {code}
         </Badge>
       </TooltipTrigger>
@@ -128,7 +128,7 @@ function CriticalityBadge({ value }: { value: string }) {
   return (
     <Badge
       variant="outline"
-      className={`text-[10px] font-semibold px-1.5 py-0 ${CRITICALITY_STYLES[value] || CRITICALITY_STYLES["Desired"]}`}
+      className={`text-xs font-semibold px-1.5 py-0 ${CRITICALITY_STYLES[value] || CRITICALITY_STYLES["Desired"]}`}
     >
       {value === "Not Required" ? "Not Req" : value === "Not Applicable" ? "N/A" : value}
     </Badge>
@@ -189,7 +189,7 @@ function StatusStepper({ projectId }: { projectId: number }) {
           <Tooltip>
             <TooltipTrigger asChild>
               <button
-                className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium transition-colors whitespace-nowrap ${
+                className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium transition-colors whitespace-nowrap ${
                   stage.active
                     ? "bg-accent/15 text-accent border border-accent/30"
                     : stage.completed
@@ -211,7 +211,7 @@ function StatusStepper({ projectId }: { projectId: number }) {
             <TooltipContent side="bottom" className="max-w-[200px]">
               <p className="text-xs font-semibold mb-1">{stage.label}</p>
               {stage.checklist.map((c, ci) => (
-                <div key={ci} className="flex items-center gap-1 text-[10px]">
+                <div key={ci} className="flex items-center gap-1 text-xs">
                   {c.done ? <Check className="w-2.5 h-2.5 text-green-500" /> : <Circle className="w-2.5 h-2.5 text-muted-foreground/50" />}
                   <span className={c.done ? "" : "text-muted-foreground"}>{c.label}</span>
                 </div>
@@ -226,7 +226,7 @@ function StatusStepper({ projectId }: { projectId: number }) {
           <Button
             variant="ghost"
             size="sm"
-            className="h-6 text-[10px] px-2 text-muted-foreground"
+            className="h-6 text-xs px-2 text-muted-foreground"
             onClick={() => advanceMutation.mutate(prevStage.key)}
             disabled={advanceMutation.isPending}
             data-testid="button-status-back"
@@ -237,7 +237,7 @@ function StatusStepper({ projectId }: { projectId: number }) {
         {nextStage && (
           <Button
             size="sm"
-            className="h-6 text-[10px] px-2 bg-accent hover:bg-accent/90 text-accent-foreground"
+            className="h-6 text-xs px-2 bg-accent hover:bg-accent/90 text-accent-foreground"
             disabled={!currentStage?.allDone || advanceMutation.isPending}
             onClick={() => advanceMutation.mutate(nextStage.key)}
             data-testid="button-advance-status"
@@ -268,16 +268,16 @@ function ProjectActivity({ projectId }: { projectId: string }) {
 
   return (
     <div className="p-2 pt-3 border-t">
-      <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-2.5 pb-1.5">Recent Activity</p>
+      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2.5 pb-1.5">Recent Activity</p>
       <div className="space-y-1">
         {activity.slice(0, 8).map((a: any) => (
           <div key={a.id} className="px-2.5 py-1">
-            <p className="text-[11px] text-foreground/80">
+            <p className="text-sm text-foreground/80">
               <span className="font-medium">{a.userName || "System"}</span>
               {" "}{ACTION_LABELS[a.action] || a.action}
             </p>
-            {a.details && <p className="text-[10px] text-muted-foreground truncate">{a.details}</p>}
-            <p className="text-[9px] text-muted-foreground/60">{new Date(a.createdAt).toLocaleDateString()}</p>
+            {a.details && <p className="text-sm text-muted-foreground truncate">{a.details}</p>}
+            <p className="text-xs text-muted-foreground/60">{new Date(a.createdAt).toLocaleDateString()}</p>
           </div>
         ))}
       </div>
@@ -829,10 +829,10 @@ export default function ProjectView() {
             <ChevronLeft className="w-3 h-3" />
             All Projects
           </Link>
-          <h2 className="text-sm font-semibold truncate" data-testid="text-project-name">{project.name}</h2>
+          <h2 className="text-base font-semibold truncate" data-testid="text-project-name">{project.name}</h2>
           <div className="flex items-center gap-2 mt-1 flex-wrap">
-            <Badge variant="outline" className="text-[10px] font-semibold uppercase">{project.status}</Badge>
-            <span className="text-[10px] text-muted-foreground">{project.stats.totalRequirements} reqs</span>
+            <Badge variant="outline" className="text-xs font-semibold uppercase">{project.status}</Badge>
+            <span className="text-xs text-muted-foreground">{project.stats.totalRequirements} reqs</span>
           </div>
           {project.engagementModules && (() => {
             try {
@@ -840,12 +840,12 @@ export default function ProjectView() {
               const labels: Record<string, string> = { selection: "Selection", ivv: "IV&V", health_check: "Health Check" };
               return mods.length > 0 ? (
                 <div className="flex gap-1 mt-1.5 flex-wrap">
-                  {mods.map(m => <Badge key={m} className="text-[9px] bg-muted text-muted-foreground">{labels[m] || m}</Badge>)}
+                  {mods.map(m => <Badge key={m} className="text-xs bg-muted text-muted-foreground">{labels[m] || m}</Badge>)}
                 </div>
               ) : null;
             } catch { return null; }
           })()}
-          <Button variant="ghost" size="sm" className="h-7 text-[11px] gap-1.5 mt-2 w-full justify-start text-muted-foreground" onClick={() => setShowTeamDialog(true)}>
+          <Button variant="ghost" size="sm" className="h-7 text-xs gap-1.5 mt-2 w-full justify-start text-muted-foreground" onClick={() => setShowTeamDialog(true)}>
             <Users className="w-3.5 h-3.5" />Team
           </Button>
         </div>
@@ -853,7 +853,7 @@ export default function ProjectView() {
           <div className="p-2">
             <button
               onClick={() => handleSetSelectedArea(null)}
-              className={`w-full text-left px-2.5 py-1.5 rounded text-xs font-medium transition-colors mb-1 ${
+              className={`w-full text-left px-2.5 py-1.5 rounded text-sm font-medium transition-colors mb-1 ${
                 !selectedArea ? "bg-primary text-primary-foreground dark:bg-accent dark:text-accent-foreground" : "text-muted-foreground hover:bg-muted"
               }`}
               data-testid="button-all-modules"
@@ -862,12 +862,12 @@ export default function ProjectView() {
             </button>
             {Object.entries(moduleTree).map(([cat, areas]) => (
               <div key={cat} className="mb-2">
-                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-2.5 py-1">{cat}</p>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2.5 py-1">{cat}</p>
                 {Object.entries(areas).map(([area, count]) => (
                   <button
                     key={area}
                     onClick={() => handleSetSelectedArea(area)}
-                    className={`w-full text-left px-2.5 py-1.5 rounded text-xs transition-colors flex items-center justify-between ${
+                    className={`w-full text-left px-2.5 py-1.5 rounded text-sm transition-colors flex items-center justify-between ${
                       selectedArea === area
                         ? "bg-primary text-primary-foreground dark:bg-accent dark:text-accent-foreground"
                         : "text-foreground/80 hover:bg-muted"
@@ -875,13 +875,13 @@ export default function ProjectView() {
                     data-testid={`button-module-${area.replace(/\s/g, '-').toLowerCase()}`}
                   >
                     <span className="truncate">{area}</span>
-                    <span className={`text-[10px] font-mono ${selectedArea === area ? "opacity-80" : "text-muted-foreground"}`}>{count}</span>
+                    <span className={`text-xs font-mono ${selectedArea === area ? "opacity-80" : "text-muted-foreground"}`}>{count}</span>
                   </button>
                 ))}
               </div>
             ))}
             {Object.keys(moduleTree).length === 0 && (
-              <p className="text-xs text-muted-foreground text-center py-6 px-2">
+              <p className="text-sm text-muted-foreground text-center py-6 px-2">
                 No modules yet. Load templates or add requirements to get started.
               </p>
             )}
@@ -903,7 +903,7 @@ export default function ProjectView() {
               placeholder="Search requirements..."
               value={searchQuery}
               onChange={(e) => handleSetSearchQuery(e.target.value)}
-              className="pl-8 h-8 text-xs"
+              className="pl-8 h-8 text-sm"
               data-testid="input-search-requirements"
             />
           </div>
@@ -1006,7 +1006,7 @@ export default function ProjectView() {
             <span className="font-semibold text-muted-foreground">Vendor Codes:</span>
             {Object.entries(VENDOR_RESPONSE_LABELS).map(([code, label]) => (
               <span key={code} className="flex items-center gap-1">
-                <Badge variant="outline" className={`text-[10px] font-bold px-1.5 py-0 ${VENDOR_RESPONSE_COLORS[code]}`}>{code}</Badge>
+                <Badge variant="outline" className={`text-xs font-bold px-1.5 py-0 ${VENDOR_RESPONSE_COLORS[code]}`}>{code}</Badge>
                 <span className="text-muted-foreground">{label}</span>
               </span>
             ))}
@@ -1120,13 +1120,13 @@ export default function ProjectView() {
                       data-testid="checkbox-select-all"
                     />
                   </TableHead>
-                  <TableHead className="w-[72px] text-[11px] font-semibold">Req #</TableHead>
-                  {!selectedArea && <TableHead className="text-[11px] font-semibold w-[140px]">Module</TableHead>}
-                  <TableHead className="text-[11px] font-semibold w-[120px]">Sub Category</TableHead>
-                  <TableHead className="text-[11px] font-semibold">Description</TableHead>
-                  <TableHead className="w-[80px] text-[11px] font-semibold text-center">Criticality</TableHead>
-                  <TableHead className="w-[56px] text-[11px] font-semibold text-center">Resp</TableHead>
-                  <TableHead className="w-[64px] text-[11px] font-semibold text-center">Actions</TableHead>
+                  <TableHead className="w-[72px] text-xs font-semibold">Req #</TableHead>
+                  {!selectedArea && <TableHead className="text-xs font-semibold w-[140px]">Module</TableHead>}
+                  <TableHead className="text-xs font-semibold w-[120px]">Sub Category</TableHead>
+                  <TableHead className="text-xs font-semibold">Description</TableHead>
+                  <TableHead className="w-[80px] text-xs font-semibold text-center">Criticality</TableHead>
+                  <TableHead className="w-[56px] text-xs font-semibold text-center">Resp</TableHead>
+                  <TableHead className="w-[64px] text-xs font-semibold text-center">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -1149,7 +1149,7 @@ export default function ProjectView() {
                     </TableCell>
                     <TableCell className="font-mono text-xs font-semibold text-primary dark:text-accent py-2">{req.reqNumber}</TableCell>
                     {!selectedArea && (
-                      <TableCell className="text-xs py-2">
+                      <TableCell className="text-sm py-2">
                         <button
                           onClick={() => handleSetSelectedArea(req.functionalArea)}
                           className="text-left hover:text-primary dark:hover:text-accent transition-colors"
@@ -1158,11 +1158,11 @@ export default function ProjectView() {
                         </button>
                       </TableCell>
                     )}
-                    <TableCell className="text-xs text-muted-foreground py-2">{req.subCategory}</TableCell>
-                    <TableCell className="text-xs py-2 max-w-md">
+                    <TableCell className="text-sm text-muted-foreground py-2">{req.subCategory}</TableCell>
+                    <TableCell className="text-sm py-2 max-w-md">
                       <p className="line-clamp-2">{req.description}</p>
                       {req.comments && (
-                        <p className="text-[10px] text-muted-foreground mt-0.5 italic line-clamp-1">{req.comments}</p>
+                        <p className="text-sm text-muted-foreground mt-0.5 italic line-clamp-1">{req.comments}</p>
                       )}
                     </TableCell>
                     <TableCell className="text-center py-2"><CriticalityBadge value={req.criticality} /></TableCell>
@@ -1184,8 +1184,8 @@ export default function ProjectView() {
           ) : (
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <FileText className="w-12 h-12 text-muted-foreground/30 mb-3" />
-              <h3 className="text-sm font-semibold mb-1">No requirements found</h3>
-              <p className="text-xs text-muted-foreground max-w-sm mb-4">
+              <h3 className="text-base font-semibold mb-1">No requirements found</h3>
+              <p className="text-sm text-muted-foreground max-w-sm mb-4">
                 {selectedArea
                   ? `No requirements in ${selectedArea} yet. Load a template or add requirements manually.`
                   : "Start by loading a module template or adding requirements manually."}
@@ -1379,7 +1379,7 @@ export default function ProjectView() {
             <DialogTitle>Load Template Requirements</DialogTitle>
           </DialogHeader>
           <div className="flex items-center justify-between -mt-1">
-            <p className="text-xs text-muted-foreground">
+            <p className="text-sm text-muted-foreground">
               Select modules to load pre-built ERP requirements.
             </p>
             <div className="flex items-center gap-2">
@@ -1391,7 +1391,7 @@ export default function ProjectView() {
                   });
                   setSelectedTemplates(new Set(allAreas));
                 }}
-                className="text-[11px] text-primary dark:text-accent hover:underline font-medium"
+                className="text-xs text-primary dark:text-accent hover:underline font-medium"
                 data-testid="button-select-all-templates"
               >
                 Select All New
@@ -1399,7 +1399,7 @@ export default function ProjectView() {
               {selectedTemplates.size > 0 && (
                 <button
                   onClick={() => setSelectedTemplates(new Set())}
-                  className="text-[11px] text-muted-foreground hover:underline"
+                  className="text-xs text-muted-foreground hover:underline"
                   data-testid="button-clear-templates"
                 >
                   Clear
@@ -1468,13 +1468,13 @@ export default function ProjectView() {
                             </div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-1">
-                                <span className="text-xs font-medium truncate">{area}</span>
-                                <span className="text-[10px] text-muted-foreground font-mono shrink-0">({prefix})</span>
+                                <span className="text-sm font-medium truncate">{area}</span>
+                                <span className="text-xs text-muted-foreground font-mono shrink-0">({prefix})</span>
                               </div>
                               <div className="flex items-center gap-2 mt-0.5">
-                                <span className="text-[10px] text-muted-foreground">{templateCount} reqs</span>
+                                <span className="text-xs text-muted-foreground">{templateCount} reqs</span>
                                 {existingCount > 0 && (
-                                  <span className="text-[10px] text-amber-600 dark:text-amber-400">{existingCount} already loaded</span>
+                                  <span className="text-xs text-amber-600 dark:text-amber-400">{existingCount} already loaded</span>
                                 )}
                               </div>
                             </div>
@@ -1510,7 +1510,7 @@ export default function ProjectView() {
       <Dialog open={showTeamDialog} onOpenChange={setShowTeamDialog}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-sm">
+            <DialogTitle className="flex items-center gap-2 text-base">
               <Users className="w-4 h-4" />
               Project Team
             </DialogTitle>
@@ -1556,7 +1556,7 @@ export default function ProjectView() {
 
             {/* Members list */}
             {teamMembers.length === 0 ? (
-              <p className="text-xs text-muted-foreground text-center py-4">No team members yet. Add users above to control access.</p>
+              <p className="text-sm text-muted-foreground text-center py-4">No team members yet. Add users above to control access.</p>
             ) : (
               <div className="space-y-1.5">
                 {teamMembers.map((member: any) => (
@@ -1569,14 +1569,14 @@ export default function ProjectView() {
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium truncate">{member.userName || "Unknown"}</p>
-                      <p className="text-[10px] text-muted-foreground truncate">{member.userEmail}</p>
+                      <p className="text-sm font-medium truncate">{member.userName || "Unknown"}</p>
+                      <p className="text-sm text-muted-foreground truncate">{member.userEmail}</p>
                     </div>
                     {member.role === "owner" && !isAdmin ? (
-                      <Badge variant="outline" className="text-[10px] shrink-0">Owner</Badge>
+                      <Badge variant="outline" className="text-xs shrink-0">Owner</Badge>
                     ) : (
                       <Select value={member.role} onValueChange={(role) => updateMemberRoleMutation.mutate({ userId: member.userId, role })}>
-                        <SelectTrigger className="w-20 h-7 text-[10px]"><SelectValue /></SelectTrigger>
+                        <SelectTrigger className="w-20 h-7 text-xs"><SelectValue /></SelectTrigger>
                         <SelectContent>
                           {isAdmin && <SelectItem value="owner" className="text-xs">Owner</SelectItem>}
                           <SelectItem value="editor" className="text-xs">Editor</SelectItem>
@@ -1599,7 +1599,7 @@ export default function ProjectView() {
               </div>
             )}
 
-            <p className="text-[10px] text-muted-foreground">
+            <p className="text-sm text-muted-foreground">
               Owners have full control. Editors can modify data. Viewers have read-only access.
             </p>
           </div>
@@ -1629,7 +1629,7 @@ export default function ProjectView() {
                   placeholder="e.g., Finance Department"
                   value={wsStakeholderName}
                   onChange={e => setWsStakeholderName(e.target.value)}
-                  className="w-full h-8 px-3 text-xs rounded border border-input bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+                  className="w-full h-8 px-3 text-sm rounded border border-input bg-background focus:outline-none focus:ring-1 focus:ring-ring"
                 />
               </div>
               <div>
@@ -1640,7 +1640,7 @@ export default function ProjectView() {
                   placeholder="stakeholder@company.com"
                   value={wsStakeholderEmail}
                   onChange={e => setWsStakeholderEmail(e.target.value)}
-                  className="w-full h-8 px-3 text-xs rounded border border-input bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+                  className="w-full h-8 px-3 text-sm rounded border border-input bg-background focus:outline-none focus:ring-1 focus:ring-ring"
                 />
               </div>
             </div>
@@ -1651,7 +1651,7 @@ export default function ProjectView() {
                 type="date"
                 value={wsExpiresAt}
                 onChange={e => setWsExpiresAt(e.target.value)}
-                className="w-full h-8 px-3 text-xs rounded border border-input bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+                className="w-full h-8 px-3 text-sm rounded border border-input bg-background focus:outline-none focus:ring-1 focus:ring-ring"
                 min={new Date().toISOString().split('T')[0]}
               />
             </div>
@@ -1698,7 +1698,7 @@ export default function ProjectView() {
                 ))}
               </div>
               {!wsAllModules && wsSelectedModules.size === 0 && (
-                <p className="text-[11px] text-muted-foreground mt-1">No modules selected — link will show all modules.</p>
+                <p className="text-sm text-muted-foreground mt-1">No modules selected — link will show all modules.</p>
               )}
             </div>
 
@@ -1740,13 +1740,13 @@ export default function ProjectView() {
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-0.5">
-                          <span className="text-sm font-semibold" data-testid={`text-link-stakeholder-${link.id}`}>{link.stakeholderName}</span>
-                          {!isActive && <Badge variant="outline" className="text-[10px] px-1">Deactivated</Badge>}
+                          <span className="text-base font-semibold" data-testid={`text-link-stakeholder-${link.id}`}>{link.stakeholderName}</span>
+                          {!isActive && <Badge variant="outline" className="text-xs px-1">Deactivated</Badge>}
                         </div>
-                        <div className="text-[11px] text-muted-foreground">
+                        <div className="text-sm text-muted-foreground">
                           {modules.length > 0 ? modules.join(", ") : "All modules"}
                         </div>
-                        <div className="text-[11px] text-muted-foreground">
+                        <div className="text-sm text-muted-foreground">
                           Created {new Date(link.createdAt).toLocaleDateString()}
                           {link.expiresAt && (
                             <span className={`ml-2 ${new Date(link.expiresAt) < new Date() ? "text-red-500" : ""}`}>
@@ -1767,7 +1767,7 @@ export default function ProjectView() {
                           <Button
                             variant="outline"
                             size="sm"
-                            className="h-7 text-[11px] gap-1 text-destructive hover:text-destructive"
+                            className="h-7 text-xs gap-1 text-destructive hover:text-destructive"
                             data-testid={`button-deactivate-link-${link.id}`}
                             onClick={() => deactivateWorkshopLinkMutation.mutate(link.id)}
                           >
@@ -1781,7 +1781,7 @@ export default function ProjectView() {
                       <Input
                         readOnly
                         value={workshopUrl}
-                        className="text-[11px] font-mono h-8 bg-muted/50 cursor-text"
+                        className="text-sm font-mono h-8 bg-muted/50 cursor-text"
                         data-testid={`text-link-url-${link.id}`}
                         onClick={(e) => (e.target as HTMLInputElement).select()}
                         onFocus={(e) => (e.target as HTMLInputElement).select()}
@@ -1794,7 +1794,7 @@ export default function ProjectView() {
           )}
 
           {workshopLinks.length === 0 && (
-            <p className="text-xs text-muted-foreground text-center py-4">No workshop links yet. Create one above.</p>
+            <p className="text-sm text-muted-foreground text-center py-4">No workshop links yet. Create one above.</p>
           )}
         </DialogContent>
       </Dialog>
@@ -1824,8 +1824,8 @@ export default function ProjectView() {
                 data-testid="import-dropzone"
               >
                 <Upload className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
-                <p className="text-sm font-medium">Drag & drop a file here, or click to browse</p>
-                <p className="text-xs text-muted-foreground mt-1">Supports .xlsx, .xls, .csv</p>
+                <p className="text-base font-medium">Drag & drop a file here, or click to browse</p>
+                <p className="text-sm text-muted-foreground mt-1">Supports .xlsx, .xls, .csv</p>
               </div>
               <input
                 id="import-file-input"
@@ -1839,7 +1839,7 @@ export default function ProjectView() {
                 <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
                   <FileText className="w-4 h-4 text-primary" />
                   <span className="text-sm font-medium">{importFile.name}</span>
-                  <span className="text-xs text-muted-foreground">({(importFile.size / 1024).toFixed(1)} KB)</span>
+                  <span className="text-sm text-muted-foreground">({(importFile.size / 1024).toFixed(1)} KB)</span>
                   <Button variant="ghost" size="sm" className="ml-auto h-6 px-2" onClick={() => setImportFile(null)}>
                     <X className="w-3 h-3" />
                   </Button>
@@ -1862,7 +1862,7 @@ export default function ProjectView() {
             <div className="space-y-4">
               {importSheetNames.length > 1 && (
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium">Sheet:</span>
+                  <span className="text-base font-medium">Sheet:</span>
                   <Select value={importSelectedSheet || importSheetNames[0]} onValueChange={(v) => setImportSelectedSheet(v)}>
                     <SelectTrigger className="w-48 h-8 text-xs" data-testid="import-sheet-select">
                       <SelectValue />
@@ -1874,7 +1874,7 @@ export default function ProjectView() {
                 </div>
               )}
 
-              <div className="text-sm font-medium">Map columns to fields:</div>
+              <div className="text-base font-medium">Map columns to fields:</div>
               <div className="grid grid-cols-2 gap-3">
                 {(["reqNumber", "category", "functionalArea", "subCategory", "description", "criticality"] as const).map((field) => {
                   const required = ["reqNumber", "category", "description"].includes(field);
@@ -1902,19 +1902,19 @@ export default function ProjectView() {
               </div>
 
               {/* Preview table */}
-              <div className="text-sm font-medium">Preview (first 5 rows):</div>
+              <div className="text-base font-medium">Preview (first 5 rows):</div>
               <div className="border rounded-lg overflow-auto max-h-48">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      {importHeaders.map((h) => <TableHead key={h} className="text-[10px] px-2 py-1 whitespace-nowrap">{h}</TableHead>)}
+                      {importHeaders.map((h) => <TableHead key={h} className="text-xs px-2 py-1 whitespace-nowrap">{h}</TableHead>)}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {importRows.slice(0, 5).map((row, i) => (
                       <TableRow key={i}>
                         {importHeaders.map((h) => (
-                          <TableCell key={h} className="text-[10px] px-2 py-1 max-w-[150px] truncate">{String(row[h] || "")}</TableCell>
+                          <TableCell key={h} className="text-sm px-2 py-1 max-w-[150px] truncate">{String(row[h] || "")}</TableCell>
                         ))}
                       </TableRow>
                     ))}
@@ -1939,8 +1939,8 @@ export default function ProjectView() {
           {importStep === 3 && (
             <div className="space-y-4">
               <div className="p-4 bg-muted/50 rounded-lg space-y-2">
-                <p className="text-sm font-medium">{importRows.length} requirements will be imported into "{project?.name}"</p>
-                <div className="text-xs text-muted-foreground space-y-1">
+                <p className="text-base font-medium">{importRows.length} requirements will be imported into "{project?.name}"</p>
+                <div className="text-sm text-muted-foreground space-y-1">
                   <p>Mapping:</p>
                   <ul className="list-disc pl-4">
                     {Object.entries(importMapping).filter(([_, v]) => v).map(([k, v]) => (
@@ -1951,9 +1951,9 @@ export default function ProjectView() {
                 {(() => {
                   const cats = [...new Set(importRows.map(r => String(r[importMapping.category] || "")).filter(Boolean))];
                   return cats.length > 0 ? (
-                    <div className="text-xs">
+                    <div className="text-sm">
                       <span className="font-medium">Detected modules:</span>{" "}
-                      {cats.slice(0, 8).map(c => <Badge key={c} variant="outline" className="text-[10px] mr-1">{c}</Badge>)}
+                      {cats.slice(0, 8).map(c => <Badge key={c} variant="outline" className="text-xs mr-1">{c}</Badge>)}
                       {cats.length > 8 && <span className="text-muted-foreground">+{cats.length - 8} more</span>}
                     </div>
                   ) : null;

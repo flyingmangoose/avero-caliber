@@ -188,7 +188,7 @@ export default function GoLivePage() {
 
           {/* AI Summary */}
           {aiNotes && (
-            <div className="p-3 rounded-lg bg-accent/5 border border-accent/20 text-xs text-muted-foreground">
+            <div className="p-3 rounded-lg bg-accent/5 border border-accent/20 text-sm text-muted-foreground">
               <span className="font-medium text-accent">AI Assessment: </span>{aiNotes}
             </div>
           )}
@@ -213,48 +213,48 @@ export default function GoLivePage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="text-xs">Criteria</TableHead>
-                        <TableHead className="text-xs w-14 text-center">Wt</TableHead>
-                        <TableHead className="text-xs w-28">Score</TableHead>
-                        <TableHead className="text-xs">Evidence / Notes</TableHead>
+                        <TableHead className="text-sm">Criteria</TableHead>
+                        <TableHead className="text-sm w-14 text-center">Wt</TableHead>
+                        <TableHead className="text-sm w-28">Score</TableHead>
+                        <TableHead className="text-sm">Evidence / Notes</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {categories.map(cat => (
                         <>
                           <TableRow key={`cat-${cat}`} className="bg-muted/30">
-                            <TableCell colSpan={4} className="text-xs font-semibold py-1.5">{cat}</TableCell>
+                            <TableCell colSpan={4} className="text-sm font-semibold py-1.5">{cat}</TableCell>
                           </TableRow>
                           {criteria.filter(c => c.category === cat).map(item => (
                             <TableRow key={item.key}>
-                              <TableCell className="text-xs py-2">
+                              <TableCell className="text-sm py-2">
                                 <div>
                                   {item.name}
                                   {item.confidence && (
-                                    <span className={`ml-1.5 text-[9px] ${CONFIDENCE_COLORS[item.confidence] || ""}`}>
+                                    <span className={`ml-1.5 text-xs ${CONFIDENCE_COLORS[item.confidence] || ""}`}>
                                       ({item.confidence})
                                     </span>
                                   )}
-                                  {item.isManual && <Badge variant="outline" className="text-[8px] ml-1">manual</Badge>}
+                                  {item.isManual && <Badge variant="outline" className="text-[10px] ml-1">manual</Badge>}
                                 </div>
                                 {item.recommendation && (
-                                  <p className="text-[10px] text-accent mt-0.5">{item.recommendation}</p>
+                                  <p className="text-sm text-accent mt-0.5">{item.recommendation}</p>
                                 )}
                               </TableCell>
                               <TableCell className="text-center py-2">
-                                <Badge className="text-[10px] bg-muted text-muted-foreground">{item.weight}</Badge>
+                                <Badge className="text-xs bg-muted text-muted-foreground">{item.weight}</Badge>
                               </TableCell>
                               <TableCell className="py-2">
                                 <div className="flex items-center gap-1.5">
                                   <input type="range" min="0" max="10" step="1" className="w-16 h-1.5 accent-amber-500"
                                     value={item.score} onChange={e => updateCriterion(item.key, "score", parseInt(e.target.value))}
                                     data-testid={`score-${item.key}`} />
-                                  <span className={`text-[11px] font-mono font-bold w-4 ${item.score <= 3 ? "text-red-600" : item.score <= 6 ? "text-amber-600" : "text-emerald-600"}`}>{item.score}</span>
+                                  <span className={`text-xs font-mono font-bold w-4 ${item.score <= 3 ? "text-red-600" : item.score <= 6 ? "text-amber-600" : "text-emerald-600"}`}>{item.score}</span>
                                 </div>
                               </TableCell>
                               <TableCell className="py-2">
-                                {item.evidence && <p className="text-[10px] text-muted-foreground mb-1">{item.evidence}</p>}
-                                <Input className="h-6 text-[10px]" placeholder="Add notes..." value={item.notes}
+                                {item.evidence && <p className="text-sm text-muted-foreground mb-1">{item.evidence}</p>}
+                                <Input className="h-7 text-sm" placeholder="Add notes..." value={item.notes}
                                   onChange={e => updateCriterion(item.key, "notes", e.target.value)} />
                               </TableCell>
                             </TableRow>
@@ -263,13 +263,13 @@ export default function GoLivePage() {
                       ))}
                     </TableBody>
                   </Table>
-                  <Textarea placeholder="Assessor notes — add context, conditions, or recommendations" className="mt-3 text-xs" rows={3} value={assessorNotes} onChange={e => setAssessorNotes(e.target.value)} data-testid="assessor-notes" />
+                  <Textarea placeholder="Assessor notes — add context, conditions, or recommendations" className="mt-3 text-sm" rows={3} value={assessorNotes} onChange={e => setAssessorNotes(e.target.value)} data-testid="assessor-notes" />
                 </div>
 
                 {/* Radar Chart */}
                 <Card>
                   <CardContent className="pt-4">
-                    <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-2">Category Radar</h4>
+                    <h4 className="text-sm font-semibold text-muted-foreground uppercase mb-2">Category Radar</h4>
                     <ResponsiveContainer width="100%" height={280}>
                       <RadarChart data={radarData}>
                         <PolarGrid stroke="hsl(var(--border))" />
@@ -280,7 +280,7 @@ export default function GoLivePage() {
                     </ResponsiveContainer>
                     <div className="mt-3 space-y-1">
                       {radarData.map(d => (
-                        <div key={d.category} className="flex justify-between text-[11px]">
+                        <div key={d.category} className="flex justify-between text-xs">
                           <span className="text-muted-foreground">{d.category}</span>
                           <span className={`font-mono font-bold ${d.score <= 3 ? "text-red-600" : d.score <= 6 ? "text-amber-600" : "text-emerald-600"}`}>{d.score}/10</span>
                         </div>
@@ -295,8 +295,8 @@ export default function GoLivePage() {
           {!initialized && !autoAssess.isPending && (
             <Card className="p-8 text-center">
               <Rocket className="w-8 h-8 mx-auto text-muted-foreground/40 mb-3" />
-              <p className="text-sm font-medium">Go-Live Readiness Assessment</p>
-              <p className="text-xs text-muted-foreground mt-1">Click "Auto-Assess from Project Data" to generate an AI-powered readiness assessment based on health check findings, RAID items, and project documents.</p>
+              <p className="text-base font-medium">Go-Live Readiness Assessment</p>
+              <p className="text-sm text-muted-foreground mt-1">Click "Auto-Assess from Project Data" to generate an AI-powered readiness assessment based on health check findings, RAID items, and project documents.</p>
             </Card>
           )}
         </div>

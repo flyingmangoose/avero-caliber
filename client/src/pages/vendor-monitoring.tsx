@@ -306,7 +306,7 @@ function ChangeCard({
               </div>
               <p className="text-sm font-semibold text-foreground leading-snug">{change.title}</p>
               {change.summary && (
-                <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{change.summary}</p>
+                <p className="text-sm text-muted-foreground mt-0.5 line-clamp-2">{change.summary}</p>
               )}
               <div className="flex items-center gap-3 mt-1.5">
                 <span className="text-xs text-muted-foreground/70">{formatRelative(change.createdAt)}</span>
@@ -378,7 +378,7 @@ function ChangeCard({
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
                   Analysis
                 </p>
-                <p className="text-xs text-foreground/80 leading-relaxed">{change.details}</p>
+                <p className="text-sm text-foreground/80 leading-relaxed">{change.details}</p>
               </div>
             )}
             {parseJsonArray(change.affectedModules).length > 0 && (
@@ -437,8 +437,8 @@ function AlertCard({
               </Badge>
             </div>
             <p className="text-sm font-semibold text-foreground">{alert.title}</p>
-            <p className="text-xs text-muted-foreground mt-0.5">{alert.message}</p>
-            <p className="text-xs text-muted-foreground/60 mt-1">{formatRelative(alert.createdAt)}</p>
+            <p className="text-sm text-muted-foreground mt-0.5">{alert.message}</p>
+            <p className="text-sm text-muted-foreground/60 mt-1">{formatRelative(alert.createdAt)}</p>
           </div>
           {!Boolean(alert.isDismissed) && (
             <Button
@@ -503,7 +503,7 @@ function AddSourceDialog({ onAdded }: { onAdded: () => void }) {
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-base">Add Monitoring Source</DialogTitle>
+          <DialogTitle>Add Monitoring Source</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 pt-2">
           <div className="space-y-1.5">
@@ -808,7 +808,7 @@ export default function VendorMonitoring() {
           </div>
           <div>
             <h1 className="text-xl font-bold text-foreground">Vendor Intelligence Monitor</h1>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-sm text-muted-foreground">
               Track vendor platform changes, releases, and alerts across your ERP ecosystem
             </p>
           </div>
@@ -855,7 +855,7 @@ export default function VendorMonitoring() {
             <Bell className="w-3.5 h-3.5 mr-1.5" />
             Alerts
             {activeAlerts.length > 0 && (
-              <span className="ml-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+              <span className="ml-1.5 bg-red-500 text-white text-xs font-bold rounded-full w-4 h-4 flex items-center justify-center">
                 {activeAlerts.length > 9 ? "9+" : activeAlerts.length}
               </span>
             )}
@@ -918,7 +918,7 @@ export default function VendorMonitoring() {
                       </Badge>
                     </div>
                     <p className="text-sm font-semibold text-red-700 dark:text-red-400">{alert.title}</p>
-                    <p className="text-xs text-red-600/80 dark:text-red-400/70 mt-0.5">{alert.message}</p>
+                    <p className="text-sm text-red-600/80 dark:text-red-400/70 mt-0.5">{alert.message}</p>
                   </div>
                   <Button
                     size="sm"
@@ -942,7 +942,7 @@ export default function VendorMonitoring() {
           {/* Recent changes feed */}
           <div>
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+              <h2 className="text-base font-semibold text-foreground flex items-center gap-1.5">
                 <Activity className="w-4 h-4 text-accent" />
                 Recent Changes
               </h2>
@@ -962,7 +962,7 @@ export default function VendorMonitoring() {
                 <CardContent className="py-12 text-center">
                   <Radar className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
                   <p className="text-sm text-muted-foreground">No changes detected yet</p>
-                  <p className="text-xs text-muted-foreground/60 mt-1">
+                  <p className="text-sm text-muted-foreground/60 mt-1">
                     Add monitoring sources and run a scan to detect changes
                   </p>
                 </CardContent>
@@ -1027,7 +1027,7 @@ export default function VendorMonitoring() {
               <CardContent className="py-12 text-center">
                 <Radio className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
                 <p className="text-sm text-muted-foreground">No sources configured</p>
-                <p className="text-xs text-muted-foreground/60 mt-1">
+                <p className="text-sm text-muted-foreground/60 mt-1">
                   Seed default sources or add your own to get started
                 </p>
               </CardContent>
@@ -1058,7 +1058,7 @@ export default function VendorMonitoring() {
                       <TableBody>
                         {platformSources.map((src) => (
                           <TableRow key={src.id} data-testid={`source-row-${src.id}`}>
-                            <TableCell className="text-xs font-medium py-2.5">{src.name}</TableCell>
+                            <TableCell className="text-sm font-medium py-2.5">{src.name}</TableCell>
                             <TableCell className="text-xs py-2.5">
                               <a
                                 href={src.url}
@@ -1239,7 +1239,7 @@ export default function VendorMonitoring() {
               <CardContent className="py-12 text-center">
                 <Eye className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
                 <p className="text-sm text-muted-foreground">No changes match your filters</p>
-                <p className="text-xs text-muted-foreground/60 mt-1">
+                <p className="text-sm text-muted-foreground/60 mt-1">
                   Try adjusting the filters above
                 </p>
               </CardContent>
@@ -1265,7 +1265,7 @@ export default function VendorMonitoring() {
           {/* Active alerts */}
           <div>
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+              <h2 className="text-base font-semibold text-foreground flex items-center gap-1.5">
                 <Bell className="w-4 h-4 text-accent" />
                 Active Alerts
               </h2>
@@ -1285,7 +1285,7 @@ export default function VendorMonitoring() {
                 <CardContent className="py-10 text-center">
                   <Bell className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
                   <p className="text-sm text-muted-foreground">No active alerts</p>
-                  <p className="text-xs text-muted-foreground/60 mt-1">
+                  <p className="text-sm text-muted-foreground/60 mt-1">
                     You're all caught up
                   </p>
                 </CardContent>
