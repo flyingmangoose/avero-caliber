@@ -1,6 +1,6 @@
 import { build as esbuild } from "esbuild";
 import { build as viteBuild } from "vite";
-import { rm, readFile } from "fs/promises";
+import { rm, readFile, copyFile } from "fs/promises";
 
 // server deps to bundle to reduce openat(2) syscalls
 // which helps cold start times
@@ -61,6 +61,13 @@ async function buildAll() {
     external: externals,
     logLevel: "info",
   });
+
+  // pdf-parse v2 needs its worker file next to the bundle
+  await copyFile(
+    "node_modules/pdf-parse/dist/pdf-parse/cjs/pdf.worker.mjs",
+    "dist/pdf.worker.mjs"
+  );
+  console.log("copied pdf.worker.mjs to dist/");
 }
 
 buildAll().catch((err) => {
