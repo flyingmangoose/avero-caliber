@@ -1,4 +1,5 @@
-import { Switch, Route, Router } from "wouter";
+import React from "react";
+import { Switch, Route, Router, useParams, useLocation } from "wouter";
 import { useHashLocation } from "wouter/use-hash-location";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider, useQuery } from "@tanstack/react-query";
@@ -30,6 +31,42 @@ import OutcomesPage from "@/pages/outcomes";
 import EvaluationScorecardPage from "@/pages/evaluation-scorecard";
 import LoginPage from "@/pages/login";
 import { ChatPanel } from "@/components/chat-panel";
+
+// Smart redirect: route to the right default page based on project modules
+function ProjectRedirect() {
+  const params = useParams<{ id: string }>();
+  const [, navigate] = useLocation();
+  const { data: project, isLoading } = useQuery<any>({
+    queryKey: ["/api/projects", params.id],
+    queryFn: () => fetch(`/api/projects/${params.id}`).then(r => r.json()),
+    enabled: !!params.id,
+  });
+
+  React.useEffect(() => {
+    if (!project || isLoading) return;
+    const modules: string[] = project.engagementModules
+      ? (typeof project.engagementModules === "string" ? JSON.parse(project.engagementModules) : project.engagementModules)
+      : ["selection"];
+
+    if (modules.includes("health_check") && !modules.includes("selection")) {
+      navigate(`/projects/${params.id}/health-check`, { replace: true });
+    } else if (modules.includes("ivv") && !modules.includes("selection") && !modules.includes("health_check")) {
+      navigate(`/projects/${params.id}/compliance`, { replace: true });
+    }
+    // If selection is included (or default), stay on ProjectView (requirements)
+  }, [project, isLoading, params.id, navigate]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="w-6 h-6 border-2 border-foreground/20 border-t-foreground rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  // For selection projects (or mixed), show the requirements page
+  return <ProjectView />;
+}
 
 const sidebarStyle = {
   "--sidebar-width": "15rem",
@@ -63,7 +100,7 @@ function AppLayout() {
               <Route path="/projects/:id/scorecard" component={EvaluationScorecardPage} />
               <Route path="/projects/:id/future-state" component={FutureStatePage} />
               <Route path="/clients/:id/profile" component={ClientProfilePage} />
-              <Route path="/projects/:id" component={ProjectView} />
+              <Route path="/projects/:id" component={ProjectRedirect} />
               <Route path="/templates" component={TemplateLibrary} />
               <Route path="/knowledge-base" component={KnowledgeBasePage} />
               <Route path="/vendor-monitoring" component={VendorMonitoringPage} />

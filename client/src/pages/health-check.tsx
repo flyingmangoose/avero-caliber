@@ -588,13 +588,13 @@ export default function HealthCheckPage() {
 
       <ScrollArea className="flex-1">
         <div className="p-4 sm:p-6">
-          <Tabs defaultValue="summary" data-testid="health-check-tabs">
+          <Tabs defaultValue="documents" data-testid="health-check-tabs">
             <TabsList className="mb-4">
+              <TabsTrigger value="documents" data-testid="tab-documents"><FileText className="w-4 h-4 mr-1 inline" />Documents</TabsTrigger>
               <TabsTrigger value="summary" data-testid="tab-summary"><Activity className="w-4 h-4 mr-1 inline" />Summary</TabsTrigger>
               <TabsTrigger value="assessment" data-testid="tab-assessment">Assessment</TabsTrigger>
               <TabsTrigger value="raid" data-testid="tab-raid">RAID Log</TabsTrigger>
               <TabsTrigger value="budget" data-testid="tab-budget">Budget & Schedule</TabsTrigger>
-              <TabsTrigger value="documents" data-testid="tab-documents"><FileText className="w-4 h-4 mr-1 inline" />Documents</TabsTrigger>
             </TabsList>
 
             {/* TAB 0: Executive Summary */}

@@ -115,7 +115,7 @@ export function AppSidebar() {
             <SidebarGroupLabel className="text-sidebar-foreground/50 text-xs uppercase tracking-widest font-semibold">Project</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu className={projectId ? "" : "opacity-40 pointer-events-none"}>
-                {/* ── DISCOVERY ── */}
+                {/* ── DISCOVERY ── always visible */}
                 <p className="text-xs font-semibold text-sidebar-foreground/40 uppercase tracking-widest px-2.5 pt-2 pb-0.5">Discovery</p>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={location === `/clients/${clientId}/profile`}>
@@ -142,50 +142,52 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
 
-                {/* ── SELECTION ── */}
-                <p className="text-xs font-semibold text-sidebar-foreground/40 uppercase tracking-widest px-2.5 pt-2 pb-0.5">Selection</p>
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={location === `/projects/${projectId}/outcomes`}>
-                    <Link href={`/projects/${projectId}/outcomes`} data-testid="nav-outcomes">
-                      <Target className="w-4 h-4" />
-                      <span>Outcomes</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={location === `/projects/${projectId}`}>
-                    <Link href={`/projects/${projectId}`} data-testid="nav-project-requirements">
-                      <FolderOpen className="w-4 h-4" />
-                      <span>Requirements</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={location === `/projects/${projectId}/evaluation`}>
-                    <Link href={`/projects/${projectId}/evaluation`} data-testid="nav-vendor-evaluation">
-                      <BarChart3 className="w-4 h-4" />
-                      <span>Vendor Evaluation</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={location === `/projects/${projectId}/stakeholder-feedback`}>
-                    <Link href={`/projects/${projectId}/stakeholder-feedback`} data-testid="nav-stakeholder-feedback">
-                      <MessageSquare className="w-4 h-4" />
-                      <span>Stakeholder Feedback</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={location === `/projects/${projectId}/scorecard`}>
-                    <Link href={`/projects/${projectId}/scorecard`} data-testid="nav-scorecard">
-                      <Trophy className="w-4 h-4" />
-                      <span>Scorecard</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
+                {/* ── SELECTION ── dimmed if not in modules */}
+                <div className={hasModule("selection") ? "" : "opacity-40"}>
+                  <p className="text-xs font-semibold text-sidebar-foreground/40 uppercase tracking-widest px-2.5 pt-2 pb-0.5">Selection</p>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={location === `/projects/${projectId}/outcomes`}>
+                      <Link href={`/projects/${projectId}/outcomes`} data-testid="nav-outcomes">
+                        <Target className="w-4 h-4" />
+                        <span>Outcomes</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={location === `/projects/${projectId}`}>
+                      <Link href={`/projects/${projectId}`} data-testid="nav-project-requirements">
+                        <FolderOpen className="w-4 h-4" />
+                        <span>Requirements</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={location === `/projects/${projectId}/evaluation`}>
+                      <Link href={`/projects/${projectId}/evaluation`} data-testid="nav-vendor-evaluation">
+                        <BarChart3 className="w-4 h-4" />
+                        <span>Vendor Evaluation</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={location === `/projects/${projectId}/stakeholder-feedback`}>
+                      <Link href={`/projects/${projectId}/stakeholder-feedback`} data-testid="nav-stakeholder-feedback">
+                        <MessageSquare className="w-4 h-4" />
+                        <span>Stakeholder Feedback</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={location === `/projects/${projectId}/scorecard`}>
+                      <Link href={`/projects/${projectId}/scorecard`} data-testid="nav-scorecard">
+                        <Trophy className="w-4 h-4" />
+                        <span>Scorecard</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </div>
 
-                {/* ── IMPLEMENTATION ── */}
+                {/* ── IMPLEMENTATION ── always visible for health_check/ivv */}
                 <p className="text-xs font-semibold text-sidebar-foreground/40 uppercase tracking-widest px-2.5 pt-2 pb-0.5">Implementation</p>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={location === `/projects/${projectId}/compliance`}>
