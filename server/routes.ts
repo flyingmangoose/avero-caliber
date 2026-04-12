@@ -5702,8 +5702,13 @@ Write in professional consulting tone covering: overall posture assessment, key 
             storage.createRaidItem({ projectId, type: raid.type || "risk", title: raid.title, description: raid.description || null, severity: raid.severity || "medium", status: raid.status || "open", owner: raid.owner || null, dueDate: raid.dueDate || null, sourceDocId: docId });
             applied.raids++;
           }
-          // Skip auto-applying budget items — contract baseline is the source of truth for budget
-          // Budget entries can still be added manually via the Budget & Schedule tab
+          // Only apply actual_spend and change_order from documents — original_contract comes from contract baseline
+          for (const budget of (items.budgetItems || [])) {
+            const cat = budget.category || "actual_spend";
+            if (cat === "original_contract" || cat === "additional_funding") continue;
+            storage.createBudgetEntry({ projectId, category: cat, description: budget.description, amount: budget.amount || 0, date: budget.date || null, notes: budget.notes || null, sourceDocId: docId });
+            applied.budgetItems++;
+          }
           for (const sched of (items.scheduleItems || [])) {
             storage.createScheduleEntry({ projectId, milestone: sched.milestone, originalDate: sched.originalDate || null, currentDate: sched.currentDate || null, status: sched.status || "on_track", varianceDays: sched.varianceDays || null, notes: sched.notes || null, sourceDocId: docId });
             applied.scheduleItems++;
@@ -5928,7 +5933,20 @@ Write in professional consulting tone covering: overall posture assessment, key 
       applied.raids++;
     }
 
-    // Skip auto-applying budget items — contract baseline is the source of truth
+    // Only apply actual_spend and change_order — original_contract comes from contract baseline
+    for (const budget of (items.budgetItems || [])) {
+      const cat = budget.category || "actual_spend";
+      if (cat === "original_contract" || cat === "additional_funding") continue;
+      storage.createBudgetEntry({
+        projectId,
+        category: cat,
+        description: budget.description,
+        amount: budget.amount || 0,
+        date: budget.date || null,
+        notes: budget.notes || null,
+      });
+      applied.budgetItems++;
+    }
 
     // Apply schedule items
     for (const sched of (items.scheduleItems || [])) {
