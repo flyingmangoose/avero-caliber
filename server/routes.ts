@@ -5543,15 +5543,15 @@ Write in professional consulting tone covering: overall posture assessment, key 
       if (ext === "txt" || ext === "csv" || ext === "md" || ext === "json") {
         rawText = fileBuffer.toString("utf-8");
       } else if (ext === "pdf") {
-        const pdfParse = (await import("pdf-parse")).default;
+        const pdfMod = require("pdf-parse");
+        const pdfParse = typeof pdfMod === "function" ? pdfMod : pdfMod.default;
         const pdfData = await pdfParse(fileBuffer);
         rawText = pdfData.text;
       } else if (ext === "docx" || ext === "doc") {
-        const mammoth = await import("mammoth");
+        const mammoth = require("mammoth");
         const result = await mammoth.extractRawText({ buffer: fileBuffer });
         rawText = result.value;
       } else if (ext === "xlsx" || ext === "xls") {
-        const XLSX = await import("xlsx");
         const workbook = XLSX.read(fileBuffer, { type: "buffer" });
         const sheets: string[] = [];
         for (const sheetName of workbook.SheetNames) {
@@ -5560,9 +5560,9 @@ Write in professional consulting tone covering: overall posture assessment, key 
         }
         rawText = sheets.join("\n\n");
       } else if (ext === "pptx" || ext === "ppt") {
-        // Extract text from PPTX using xml parsing
         try {
-          const JSZip = (await import("jszip")).default;
+          const jszipMod = require("jszip");
+          const JSZip = typeof jszipMod === "function" ? jszipMod : jszipMod.default;
           const zip = await JSZip.loadAsync(fileBuffer);
           const slideTexts: string[] = [];
           const slideFiles = Object.keys(zip.files).filter(f => f.match(/ppt\/slides\/slide\d+\.xml/)).sort();
