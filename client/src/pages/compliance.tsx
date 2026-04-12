@@ -872,12 +872,8 @@ function CheckpointsTab({ contractId, projectId }: { contractId: number | null; 
   const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
-  const toggleExpanded = (id: number) => setExpandedIds(prev => {
-    const next = new Set(prev);
-    if (next.has(id)) next.delete(id); else next.add(id);
-    return next;
-  });
+  const [expandedIds, setExpandedIds] = useState<Record<number, boolean>>({});
+  const toggleExpanded = (id: number) => setExpandedIds(prev => ({ ...prev, [id]: !prev[id] }));
   const [form, setForm] = useState({ name: "", phase: "planning", scheduledDate: "", status: "upcoming", overallAssessment: "", recommendations: "" as string, findings: "" as string });
   const [assessmentForm, setAssessmentForm] = useState<Record<string, { rating: string; observation: string; recommendation: string }>>(
     Object.fromEntries(ASSESSMENT_DIMENSIONS.map(d => [d.key, { rating: "", observation: "", recommendation: "" }]))
@@ -1046,10 +1042,10 @@ function CheckpointsTab({ contractId, projectId }: { contractId: number | null; 
                   </div>
                 </div>
                 <button className="text-xs text-accent mt-1 flex items-center gap-1 hover:underline" onClick={() => toggleExpanded(cp.id)} data-testid={`expand-checkpoint-${cp.id}`}>
-                  <ChevronRight className={`w-3 h-3 transition-transform ${expandedIds.has(cp.id) ? "rotate-90" : ""}`} />
+                  <ChevronRight className={`w-3 h-3 transition-transform ${expandedIds[cp.id] ? "rotate-90" : ""}`} />
                   Details
                 </button>
-                {expandedIds.has(cp.id) && (
+                {expandedIds[cp.id] && (
                   <div className="mt-2 space-y-2 text-sm">
                     {cp.overallAssessment && <div><span className="font-semibold text-muted-foreground">Assessment:</span> <span className="text-foreground">{cp.overallAssessment}</span></div>}
                     {cp.recommendations && (
@@ -1078,6 +1074,9 @@ function CheckpointsTab({ contractId, projectId }: { contractId: number | null; 
                       </div>
                     )}
                     <CheckpointAssessmentDimensions checkpointId={cp.id} />
+                    {!cp.overallAssessment && !cp.recommendations && !cp.findings && (
+                      <p className="text-xs text-muted-foreground italic">No assessment data yet — upload project documents to trigger automatic assessment.</p>
+                    )}
                   </div>
                 )}
               </CardContent>
