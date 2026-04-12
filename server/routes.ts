@@ -398,7 +398,7 @@ Return ONLY the JSON.`);
         })),
         projectCount: clientProjects.length,
       };
-    }).filter(c => isAdmin || c.projectCount > 0); // Hide clients with no accessible projects
+    }); // Show all clients to all authenticated users
 
     // Also include orphan projects (no client) as a virtual "Unassigned" group
     const orphans = allProjects.filter(p => !p.clientId && filterProject(p));
