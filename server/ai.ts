@@ -914,6 +914,7 @@ DOCUMENT TYPE: ${documentType}
 ${contextStr}
 
 Analyze the following document and extract ALL structured data. Be thorough — every risk, issue, budget line, schedule milestone, and finding matters.
+${documentType === "interview_notes" ? "\nThis is a STAKEHOLDER INTERVIEW transcript/notes from a health check engagement. Pay special attention to:\n- User adoption concerns and training gaps (→ change_management findings)\n- System performance complaints and workarounds (→ technical findings)\n- Process pain points and manual workarounds (→ scope_requirements findings)\n- Data quality issues reported by users (→ data_migration findings)\n- Vendor/SI responsiveness complaints (→ vendor_performance findings)\n- Compliance or security concerns raised (→ compliance_security findings)\n- Any risks, issues, or dependencies mentioned by the interviewee\n" : ""}
 
 For each category, extract as much as possible:
 

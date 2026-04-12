@@ -71,6 +71,7 @@ const DOC_TYPES: { value: string; label: string; color: string }[] = [
   { value: "budget_report",   label: "Budget Report",    color: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300" },
   { value: "schedule_update", label: "Schedule Update",  color: "bg-indigo-100 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300" },
   { value: "change_request",  label: "Change Request",   color: "bg-orange-100 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300" },
+  { value: "interview_notes", label: "Interview Notes",   color: "bg-cyan-100 text-cyan-700 dark:bg-cyan-950/40 dark:text-cyan-300" },
   { value: "meeting_minutes", label: "Meeting Minutes",  color: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300" },
   { value: "sow_contract",    label: "SOW/Contract",     color: "bg-teal-100 text-teal-700 dark:bg-teal-950/40 dark:text-teal-300" },
   { value: "other",           label: "Other",            color: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300" },
@@ -420,6 +421,7 @@ function guessDocType(fileName: string): string {
   if (lower.includes("schedule") || lower.includes("timeline") || lower.includes("milestone")) return "schedule_update";
   if (lower.includes("test") || lower.includes("uat") || lower.includes("sit")) return "test_results";
   if (lower.includes("change request") || lower.includes("cr")) return "change_request";
+  if (lower.includes("interview") || lower.includes("transcript") || lower.includes("fireflies") || lower.includes("stakeholder")) return "interview_notes";
   if (lower.includes("meeting") || lower.includes("minutes")) return "meeting_minutes";
   if (lower.includes("sow") || lower.includes("contract")) return "sow_contract";
   if (lower.includes("status") || lower.includes("report")) return "status_report";
