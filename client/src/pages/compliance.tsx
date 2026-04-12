@@ -830,24 +830,58 @@ function ContractDialog({ open, onOpenChange, form, setForm, onSubmit, isPending
   );
 }
 
+// ==================== CHECKPOINT ASSESSMENT DIMENSIONS (per-checkpoint fetch) ====================
+
+function CheckpointAssessmentDimensions({ checkpointId }: { checkpointId: number }) {
+  const { data: assessment } = useQuery<any[]>({
+    queryKey: ["/api/checkpoints", checkpointId, "assessment"],
+    queryFn: () => apiRequest("GET", `/api/checkpoints/${checkpointId}/assessment`).then(r => r.json()),
+  });
+
+  if (!assessment || assessment.length === 0) return null;
+
+  const ratings = assessment.map((a: any) => a.rating);
+  const overall = ratings.some((r: string) => r === "at_risk" || r === "unsatisfactory") ? "Not Ready"
+    : ratings.some((r: string) => r === "needs_attention") ? "Passed with Conditions" : "Passed";
+  const overallColor = overall === "Passed" ? "bg-emerald-100 text-emerald-700" : overall === "Passed with Conditions" ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700";
+
+  return (
+    <div className="mt-2 pt-2 border-t">
+      <div className="flex items-center gap-2 mb-2">
+        <span className="font-semibold text-muted-foreground">Structured Assessment:</span>
+        <Badge className={`text-xs ${overallColor}`}>{overall}</Badge>
+      </div>
+      <div className="grid grid-cols-2 gap-1.5">
+        {assessment.map((a: any) => {
+          const dimLabel = ASSESSMENT_DIMENSIONS.find(d => d.key === a.dimension)?.label || a.dimension;
+          return (
+            <div key={a.dimension} className="flex items-center gap-1.5 px-2 py-1 rounded border border-border/50 bg-muted/20">
+              <Badge className={`text-xs shrink-0 ${DIMENSION_RATING_COLORS[a.rating] || ""}`}>{formatLabel(a.rating)}</Badge>
+              <span className="text-xs truncate">{dimLabel}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ==================== TAB 2: IV&V ASSESSMENTS ====================
 
 function CheckpointsTab({ contractId, projectId }: { contractId: number | null; projectId: number }) {
   const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
+  const toggleExpanded = (id: number) => setExpandedIds(prev => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
   const [form, setForm] = useState({ name: "", phase: "planning", scheduledDate: "", status: "upcoming", overallAssessment: "", recommendations: "" as string, findings: "" as string });
   const [assessmentForm, setAssessmentForm] = useState<Record<string, { rating: string; observation: string; recommendation: string }>>(
     Object.fromEntries(ASSESSMENT_DIMENSIONS.map(d => [d.key, { rating: "", observation: "", recommendation: "" }]))
   );
-
-  // Fetch assessment for expanded checkpoint
-  const { data: expandedAssessment } = useQuery<any[]>({
-    queryKey: ["/api/checkpoints", expandedId, "assessment"],
-    queryFn: () => apiRequest("GET", `/api/checkpoints/${expandedId}/assessment`).then(r => r.json()),
-    enabled: !!expandedId,
-  });
 
   // Fetch assessment for editing checkpoint
   const { data: editingAssessment } = useQuery<any[]>({
@@ -1015,10 +1049,10 @@ function CheckpointsTab({ contractId, projectId }: { contractId: number | null; 
                     <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => deleteMutation.mutate(cp.id)} data-testid={`delete-checkpoint-${cp.id}`}><Trash2 className="w-3 h-3" /></Button>
                   </div>
                 </div>
-                <Collapsible open={expandedId === cp.id} onOpenChange={(open) => setExpandedId(open ? cp.id : null)}>
+                <Collapsible open={expandedIds.has(cp.id)} onOpenChange={() => toggleExpanded(cp.id)}>
                   <CollapsibleTrigger asChild>
                     <button className="text-xs text-accent mt-1 flex items-center gap-1 hover:underline" data-testid={`expand-checkpoint-${cp.id}`}>
-                      <ChevronRight className={`w-3 h-3 transition-transform ${expandedId === cp.id ? "rotate-90" : ""}`} />
+                      <ChevronRight className={`w-3 h-3 transition-transform ${expandedIds.has(cp.id) ? "rotate-90" : ""}`} />
                       Details
                     </button>
                   </CollapsibleTrigger>
@@ -1050,31 +1084,7 @@ function CheckpointsTab({ contractId, projectId }: { contractId: number | null; 
                       </div>
                     )}
                     {/* Structured Assessment Dimensions */}
-                    {expandedId === cp.id && expandedAssessment && expandedAssessment.length > 0 && (() => {
-                      const ratings = expandedAssessment.map((a: any) => a.rating);
-                      const overall = ratings.some((r: string) => r === "at_risk" || r === "unsatisfactory") ? "Not Ready"
-                        : ratings.some((r: string) => r === "needs_attention") ? "Passed with Conditions" : "Passed";
-                      const overallColor = overall === "Passed" ? "bg-emerald-100 text-emerald-700" : overall === "Passed with Conditions" ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700";
-                      return (
-                        <div className="mt-2 pt-2 border-t">
-                          <div className="flex items-center gap-2 mb-2">
-                            <span className="font-semibold text-muted-foreground">Structured Assessment:</span>
-                            <Badge className={`text-xs ${overallColor}`}>{overall}</Badge>
-                          </div>
-                          <div className="grid grid-cols-2 gap-1.5">
-                            {expandedAssessment.map((a: any) => {
-                              const dimLabel = ASSESSMENT_DIMENSIONS.find(d => d.key === a.dimension)?.label || a.dimension;
-                              return (
-                                <div key={a.dimension} className="flex items-center gap-1.5 px-2 py-1 rounded border border-border/50 bg-muted/20">
-                                  <Badge className={`text-xs shrink-0 ${DIMENSION_RATING_COLORS[a.rating] || ""}`}>{formatLabel(a.rating)}</Badge>
-                                  <span className="text-xs truncate">{dimLabel}</span>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      );
-                    })()}
+                    {expandedIds.has(cp.id) && <CheckpointAssessmentDimensions checkpointId={cp.id} />}
                   </CollapsibleContent>
                 </Collapsible>
               </CardContent>
