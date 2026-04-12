@@ -914,6 +914,7 @@ export interface IStorage {
   // Go-Live Scorecard
   saveGoLiveScorecard(data: { baselineId: number; criteria: string; overallScore?: number | null; overallReadiness?: string | null; assessorNotes?: string | null; assessedAt: string }): GoLiveScorecard;
   getGoLiveScorecard(baselineId: number): GoLiveScorecard | undefined;
+  getGoLiveScorecardHistory(baselineId: number): GoLiveScorecard[];
 
   // Escalation Status
   getEscalationStatus(projectId: number): Deviation[];
@@ -2525,8 +2526,7 @@ export class DatabaseStorage implements IStorage {
 
   saveGoLiveScorecard(data: { baselineId: number; criteria: string; overallScore?: number | null; overallReadiness?: string | null; assessorNotes?: string | null; assessedAt: string }): GoLiveScorecard {
     const now = new Date().toISOString();
-    // Upsert: delete existing for this baseline, then insert
-    db.delete(goLiveScorecard).where(eq(goLiveScorecard.baselineId, data.baselineId)).run();
+    // Append new scorecard (keep history for trend tracking)
     return db.insert(goLiveScorecard).values({
       baselineId: data.baselineId,
       criteria: data.criteria,
@@ -2544,6 +2544,13 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(goLiveScorecard.createdAt))
       .limit(1)
       .get();
+  }
+
+  getGoLiveScorecardHistory(baselineId: number): GoLiveScorecard[] {
+    return db.select().from(goLiveScorecard)
+      .where(eq(goLiveScorecard.baselineId, baselineId))
+      .orderBy(goLiveScorecard.createdAt)
+      .all();
   }
 
   // ==================== ESCALATION STATUS ====================

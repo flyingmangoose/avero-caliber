@@ -14,7 +14,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Rocket, ChevronLeft, Check, Loader2, Sparkles, AlertTriangle, Download } from "lucide-react";
-import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from "recharts";
+import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine } from "recharts";
 
 const DEFAULT_CRITERIA = [
   { category: "Testing", key: "sit_completion", name: "SIT Completion", weight: 10, score: 0, notes: "", evidence: "", recommendation: "", confidence: "", isManual: false },
@@ -75,6 +75,12 @@ export default function GoLivePage() {
     queryKey: ["/api/contracts", contractId, "go-live-scorecard"],
     queryFn: () => apiRequest("GET", `/api/contracts/${contractId}/go-live-scorecard`).then(r => r.json()),
     enabled: !!contractId,
+  });
+
+  const { data: scorecardHistory } = useQuery<any[]>({
+    queryKey: ["/api/projects", projectId, "go-live", "history"],
+    queryFn: () => apiRequest("GET", `/api/projects/${projectId}/go-live/history`).then(r => r.json()),
+    enabled: !!projectId,
   });
 
   useEffect(() => {
@@ -289,6 +295,33 @@ export default function GoLivePage() {
                   </CardContent>
                 </Card>
               </div>
+
+              {/* Readiness Trend Over Time */}
+              {scorecardHistory && scorecardHistory.length > 1 && (
+                <Card>
+                  <CardContent className="pt-4">
+                    <h4 className="text-sm font-semibold text-muted-foreground uppercase mb-3">Readiness Trend</h4>
+                    <ResponsiveContainer width="100%" height={240}>
+                      <LineChart data={scorecardHistory.map((s: any) => ({
+                        date: new Date(s.assessedAt || s.createdAt).toLocaleDateString("en-US", { month: "short", year: "2-digit" }),
+                        score: s.overallScore || 0,
+                        readiness: s.overallReadiness,
+                      }))}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                        <XAxis dataKey="date" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                        <YAxis domain={[0, 100]} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                        <Tooltip
+                          contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "6px", fontSize: "12px" }}
+                          formatter={(value: number) => [`${value}/100`, "Score"]}
+                        />
+                        <ReferenceLine y={85} stroke="hsl(142 76% 36%)" strokeDasharray="4 4" label={{ value: "Ready", position: "right", fontSize: 10, fill: "hsl(142 76% 36%)" }} />
+                        <ReferenceLine y={70} stroke="hsl(38 92% 50%)" strokeDasharray="4 4" label={{ value: "Conditional", position: "right", fontSize: 10, fill: "hsl(38 92% 50%)" }} />
+                        <Line type="monotone" dataKey="score" stroke="hsl(var(--accent))" strokeWidth={2} dot={{ r: 4, fill: "hsl(var(--accent))" }} activeDot={{ r: 6 }} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+              )}
             </>
           )}
 

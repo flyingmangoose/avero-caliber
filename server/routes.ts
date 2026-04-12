@@ -3250,6 +3250,15 @@ Write in professional consulting tone covering: overall posture assessment, key 
     }
   });
 
+  // Go-live readiness trend (history of all assessments)
+  app.get("/api/projects/:id/go-live/history", (req, res) => {
+    const projectId = parseInt(req.params.id);
+    const contracts = storage.getContractBaselines(projectId);
+    if (contracts.length === 0) return res.json([]);
+    const history = storage.getGoLiveScorecardHistory(contracts[0].id);
+    res.json(history);
+  });
+
   // ==================== ESCALATION STATUS ====================
 
   // Get escalation status for a project
