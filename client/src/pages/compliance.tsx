@@ -1041,22 +1041,16 @@ function CheckpointsTab({ contractId, projectId }: { contractId: number | null; 
                   </div>
                   <div className="flex items-center gap-1">
                     {cp.scheduledDate && <span className="text-xs text-muted-foreground flex items-center gap-1"><Calendar className="w-3 h-3" />{cp.scheduledDate}</span>}
-                    <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={() => autoAssessCheckpoint(cp.id)} disabled={autoAssessing === cp.id} data-testid={`auto-assess-${cp.id}`}>
-                      {autoAssessing === cp.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
-                      {autoAssessing === cp.id ? "Assessing..." : "Auto-Assess"}
-                    </Button>
                     <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(cp)} data-testid={`edit-checkpoint-${cp.id}`}><Pencil className="w-3 h-3" /></Button>
                     <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => deleteMutation.mutate(cp.id)} data-testid={`delete-checkpoint-${cp.id}`}><Trash2 className="w-3 h-3" /></Button>
                   </div>
                 </div>
-                <Collapsible open={expandedIds.has(cp.id)} onOpenChange={() => toggleExpanded(cp.id)}>
-                  <CollapsibleTrigger asChild>
-                    <button className="text-xs text-accent mt-1 flex items-center gap-1 hover:underline" data-testid={`expand-checkpoint-${cp.id}`}>
-                      <ChevronRight className={`w-3 h-3 transition-transform ${expandedIds.has(cp.id) ? "rotate-90" : ""}`} />
-                      Details
-                    </button>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="mt-2 space-y-2 text-sm">
+                <button className="text-xs text-accent mt-1 flex items-center gap-1 hover:underline" onClick={() => toggleExpanded(cp.id)} data-testid={`expand-checkpoint-${cp.id}`}>
+                  <ChevronRight className={`w-3 h-3 transition-transform ${expandedIds.has(cp.id) ? "rotate-90" : ""}`} />
+                  Details
+                </button>
+                {expandedIds.has(cp.id) && (
+                  <div className="mt-2 space-y-2 text-sm">
                     {cp.overallAssessment && <div><span className="font-semibold text-muted-foreground">Assessment:</span> <span className="text-foreground">{cp.overallAssessment}</span></div>}
                     {cp.recommendations && (
                       <div>
@@ -1083,10 +1077,9 @@ function CheckpointsTab({ contractId, projectId }: { contractId: number | null; 
                         </ul>
                       </div>
                     )}
-                    {/* Structured Assessment Dimensions */}
-                    {expandedIds.has(cp.id) && <CheckpointAssessmentDimensions checkpointId={cp.id} />}
-                  </CollapsibleContent>
-                </Collapsible>
+                    <CheckpointAssessmentDimensions checkpointId={cp.id} />
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
