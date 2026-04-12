@@ -164,8 +164,8 @@ function DocumentRow({
         <div className="flex items-center gap-2 min-w-0">
           <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
           <div className="min-w-0">
-            <p className="text-xs font-medium truncate">{doc.fileName}</p>
-            {doc.period && <p className="text-xs text-muted-foreground">{doc.period}</p>}
+            <p className="text-sm font-medium truncate">{doc.fileName}</p>
+            {doc.period && <p className="text-sm text-muted-foreground">{doc.period}</p>}
           </div>
         </div>
 
@@ -224,7 +224,7 @@ function DocumentRow({
           <div className="flex items-start gap-3">
             <div className="flex-1">
               <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">AI Summary</p>
-              <p className="text-xs leading-relaxed">{analysis.summary || "No summary available."}</p>
+              <p className="text-sm leading-relaxed">{analysis.summary || "No summary available."}</p>
             </div>
             {analysis.overallHealth && (
               <Badge className={`text-xs capitalize shrink-0 ${HEALTH_COLORS[analysis.overallHealth.toLowerCase()] ?? "bg-slate-100 text-slate-600"}`}>
@@ -248,7 +248,7 @@ function DocumentRow({
 
           {/* Applied status indicator */}
           {(applyResult || doc.appliedAt) && (
-            <div className="flex items-center gap-2 text-xs text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 rounded p-2">
+            <div className="flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 rounded p-2">
               <Check className="w-3.5 h-3.5 shrink-0" />
               {applyResult
                 ? <>Applied: {applyResult.applied.raids ?? 0} RAID, {applyResult.applied.budgetItems ?? 0} budget, {applyResult.applied.scheduleItems ?? 0} schedule, {applyResult.applied.findings ?? 0} findings</>
@@ -259,7 +259,7 @@ function DocumentRow({
 
           {/* Auto-applied notice or manual apply fallback */}
           {hasItems && !doc.appliedAt && !applyResult && (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/30 rounded p-2">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/30 rounded p-2">
               <Loader2 className="w-3 h-3 animate-spin" />
               Auto-applying items and synthesizing assessment...
             </div>
@@ -290,7 +290,7 @@ function ExtractedDetails({ analysis }: { analysis: AnalysisResult }) {
         >
           <div className="space-y-1">
             {analysis.raids.map((r: any, i: number) => (
-              <div key={i} className="text-xs flex gap-2 items-start py-1 border-b border-border/30 last:border-0">
+              <div key={i} className="text-sm flex gap-2 items-start py-1 border-b border-border/30 last:border-0">
                 <Badge variant="outline" className="text-xs capitalize shrink-0 mt-0.5">{r.type ?? "risk"}</Badge>
                 <div>
                   <p className="font-medium">{r.title ?? r.description ?? "—"}</p>
@@ -313,7 +313,7 @@ function ExtractedDetails({ analysis }: { analysis: AnalysisResult }) {
         >
           <div className="space-y-1">
             {analysis.budgetItems.map((b: any, i: number) => (
-              <div key={i} className="text-xs flex gap-2 items-center py-1 border-b border-border/30 last:border-0">
+              <div key={i} className="text-sm flex gap-2 items-center py-1 border-b border-border/30 last:border-0">
                 <p className="flex-1">{b.description ?? b.category ?? "—"}</p>
                 {b.amount != null && (
                   <span className="font-mono text-emerald-600 dark:text-emerald-400 shrink-0">
@@ -336,7 +336,7 @@ function ExtractedDetails({ analysis }: { analysis: AnalysisResult }) {
         >
           <div className="space-y-1">
             {analysis.scheduleItems.map((s: any, i: number) => (
-              <div key={i} className="text-xs flex gap-2 items-center py-1 border-b border-border/30 last:border-0">
+              <div key={i} className="text-sm flex gap-2 items-center py-1 border-b border-border/30 last:border-0">
                 <p className="flex-1">{s.milestone ?? s.name ?? "—"}</p>
                 {s.currentDate && <span className="text-muted-foreground shrink-0">{s.currentDate}</span>}
                 {s.status && (
@@ -360,7 +360,7 @@ function ExtractedDetails({ analysis }: { analysis: AnalysisResult }) {
         >
           <div className="space-y-1">
             {analysis.findings.map((f: any, i: number) => (
-              <div key={i} className="text-xs py-1 border-b border-border/30 last:border-0">
+              <div key={i} className="text-sm py-1 border-b border-border/30 last:border-0">
                 <p>{typeof f === "string" ? f : (f.description ?? f.text ?? JSON.stringify(f))}</p>
               </div>
             ))}
@@ -403,18 +403,41 @@ function Collapsible({
 
 // ─── Main DocumentsTab component ─────────────────────────────────────────────
 
+interface QueuedFile {
+  id: string;
+  file: File;
+  documentType: string;
+  period: string;
+  status: "queued" | "uploading" | "done" | "error";
+  error?: string;
+}
+
+function guessDocType(fileName: string): string {
+  const lower = fileName.toLowerCase();
+  if (lower.includes("raid") || lower.includes("risk register")) return "raid_log";
+  if (lower.includes("risk")) return "risk_register";
+  if (lower.includes("budget") || lower.includes("financial")) return "budget_report";
+  if (lower.includes("schedule") || lower.includes("timeline") || lower.includes("milestone")) return "schedule_update";
+  if (lower.includes("test") || lower.includes("uat") || lower.includes("sit")) return "test_results";
+  if (lower.includes("change request") || lower.includes("cr")) return "change_request";
+  if (lower.includes("meeting") || lower.includes("minutes")) return "meeting_minutes";
+  if (lower.includes("sow") || lower.includes("contract")) return "sow_contract";
+  if (lower.includes("status") || lower.includes("report")) return "status_report";
+  return "status_report";
+}
+
 export function DocumentsTab({ projectId, onApplyComplete }: { projectId: number; onApplyComplete?: () => void }) {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ── Form state ──────────────────────────────────────────────────────────────
   const [dragOver, setDragOver]         = useState(false);
-  const [fileName, setFileName]         = useState("");
+  const [fileQueue, setFileQueue]       = useState<QueuedFile[]>([]);
   const [pastedContent, setPastedContent] = useState("");
   const [documentType, setDocumentType] = useState("status_report");
   const [period, setPeriod]             = useState("");
   const [showPasteArea, setShowPasteArea] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading]   = useState(false);
 
   // ── Queries ─────────────────────────────────────────────────────────────────
   const { data: documents = [], isLoading } = useQuery<ProjectDocument[]>({
@@ -429,18 +452,38 @@ export function DocumentsTab({ projectId, onApplyComplete }: { projectId: number
     },
   });
 
-  // ── Mutations ────────────────────────────────────────────────────────────────
+  // ── Upload all queued files ──────────────────────────────────────────────────
 
-  const createAndAnalyze = useMutation({
-    mutationFn: async () => {
-      let created: ProjectDocument;
+  const uploadAll = useCallback(async () => {
+    if (fileQueue.length === 0 && !pastedContent.trim()) return;
+    setIsUploading(true);
 
-      if (selectedFile) {
-        // Upload actual file — server extracts text from PDF, DOCX, XLSX, PPTX, etc.
+    // Upload pasted content if present
+    if (pastedContent.trim() && fileQueue.length === 0) {
+      try {
+        const createRes = await apiRequest("POST", `/api/projects/${projectId}/documents`, {
+          fileName: "Pasted Document",
+          documentType,
+          rawText: pastedContent,
+          period: period || null,
+        });
+        const created = await createRes.json();
+        await apiRequest("POST", `/api/projects/${projectId}/documents/${created.id}/analyze`);
+        toast({ title: "Document uploaded", description: "AI analysis started." });
+      } catch (e: any) {
+        toast({ title: "Upload failed", description: e.message, variant: "destructive" });
+      }
+    }
+
+    // Upload each queued file
+    let successCount = 0;
+    for (const qf of fileQueue) {
+      setFileQueue(prev => prev.map(f => f.id === qf.id ? { ...f, status: "uploading" as const } : f));
+      try {
         const fd = new FormData();
-        fd.append("file", selectedFile);
-        fd.append("documentType", documentType);
-        if (period) fd.append("period", period);
+        fd.append("file", qf.file);
+        fd.append("documentType", qf.documentType);
+        if (qf.period) fd.append("period", qf.period);
         const uploadRes = await fetch(`/api/projects/${projectId}/documents/upload`, {
           method: "POST",
           body: fd,
@@ -450,37 +493,29 @@ export function DocumentsTab({ projectId, onApplyComplete }: { projectId: number
           const err = await uploadRes.json().catch(() => ({ error: "Upload failed" }));
           throw new Error(err.error || "Upload failed");
         }
-        created = await uploadRes.json();
-      } else if (pastedContent.trim()) {
-        // Pasted text content
-        const createRes = await apiRequest("POST", `/api/projects/${projectId}/documents`, {
-          fileName: fileName || "Pasted Document",
-          documentType,
-          rawText: pastedContent,
-          period: period || null,
-        });
-        created = await createRes.json();
-      } else {
-        throw new Error("Please select a file or paste document content.");
+        const created = await uploadRes.json();
+        // Fire off analysis (don't await — let it process in background)
+        apiRequest("POST", `/api/projects/${projectId}/documents/${created.id}/analyze`).catch(() => {});
+        setFileQueue(prev => prev.map(f => f.id === qf.id ? { ...f, status: "done" as const } : f));
+        successCount++;
+      } catch (e: any) {
+        setFileQueue(prev => prev.map(f => f.id === qf.id ? { ...f, status: "error" as const, error: e.message } : f));
       }
+    }
 
-      // Trigger AI analysis
-      await apiRequest("POST", `/api/projects/${projectId}/documents/${created.id}/analyze`);
-
-      return created;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "documents"] });
-      // Reset form
-      setFileName("");
+    queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "documents"] });
+    if (successCount > 0) {
+      toast({ title: `${successCount} document${successCount > 1 ? "s" : ""} uploaded`, description: "AI analysis started. Results will appear shortly." });
+    }
+    // Clear queue after a moment so user can see status
+    setTimeout(() => {
+      setFileQueue([]);
       setPastedContent("");
       setPeriod("");
       setShowPasteArea(false);
-      setSelectedFile(null);
-      toast({ title: "Document uploaded", description: "AI analysis started. Results will appear shortly." });
-    },
-    onError: (e: any) => toast({ title: "Upload failed", description: e.message, variant: "destructive" }),
-  });
+      setIsUploading(false);
+    }, 1500);
+  }, [fileQueue, pastedContent, documentType, period, projectId, toast]);
 
   const deleteDocument = useMutation({
     mutationFn: (docId: number) => apiRequest("DELETE", `/api/projects/${projectId}/documents/${docId}`),
@@ -491,37 +526,37 @@ export function DocumentsTab({ projectId, onApplyComplete }: { projectId: number
     onError: (e: any) => toast({ title: "Delete failed", description: e.message, variant: "destructive" }),
   });
 
-  // ── File handling ────────────────────────────────────────────────────────────
+  // ── File handling (multi-file) ────────────────────────────────────────────────
 
-  const handleFile = useCallback((file: File) => {
-    setFileName(file.name);
-    setSelectedFile(file);
-    const ext = file.name.split(".").pop()?.toLowerCase();
-
-    if (ext === "txt" || ext === "csv" || ext === "md" || ext === "json") {
-      // Also read text for preview in paste area
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setPastedContent((e.target?.result as string) ?? "");
-        setShowPasteArea(true);
-      };
-      reader.readAsText(file);
-    }
-    // For PDF, DOCX, XLSX, PPTX — file will be uploaded directly to server for extraction
-    // No need to ask user to paste text
+  const addFiles = useCallback((files: FileList | File[]) => {
+    const newFiles: QueuedFile[] = Array.from(files).map(file => ({
+      id: `${file.name}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      file,
+      documentType: guessDocType(file.name),
+      period: "",
+      status: "queued" as const,
+    }));
+    setFileQueue(prev => [...prev, ...newFiles]);
   }, []);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setDragOver(false);
-    const file = e.dataTransfer.files[0];
-    if (file) handleFile(file);
-  }, [handleFile]);
+    if (e.dataTransfer.files.length > 0) addFiles(e.dataTransfer.files);
+  }, [addFiles]);
 
   const handleFileInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) handleFile(file);
-  }, [handleFile]);
+    if (e.target.files && e.target.files.length > 0) addFiles(e.target.files);
+    e.target.value = ""; // Reset so same files can be selected again
+  }, [addFiles]);
+
+  const removeFromQueue = useCallback((id: string) => {
+    setFileQueue(prev => prev.filter(f => f.id !== id));
+  }, []);
+
+  const updateQueueItem = useCallback((id: string, updates: Partial<QueuedFile>) => {
+    setFileQueue(prev => prev.map(f => f.id === id ? { ...f, ...updates } : f));
+  }, []);
 
   // ALL hooks are declared above — safe to have conditional rendering below
 
@@ -531,7 +566,7 @@ export function DocumentsTab({ projectId, onApplyComplete }: { projectId: number
       {/* ── Upload Area ─────────────────────────────────────────────────────── */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm flex items-center gap-2">
+          <CardTitle className="text-base flex items-center gap-2">
             <Upload className="w-4 h-4 text-accent" />
             Upload Document
           </CardTitle>
@@ -555,45 +590,50 @@ export function DocumentsTab({ projectId, onApplyComplete }: { projectId: number
               ref={fileInputRef}
               type="file"
               className="hidden"
+              multiple
               accept=".txt,.csv,.md,.json,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
               onChange={handleFileInput}
               data-testid="file-input"
             />
-            <FileText className="w-8 h-8 mx-auto mb-2 text-muted-foreground/50" />
+            <Upload className="w-8 h-8 mx-auto mb-2 text-muted-foreground/50" />
             <p className="text-sm text-muted-foreground font-medium">
-              {fileName ? fileName : "Drop files here or click to browse"}
+              Drop files here or click to browse
             </p>
-            <p className="text-xs text-muted-foreground/60 mt-1">
-              Supports PDF, Word, Excel, PowerPoint, CSV, and text files
+            <p className="text-sm text-muted-foreground/60 mt-1">
+              Select multiple files — PDF, Word, Excel, PowerPoint, CSV, text
             </p>
           </div>
 
-          {/* Document type + period */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs text-muted-foreground mb-1 block">Document Type</label>
-              <Select value={documentType} onValueChange={setDocumentType}>
-                <SelectTrigger className="h-8 text-xs" data-testid="select-doc-type">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {DOC_TYPES.map(t => (
-                    <SelectItem key={t.value} value={t.value} className="text-xs">{t.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          {/* File queue */}
+          {fileQueue.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">{fileQueue.length} file{fileQueue.length > 1 ? "s" : ""} ready to upload</p>
+              {fileQueue.map(qf => (
+                <div key={qf.id} className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border/50 bg-card">
+                  <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
+                  <span className="text-sm font-medium truncate flex-1 min-w-0">{qf.file.name}</span>
+                  <Select value={qf.documentType} onValueChange={(v) => updateQueueItem(qf.id, { documentType: v })}>
+                    <SelectTrigger className="h-7 text-xs w-[140px] shrink-0">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DOC_TYPES.map(t => (
+                        <SelectItem key={t.value} value={t.value} className="text-xs">{t.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {qf.status === "uploading" && <Loader2 className="w-3.5 h-3.5 animate-spin text-accent shrink-0" />}
+                  {qf.status === "done" && <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />}
+                  {qf.status === "error" && <AlertTriangle className="w-3.5 h-3.5 text-destructive shrink-0" title={qf.error} />}
+                  {qf.status === "queued" && (
+                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive shrink-0" onClick={() => removeFromQueue(qf.id)}>
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  )}
+                </div>
+              ))}
             </div>
-            <div>
-              <label className="text-xs text-muted-foreground mb-1 block">Report Period (optional)</label>
-              <Input
-                className="h-8 text-xs"
-                placeholder="e.g. Week ending 3/28/2026"
-                value={period}
-                onChange={e => setPeriod(e.target.value)}
-                data-testid="input-period"
-              />
-            </div>
-          </div>
+          )}
 
           {/* Toggle paste area */}
           <div>
@@ -604,37 +644,64 @@ export function DocumentsTab({ projectId, onApplyComplete }: { projectId: number
               type="button"
             >
               {showPasteArea ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-              {showPasteArea ? "Hide" : "Paste content directly"} (for Fireflies, email, or PDF text)
+              {showPasteArea ? "Hide" : "Or paste content directly"} (for Fireflies, email, or PDF text)
             </button>
 
             {showPasteArea && (
-              <Textarea
-                className="mt-2 text-xs font-mono"
-                rows={8}
-                placeholder="Paste document text here — copied from PDF, Fireflies transcript, email body, etc."
-                value={pastedContent}
-                onChange={e => setPastedContent(e.target.value)}
-                data-testid="textarea-content"
-              />
+              <>
+                <div className="grid grid-cols-2 gap-3 mt-2 mb-2">
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1 block">Document Type</label>
+                    <Select value={documentType} onValueChange={setDocumentType}>
+                      <SelectTrigger className="h-8 text-xs" data-testid="select-doc-type">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {DOC_TYPES.map(t => (
+                          <SelectItem key={t.value} value={t.value} className="text-xs">{t.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1 block">Report Period (optional)</label>
+                    <Input
+                      className="h-8 text-xs"
+                      placeholder="e.g. Week ending 3/28/2026"
+                      value={period}
+                      onChange={e => setPeriod(e.target.value)}
+                      data-testid="input-period"
+                    />
+                  </div>
+                </div>
+                <Textarea
+                  className="text-xs font-mono"
+                  rows={8}
+                  placeholder="Paste document text here — copied from PDF, Fireflies transcript, email body, etc."
+                  value={pastedContent}
+                  onChange={e => setPastedContent(e.target.value)}
+                  data-testid="textarea-content"
+                />
+              </>
             )}
           </div>
 
           {/* Upload & Analyze button */}
           <div className="flex items-center justify-between pt-1">
-            <p className="text-xs text-muted-foreground">
+            <p className="text-sm text-muted-foreground">
               AI will extract data, apply to health check, and update the assessment automatically.
             </p>
             <Button
               size="sm"
               className="bg-accent hover:bg-accent/90 text-accent-foreground text-xs gap-1.5 shrink-0"
-              onClick={() => createAndAnalyze.mutate()}
-              disabled={createAndAnalyze.isPending || (!selectedFile && !pastedContent.trim())}
+              onClick={uploadAll}
+              disabled={isUploading || (fileQueue.length === 0 && !pastedContent.trim())}
               data-testid="button-upload-analyze"
             >
-              {createAndAnalyze.isPending
+              {isUploading
                 ? <Loader2 className="w-3 h-3 animate-spin" />
                 : <Sparkles className="w-3 h-3" />}
-              {createAndAnalyze.isPending ? "Analyzing…" : "Upload & Analyze"}
+              {isUploading ? "Uploading…" : fileQueue.length > 1 ? `Upload & Analyze ${fileQueue.length} Files` : "Upload & Analyze"}
             </Button>
           </div>
         </CardContent>
@@ -643,7 +710,7 @@ export function DocumentsTab({ projectId, onApplyComplete }: { projectId: number
       {/* ── Document Library ─────────────────────────────────────────────────── */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm flex items-center gap-2">
+          <CardTitle className="text-base flex items-center gap-2">
             <FileText className="w-4 h-4 text-accent" />
             Document Library
             {documents.length > 0 && (
@@ -661,7 +728,7 @@ export function DocumentsTab({ projectId, onApplyComplete }: { projectId: number
             <div className="text-center py-10">
               <FileText className="w-8 h-8 mx-auto mb-2 text-muted-foreground/30" />
               <p className="text-sm text-muted-foreground">No documents uploaded yet.</p>
-              <p className="text-xs text-muted-foreground/60 mt-1">
+              <p className="text-sm text-muted-foreground/60 mt-1">
                 Upload status reports, RAID logs, test results, and more to extract structured data.
               </p>
             </div>
