@@ -202,8 +202,12 @@ export default function ClientProfilePage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Building2 className="w-7 h-7 text-accent" />
-          <h1 className="text-2xl font-bold">Client Profile</h1>
+          {clientData?.logoPath ? (
+            <img src={clientData.logoPath} alt="Client logo" className="w-8 h-8 object-contain rounded" />
+          ) : (
+            <Building2 className="w-7 h-7 text-accent" />
+          )}
+          <h1 className="text-2xl font-bold">{profile?.entityName || "Client Profile"}</h1>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" data-testid="btn-re-enrich" onClick={() => { setEnrichDomain(profile?.domain || ""); setEnrichOpen(true); }}>
@@ -397,7 +401,7 @@ export default function ClientProfilePage() {
           <div className="space-y-3">
             <label className="text-sm font-medium">Domain</label>
             <Input value={enrichDomain} onChange={e => setEnrichDomain(e.target.value)} placeholder="e.g. cityofexample.gov" data-testid="input-enrich-domain" />
-            <p className="text-xs text-muted-foreground">New data will only fill in empty fields — existing values are preserved.</p>
+            <p className="text-sm text-muted-foreground">New data will only fill in empty fields — existing values are preserved.</p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEnrichOpen(false)}>Cancel</Button>

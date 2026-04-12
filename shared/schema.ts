@@ -73,6 +73,7 @@ export const clients = sqliteTable("clients", {
   leadership: text("leadership"), // JSON
   documents: text("documents"), // JSON: uploaded docs
   description: text("description").default(""),
+  logoPath: text("logo_path"), // path to uploaded logo file
   createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
   updatedAt: text("updated_at").$defaultFn(() => new Date().toISOString()),
 });

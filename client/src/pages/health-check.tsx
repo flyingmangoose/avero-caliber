@@ -402,6 +402,7 @@ export default function HealthCheckPage() {
   const [raidFilters, setRaidFilters] = useState<{ type: string; severity: string; status: string; search: string }>({ type: "", severity: "", status: "", search: "" });
 
   const { data: project } = useQuery<any>({ queryKey: ["/api/projects", projectId], queryFn: () => apiRequest("GET", `/api/projects/${projectId}`).then(r => r.json()), enabled: !!projectId });
+  const { data: clientData } = useQuery<any>({ queryKey: ["/api/clients", project?.clientId], queryFn: () => apiRequest("GET", `/api/clients/${project.clientId}`).then(r => r.json()), enabled: !!project?.clientId });
   const { data: assessments = [] } = useQuery<any[]>({ queryKey: ["/api/projects", projectId, "hc-assessments"], queryFn: () => apiRequest("GET", `/api/projects/${projectId}/health-check/assessments`).then(r => r.json()), enabled: !!projectId });
   const { data: raidItems = [] } = useQuery<any[]>({ queryKey: ["/api/projects", projectId, "raid"], queryFn: () => apiRequest("GET", `/api/projects/${projectId}/raid`).then(r => r.json()), enabled: !!projectId });
   const { data: budgetData } = useQuery<any>({ queryKey: ["/api/projects", projectId, "budget"], queryFn: () => apiRequest("GET", `/api/projects/${projectId}/budget`).then(r => r.json()), enabled: !!projectId });
@@ -573,6 +574,7 @@ export default function HealthCheckPage() {
             </Button>
           </Link>
           <span className="text-muted-foreground/40">/</span>
+          {clientData?.logoPath && <img src={clientData.logoPath} alt="" className="w-6 h-6 object-contain rounded" />}
           <h1 className="text-lg font-semibold text-foreground flex items-center gap-2">
             <Stethoscope className="w-5 h-5 text-accent" />Health Check & Rescue
           </h1>

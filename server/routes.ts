@@ -433,6 +433,30 @@ Return ONLY the JSON.`);
     res.json(updated);
   });
 
+  // Upload client logo
+  const logoUpload = multer({ dest: os.tmpdir(), limits: { fileSize: 5 * 1024 * 1024 }, fileFilter: (_req, file, cb) => {
+    if (file.mimetype.startsWith("image/")) cb(null, true);
+    else cb(new Error("Only image files allowed"));
+  }});
+
+  app.post("/api/clients/:id/logo", logoUpload.single("logo"), (req, res) => {
+    const clientId = parseInt(req.params.id);
+    const client = storage.getClient(clientId);
+    if (!client) return res.status(404).json({ error: "Client not found" });
+    if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+
+    const ext = req.file.originalname.split(".").pop()?.toLowerCase() || "png";
+    const destDir = path.resolve("dist/public/logos");
+    if (!fs.existsSync(destDir)) fs.mkdirSync(destDir, { recursive: true });
+    const destPath = path.join(destDir, `client-${clientId}.${ext}`);
+    fs.copyFileSync(req.file.path, destPath);
+    try { fs.unlinkSync(req.file.path); } catch {}
+
+    const logoUrl = `/logos/client-${clientId}.${ext}`;
+    storage.updateClient(clientId, { logoPath: logoUrl });
+    res.json({ logoPath: logoUrl });
+  });
+
   app.delete("/api/clients/:id", (req, res) => {
     storage.deleteClient(parseInt(req.params.id));
     res.json({ success: true });
@@ -474,6 +498,23 @@ Return ONLY the JSON.`);
       if (raw.currentSystems) data.currentSystems = raw.currentSystems;
       if (raw.departments) data.departments = raw.departments;
       if (raw.leadership) data.leadership = raw.leadership;
+      // Try to fetch the client logo from their domain
+      try {
+        const logoUrl = `https://logo.clearbit.com/${domain}`;
+        const logoController = new AbortController();
+        const logoTimeout = setTimeout(() => logoController.abort(), 8000);
+        const logoRes = await fetch(logoUrl, { signal: logoController.signal });
+        clearTimeout(logoTimeout);
+        if (logoRes.ok) {
+          const logoBuffer = Buffer.from(await logoRes.arrayBuffer());
+          const destDir = path.resolve("dist/public/logos");
+          if (!fs.existsSync(destDir)) fs.mkdirSync(destDir, { recursive: true });
+          const destPath = path.join(destDir, `client-${clientId}.png`);
+          fs.writeFileSync(destPath, logoBuffer);
+          data.logoPath = `/logos/client-${clientId}.png`;
+        }
+      } catch {}
+
       const updated = storage.updateClient(clientId, data);
       res.json({ success: true, data: updated });
     } catch (err: any) {
@@ -3112,10 +3153,12 @@ Write in professional consulting tone covering: overall posture assessment, key 
         doc.y = pageNum === 1 ? 72 : 72;
       }
 
-      // Logo
+      // Logos
       let logoPath = path.resolve("client/public/avero-logo.png");
       if (!fs.existsSync(logoPath)) logoPath = path.resolve("dist/public/avero-logo.png");
       const hasLogo = fs.existsSync(logoPath);
+      let clientLogoPath = client?.logoPath ? path.resolve("dist/public" + client.logoPath) : "";
+      const hasClientLogo = clientLogoPath && fs.existsSync(clientLogoPath);
 
       // ========== COVER PAGE ==========
       newPage();
@@ -3124,6 +3167,7 @@ Write in professional consulting tone covering: overall posture assessment, key 
       const contentW = pageW - 144;
       doc.rect(0, 0, pageW, 280).fill(blue);
       if (hasLogo) { try { doc.image(logoPath, 72, 60, { height: 50 }); } catch {} }
+      if (hasClientLogo) { try { doc.image(clientLogoPath, pageW - 72 - 80, 60, { height: 50 }); } catch {} }
       doc.fill("#ffffff").fontSize(32).font("Helvetica-Bold").text("Go-Live Readiness\nAssessment", 72, 140, { width: contentW, lineBreak: true });
       doc.rect(72, 300, 80, 4).fill(orange);
       doc.fill(darkText).fontSize(16).font("Helvetica-Bold").text(project.name, 72, 330, { lineBreak: false });
@@ -4407,11 +4451,14 @@ Write in professional consulting tone covering: overall posture assessment, key 
       let logoPath = path.resolve("client/public/avero-logo.png");
       if (!fs.existsSync(logoPath)) logoPath = path.resolve("dist/public/avero-logo.png");
       const hasLogo = fs.existsSync(logoPath);
+      let clientLogoPath = client?.logoPath ? path.resolve("dist/public" + client.logoPath) : "";
+      const hasClientLogo = clientLogoPath && fs.existsSync(clientLogoPath);
 
       // ========== COVER PAGE ==========
       newPage();
       doc.rect(0, 0, pageW, 280).fill(blue);
       if (hasLogo) { try { doc.image(logoPath, 72, 60, { height: 50 }); } catch {} }
+      if (hasClientLogo) { try { doc.image(clientLogoPath, pageW - 72 - 80, 60, { height: 50 }); } catch {} }
       doc.fill("#ffffff").fontSize(32).font("Helvetica-Bold").text("Project Health\nCheck Report", 72, 140, { width: contentW });
       doc.rect(72, 300, 80, 4).fill(orange);
       doc.fill(darkText).fontSize(16).font("Helvetica-Bold").text(project.name, 72, 330, { lineBreak: false });
@@ -4910,10 +4957,13 @@ Write in professional consulting tone covering: overall posture assessment, key 
       let logoPath = path.resolve("client/public/avero-logo.png");
       if (!fs.existsSync(logoPath)) logoPath = path.resolve("dist/public/avero-logo.png");
       const hasLogo = fs.existsSync(logoPath);
+      let clientLogoPath = client?.logoPath ? path.resolve("dist/public" + client.logoPath) : "";
+      const hasClientLogo = clientLogoPath && fs.existsSync(clientLogoPath);
 
       // ========== COVER ==========
       doc.rect(0, 0, pageW, 280).fill(blue);
       if (hasLogo) { try { doc.image(logoPath, 72, 60, { height: 50 }); } catch {} }
+      if (hasClientLogo) { try { doc.image(clientLogoPath, pageW - 72 - 80, 60, { height: 50 }); } catch {} }
       doc.fill("#ffffff").fontSize(32).font("Helvetica-Bold").text("Vendor Evaluation\nScorecard", 72, 140, { width: contentW });
       doc.rect(72, 300, 80, 4).fill(orange);
       doc.fill(darkText).fontSize(16).font("Helvetica-Bold").text(project.name, 72, 330, { width: contentW });
