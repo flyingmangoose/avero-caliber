@@ -907,28 +907,21 @@ function CheckpointsTab({ contractId, projectId }: { contractId: number | null; 
     },
   });
 
-  const [autoAssessing, setAutoAssessing] = useState<number | null>(null);
-  const autoAssessCheckpoint = async (checkpointId: number) => {
-    setAutoAssessing(checkpointId);
+  const [assessingAll, setAssessingAll] = useState(false);
+  const assessAllCheckpoints = async () => {
+    if (!contractId) return;
+    setAssessingAll(true);
     try {
-      const res = await apiRequest("POST", `/api/checkpoints/${checkpointId}/auto-assess`);
+      const res = await apiRequest("POST", `/api/contracts/${contractId}/assess-all-checkpoints`);
       const data = await res.json();
+      queryClient.invalidateQueries({ queryKey: ["/api/contracts", contractId, "checkpoints"] });
       queryClient.invalidateQueries({ queryKey: ["/api/checkpoints"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/contracts"] });
-      // Load the AI results into the form if editing this checkpoint
-      if (editingId === checkpointId && data.dimensions) {
-        const newForm: any = {};
-        for (const d of data.dimensions) {
-          newForm[d.dimension] = { rating: d.rating, observation: d.observation, recommendation: d.recommendation };
-        }
-        setAssessmentForm(newForm);
-        setForm((prev: any) => ({ ...prev, overallAssessment: data.overallAssessment || prev.overallAssessment, recommendations: data.recommendations || prev.recommendations, findings: data.findings || prev.findings }));
-      }
-      toast({ title: "AI assessment complete" });
+      queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "compliance-summary"] });
+      toast({ title: `Assessed ${data.assessed}/${data.total} checkpoints` });
     } catch (e: any) {
-      toast({ title: "Auto-assess failed", description: e.message, variant: "destructive" });
+      toast({ title: "Assessment failed", description: e.message, variant: "destructive" });
     }
-    setAutoAssessing(null);
+    setAssessingAll(false);
   };
 
   const PRESETS = [
@@ -1009,7 +1002,13 @@ function CheckpointsTab({ contractId, projectId }: { contractId: number | null; 
 
   return (
     <div className="space-y-3">
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
+        {checkpoints && checkpoints.length > 0 && (
+          <Button size="sm" variant="outline" className="gap-1.5 text-xs" onClick={assessAllCheckpoints} disabled={assessingAll}>
+            {assessingAll ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+            {assessingAll ? "Assessing..." : "Assess All Checkpoints"}
+          </Button>
+        )}
         <Button size="sm" className="gap-1.5 bg-accent hover:bg-accent/90 text-accent-foreground text-xs" onClick={() => { resetForm(); setEditingId(null); setDialogOpen(true); }} data-testid="button-add-checkpoint">
           <Plus className="w-3.5 h-3.5" /> Add Checkpoint
         </Button>

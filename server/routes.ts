@@ -2860,6 +2860,53 @@ Write in professional consulting tone covering: overall posture assessment, key 
     }
   });
 
+  // Assess all checkpoints for a contract
+  app.post("/api/contracts/:id/assess-all-checkpoints", async (req, res) => {
+    const baselineId = parseInt(req.params.id);
+    const baseline = storage.getContractBaseline(baselineId);
+    if (!baseline) return res.status(404).json({ error: "Contract not found" });
+    const projectId = baseline.projectId;
+
+    try {
+      const checkpoints = storage.getCheckpoints(baselineId);
+      if (checkpoints.length === 0) return res.json({ assessed: 0 });
+
+      const { assessCheckpoint, buildProjectContext } = await import("./ai");
+      const projectContext = buildProjectContext(projectId);
+      const hcAssessments = storage.getHealthCheckAssessments(projectId);
+      const raidItems = storage.getRaidItems(projectId);
+      const scheduleItems = storage.getScheduleEntries(projectId);
+      const documents = storage.getProjectDocuments(projectId);
+
+      let assessed = 0;
+      for (const cp of checkpoints) {
+        try {
+          const result = await assessCheckpoint({
+            checkpointName: cp.name, checkpointPhase: cp.phase,
+            projectContext, assessments: hcAssessments, raidItems, scheduleItems, documents,
+          });
+          if (result.dimensions.length > 0) {
+            storage.saveCheckpointAssessment(cp.id, result.dimensions);
+          }
+          storage.updateCheckpoint(cp.id, {
+            overallAssessment: result.overallAssessment,
+            recommendations: result.recommendations,
+            findings: result.findings,
+            status: "completed",
+          });
+          assessed++;
+        } catch (cpErr: any) {
+          console.error(`Assess checkpoint ${cp.name} error:`, cpErr.message);
+        }
+      }
+      logAction(req, "auto_assessed_checkpoints", projectId, `${assessed}/${checkpoints.length} checkpoints`);
+      res.json({ assessed, total: checkpoints.length });
+    } catch (err: any) {
+      console.error("Assess all checkpoints error:", err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // Generate readiness report (text) for a checkpoint
   app.get("/api/checkpoints/:id/readiness-report", (req, res) => {
     const checkpointId = parseInt(req.params.id);
