@@ -297,7 +297,7 @@ export default function GoLivePage() {
               </div>
 
               {/* Readiness Trend Over Time */}
-              {scorecardHistory && scorecardHistory.length > 1 && (
+              {scorecardHistory && scorecardHistory.length > 0 && (
                 <Card>
                   <CardContent className="pt-4">
                     <h4 className="text-sm font-semibold text-muted-foreground uppercase mb-3">Readiness Trend</h4>
