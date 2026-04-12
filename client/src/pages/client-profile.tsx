@@ -36,6 +36,10 @@ export default function ClientProfilePage() {
   const qc = useQueryClient();
   const { toast } = useToast();
 
+  const { data: project } = useQuery<any>({
+    queryKey: ["/api/projects", projectId],
+    queryFn: () => apiRequest("GET", `/api/projects/${projectId}`).then(r => r.json()),
+  });
   const { data: clientDataDirect } = useQuery<any>({
     queryKey: ["/api/clients", projectId],
     queryFn: () => apiRequest("GET", `/api/clients/${projectId}`).then(r => r.json()),
@@ -60,10 +64,6 @@ export default function ClientProfilePage() {
     domain: clientData.domain, leadership: clientData.leadership,
     documents: clientData.documents, createdAt: clientData.createdAt,
   } : orgProfile;
-  const { data: project } = useQuery<any>({
-    queryKey: ["/api/projects", projectId],
-    queryFn: () => apiRequest("GET", `/api/projects/${projectId}`).then(r => r.json()),
-  });
   const { data: interviews } = useQuery<any[]>({
     queryKey: ["/api/projects", projectId, "interviews"],
     queryFn: () => apiRequest("GET", `/api/projects/${projectId}/discovery/interviews`).then(r => r.json()),
