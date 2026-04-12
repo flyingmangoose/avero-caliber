@@ -2752,17 +2752,28 @@ export class DatabaseStorage implements IStorage {
   }
 
   getBudgetSummary(projectId: number): { originalContract: number; totalChangeOrders: number; totalAdditionalFunding: number; totalActualSpend: number; variance: number } {
-    const entries = this.getBudgetEntries(projectId);
+    // Primary source: contract baseline and project baseline
+    const contracts = this.getContractBaselines(projectId);
+    const projectBaseline = this.getProjectBaseline(projectId);
+
     let originalContract = 0;
+    if (projectBaseline?.contractedAmount) {
+      originalContract = projectBaseline.contractedAmount;
+    } else if (contracts.length > 0 && contracts[0].totalValue) {
+      originalContract = parseInt(String(contracts[0].totalValue).replace(/[^0-9]/g, "")) || 0;
+    }
+
+    // Manual budget entries supplement the contract baseline
+    const entries = this.getBudgetEntries(projectId);
     let totalChangeOrders = 0;
     let totalAdditionalFunding = 0;
     let totalActualSpend = 0;
     for (const e of entries) {
       switch (e.category) {
-        case "original_contract": originalContract += e.amount; break;
         case "change_order": totalChangeOrders += e.amount; break;
         case "additional_funding": totalAdditionalFunding += e.amount; break;
         case "actual_spend": totalActualSpend += e.amount; break;
+        // Ignore "original_contract" entries — contract baseline is source of truth
       }
     }
     const totalBudget = originalContract + totalChangeOrders + totalAdditionalFunding;

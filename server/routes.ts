@@ -5702,10 +5702,8 @@ Write in professional consulting tone covering: overall posture assessment, key 
             storage.createRaidItem({ projectId, type: raid.type || "risk", title: raid.title, description: raid.description || null, severity: raid.severity || "medium", status: raid.status || "open", owner: raid.owner || null, dueDate: raid.dueDate || null, sourceDocId: docId });
             applied.raids++;
           }
-          for (const budget of (items.budgetItems || [])) {
-            storage.createBudgetEntry({ projectId, category: budget.category || "actual_spend", description: budget.description, amount: budget.amount || 0, date: budget.date || null, notes: budget.notes || null, sourceDocId: docId });
-            applied.budgetItems++;
-          }
+          // Skip auto-applying budget items — contract baseline is the source of truth for budget
+          // Budget entries can still be added manually via the Budget & Schedule tab
           for (const sched of (items.scheduleItems || [])) {
             storage.createScheduleEntry({ projectId, milestone: sched.milestone, originalDate: sched.originalDate || null, currentDate: sched.currentDate || null, status: sched.status || "on_track", varianceDays: sched.varianceDays || null, notes: sched.notes || null, sourceDocId: docId });
             applied.scheduleItems++;
@@ -5930,18 +5928,7 @@ Write in professional consulting tone covering: overall posture assessment, key 
       applied.raids++;
     }
 
-    // Apply budget items
-    for (const budget of (items.budgetItems || [])) {
-      storage.createBudgetEntry({
-        projectId,
-        category: budget.category || "actual_spend",
-        description: budget.description,
-        amount: budget.amount || 0,
-        date: budget.date || null,
-        notes: budget.notes || null,
-      });
-      applied.budgetItems++;
-    }
+    // Skip auto-applying budget items — contract baseline is the source of truth
 
     // Apply schedule items
     for (const sched of (items.scheduleItems || [])) {
