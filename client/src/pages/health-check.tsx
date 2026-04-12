@@ -474,11 +474,14 @@ export default function HealthCheckPage() {
     onSuccess: () => { invalidateAll(); toast({ title: "Deleted" }); },
   });
 
+  const [activeTab, setActiveTab] = useState("documents");
+
   const synthesize = useMutation({
     mutationFn: () => apiRequest("POST", `/api/projects/${projectId}/health-check/synthesize`).then(r => r.json()),
     onSuccess: (data: any) => {
       setSynthesis(data);
       invalidateAll();
+      setActiveTab("summary");
       toast({ title: "Health assessment synthesized" });
     },
     onError: (e: any) => toast({ title: "Synthesis failed", description: e.message, variant: "destructive" }),
@@ -588,7 +591,7 @@ export default function HealthCheckPage() {
 
       <ScrollArea className="flex-1">
         <div className="p-4 sm:p-6">
-          <Tabs defaultValue="documents" data-testid="health-check-tabs">
+          <Tabs value={activeTab} onValueChange={setActiveTab} data-testid="health-check-tabs">
             <TabsList className="mb-4">
               <TabsTrigger value="documents" data-testid="tab-documents"><FileText className="w-4 h-4 mr-1 inline" />Documents</TabsTrigger>
               <TabsTrigger value="summary" data-testid="tab-summary"><Activity className="w-4 h-4 mr-1 inline" />Summary</TabsTrigger>
@@ -822,7 +825,19 @@ export default function HealthCheckPage() {
               </div>
             </TabsContent>
             <TabsContent value="documents">
-              <DocumentsTab projectId={projectId} onApplyComplete={() => synthesize.mutate()} />
+              <DocumentsTab projectId={projectId} onApplyComplete={() => {}} />
+              <div className="flex justify-end mt-6">
+                <Button
+                  className="bg-accent hover:bg-accent/90 text-accent-foreground gap-2"
+                  onClick={() => synthesize.mutate()}
+                  disabled={synthesize.isPending}
+                  data-testid="button-synthesize-from-docs"
+                >
+                  {synthesize.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                  {synthesize.isPending ? "Synthesizing…" : "Synthesize & View Summary"}
+                  {!synthesize.isPending && <ArrowRight className="w-4 h-4" />}
+                </Button>
+              </div>
             </TabsContent>
           </Tabs>
         </div>
