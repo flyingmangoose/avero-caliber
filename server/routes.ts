@@ -5709,39 +5709,61 @@ Write in professional consulting tone covering: overall posture assessment, key 
           try {
             const { extractContractData } = await import("./ai");
             const contractData = await extractContractData(doc.rawText!);
+            console.log("Contract data extracted:", JSON.stringify(contractData).substring(0, 500));
             const existingContracts = storage.getContractBaselines(projectId);
             if (existingContracts.length === 0) {
-              const baseline = storage.createContractBaseline({
-                projectId, vendorId: null,
-                contractName: contractData.contractName || doc.fileName,
-                contractDate: contractData.contractDate, totalValue: contractData.totalValue,
-                startDate: contractData.startDate, endDate: contractData.endDate,
-                sourceDocument: doc.fileName,
-                notes: [contractData.vendorName ? `Vendor: ${contractData.vendorName}` : "", contractData.notes || ""].filter(Boolean).join("\n"),
-              });
+              let baseline: any;
+              try {
+                baseline = storage.createContractBaseline({
+                  projectId, vendorId: null,
+                  contractName: contractData.contractName || doc.fileName,
+                  contractDate: contractData.contractDate || null, totalValue: contractData.totalValue || null,
+                  startDate: contractData.startDate || null, endDate: contractData.endDate || null,
+                  sourceDocument: doc.fileName,
+                  notes: [contractData.vendorName ? `Vendor: ${contractData.vendorName}` : "", contractData.notes || ""].filter(Boolean).join("\n") || null,
+                });
+                console.log("Contract baseline created:", baseline.id);
+              } catch (blErr: any) {
+                console.error("createContractBaseline error:", blErr.message);
+                throw blErr;
+              }
               if (contractData.deliverables?.length > 0) {
-                storage.createDeliverablesBulk(contractData.deliverables.map(d => ({
-                  baselineId: baseline.id, category: d.category || "documentation", name: d.name,
-                  description: d.description || null, dueDate: d.dueDate || null,
-                  status: "pending", priority: d.priority || "medium", contractReference: d.contractReference || null,
-                })));
+                try {
+                  storage.createDeliverablesBulk(contractData.deliverables.map((d: any) => ({
+                    baselineId: baseline.id, category: d.category || "documentation", name: d.name || "Unnamed deliverable",
+                    description: d.description || null, dueDate: d.dueDate || null,
+                    status: "pending", priority: d.priority || "medium", contractReference: d.contractReference || null,
+                  })));
+                  console.log("Created", contractData.deliverables.length, "deliverables");
+                } catch (delErr: any) {
+                  console.error("createDeliverablesBulk error:", delErr.message);
+                }
               }
               if (contractData.milestones?.length > 0) {
-                for (const m of contractData.milestones) {
-                  storage.createCheckpoint({ baselineId: baseline.id, name: m.name, phase: m.phase || "planning", scheduledDate: m.scheduledDate || null, status: "pending" });
+                try {
+                  for (const m of contractData.milestones) {
+                    storage.createCheckpoint({ baselineId: baseline.id, name: m.name || "Unnamed milestone", phase: m.phase || "planning", scheduledDate: m.scheduledDate || null, status: "pending" });
+                  }
+                  console.log("Created", contractData.milestones.length, "milestones");
+                } catch (cpErr: any) {
+                  console.error("createCheckpoint error:", cpErr.message);
                 }
               }
               // Also set health check baseline
-              const existingHcBaseline = storage.getProjectBaseline(projectId);
-              if (!existingHcBaseline && contractData.totalValue) {
-                storage.upsertProjectBaseline({
-                  projectId,
-                  contractedAmount: parseInt(String(contractData.totalValue).replace(/\D/g, "")) || 0,
-                  goLiveDate: contractData.endDate || "",
-                  contractStartDate: contractData.startDate || "",
-                  vendorName: contractData.vendorName || "",
-                  notes: `Auto-extracted from ${doc.fileName}`,
-                });
+              try {
+                const existingHcBaseline = storage.getProjectBaseline(projectId);
+                if (!existingHcBaseline && contractData.totalValue) {
+                  storage.upsertProjectBaseline(projectId, {
+                    contractedAmount: parseInt(String(contractData.totalValue).replace(/\D/g, "")) || 0,
+                    goLiveDate: contractData.endDate || null,
+                    contractStartDate: contractData.startDate || null,
+                    vendorName: contractData.vendorName || null,
+                    notes: `Auto-extracted from ${doc.fileName}`,
+                  });
+                  console.log("Project baseline created");
+                }
+              } catch (pbErr: any) {
+                console.error("upsertProjectBaseline error:", pbErr.message);
               }
               logAction(req, "auto_extracted_contract", projectId, `${baseline.contractName}: ${contractData.deliverables?.length || 0} deliverables, ${contractData.milestones?.length || 0} milestones`);
             }
