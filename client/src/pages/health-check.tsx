@@ -43,7 +43,7 @@ const RAID_TYPES = ["risk", "assumption", "issue", "dependency"];
 const SEVERITIES = ["critical", "high", "medium", "low"];
 const STATUSES = ["open", "mitigated", "closed", "accepted"];
 const SCHEDULE_STATUSES = ["on_track", "at_risk", "delayed", "completed"];
-const BUDGET_CATEGORIES = ["original_contract", "change_order", "additional_funding", "actual_spend"];
+const BUDGET_CATEGORIES = ["original_contract", "change_order", "actual_spend"];
 
 type AssessmentForm = { domain: string; overallRating: string; summary: string; findings: string; assessedBy: string };
 type RaidForm = { type: string; title: string; description: string; severity: string; status: string; owner: string };
@@ -740,7 +740,6 @@ export default function HealthCheckPage() {
                     {[
                       { label: "Original Contract", value: budgetSummary.originalContract },
                       { label: "Change Orders", value: budgetSummary.totalChangeOrders },
-                      { label: "Additional Funding", value: budgetSummary.totalAdditionalFunding },
                       { label: "Actual Spend", value: budgetSummary.totalActualSpend },
                     ].map(s => (
                       <Card key={s.label} className="p-2">

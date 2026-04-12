@@ -2767,19 +2767,16 @@ export class DatabaseStorage implements IStorage {
     // Manual budget entries supplement the contract baseline
     const entries = this.getBudgetEntries(projectId);
     let totalChangeOrders = 0;
-    let totalAdditionalFunding = 0;
     let totalActualSpend = 0;
     for (const e of entries) {
       switch (e.category) {
         case "change_order": totalChangeOrders += e.amount; break;
-        case "additional_funding": totalAdditionalFunding += e.amount; break;
         case "actual_spend": totalActualSpend += e.amount; break;
-        // Ignore "original_contract" entries — contract baseline is source of truth
       }
     }
-    const totalBudget = originalContract + totalChangeOrders + totalAdditionalFunding;
+    const totalBudget = originalContract + totalChangeOrders;
     const variance = totalBudget - totalActualSpend;
-    return { originalContract, totalChangeOrders, totalAdditionalFunding, totalActualSpend, variance };
+    return { originalContract, totalChangeOrders, totalAdditionalFunding: 0, totalActualSpend, variance };
   }
 
   // ==================== SCHEDULE TRACKING ====================
