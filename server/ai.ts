@@ -977,6 +977,75 @@ ${documentText.substring(0, 30000)}`, undefined, 8192);
   }
 }
 
+// ==================== CONTRACT EXTRACTION FROM DOCUMENTS ====================
+
+export async function extractContractData(documentText: string): Promise<{
+  contractName: string;
+  vendorName: string | null;
+  contractDate: string | null;
+  totalValue: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  notes: string | null;
+  deliverables: Array<{ category: string; name: string; description: string; dueDate: string | null; priority: string; contractReference: string | null }>;
+  milestones: Array<{ name: string; phase: string; scheduledDate: string | null; status: string }>;
+}> {
+  const text = await llmCall(`You are an expert contract analyst. Extract structured data from this SOW/contract document for an ERP/EAM implementation compliance tracking system.
+
+Extract:
+
+1. CONTRACT BASELINE:
+   - contractName: Name or title of the contract/SOW
+   - vendorName: The vendor/SI name
+   - contractDate: When the contract was signed (YYYY-MM-DD or null)
+   - totalValue: Total contract value as a string (e.g. "2,500,000")
+   - startDate: Contract/project start date (YYYY-MM-DD or null)
+   - endDate: Contract/project end date or go-live date (YYYY-MM-DD or null)
+   - notes: Key terms, conditions, or SLA requirements (brief)
+
+2. DELIVERABLES: Every deliverable, milestone, or work product mentioned
+   - category: One of: planning, design, configuration, development, testing, training, data_migration, deployment, documentation, support, governance
+   - name: Short name of the deliverable
+   - description: What it entails
+   - dueDate: When it's due (YYYY-MM-DD or null)
+   - priority: critical, high, medium, low
+   - contractReference: Section/clause reference if mentioned (e.g. "Section 4.2")
+
+3. MILESTONES: Key project phases/milestones
+   - name: Milestone name
+   - phase: planning, design, build, test, deploy, support
+   - scheduledDate: Target date (YYYY-MM-DD or null)
+   - status: pending
+
+Be thorough — extract every deliverable and milestone mentioned.
+
+Return JSON:
+{
+  "contractName": "",
+  "vendorName": "",
+  "contractDate": null,
+  "totalValue": "",
+  "startDate": null,
+  "endDate": null,
+  "notes": "",
+  "deliverables": [],
+  "milestones": []
+}
+
+DOCUMENT TEXT:
+${documentText.substring(0, 30000)}`, undefined, 8192);
+
+  const jsonMatch = text.match(/\{[\s\S]*"contractName"[\s\S]*\}/);
+  if (!jsonMatch) {
+    return { contractName: "Imported Contract", vendorName: null, contractDate: null, totalValue: null, startDate: null, endDate: null, notes: null, deliverables: [], milestones: [] };
+  }
+  try {
+    return JSON.parse(jsonMatch[0]);
+  } catch {
+    return { contractName: "Imported Contract", vendorName: null, contractDate: null, totalValue: null, startDate: null, endDate: null, notes: null, deliverables: [], milestones: [] };
+  }
+}
+
 // ==================== HEALTH CHECK SYNTHESIS ====================
 
 export interface SynthesisResult {

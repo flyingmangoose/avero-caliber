@@ -2128,6 +2128,94 @@ Only include fields that are clearly present in the document. Return ONLY valid 
     res.json({ success: true });
   });
 
+  // ==================== CONTRACT EXTRACTION FROM DOCUMENTS ====================
+
+  app.post("/api/projects/:id/extract-contract", async (req, res) => {
+    const projectId = parseInt(req.params.id);
+    const project = storage.getProject(projectId);
+    if (!project) return res.status(404).json({ error: "Project not found" });
+
+    const { documentId } = req.body;
+    if (!documentId) return res.status(400).json({ error: "documentId required" });
+
+    const doc = storage.getProjectDocument(documentId);
+    if (!doc || !doc.rawText) return res.status(400).json({ error: "Document not found or has no text" });
+
+    try {
+      const { extractContractData } = await import("./ai");
+      const contractData = await extractContractData(doc.rawText);
+
+      // Create contract baseline
+      const baseline = storage.createContractBaseline({
+        projectId,
+        vendorId: null,
+        contractName: contractData.contractName || doc.fileName,
+        contractDate: contractData.contractDate,
+        totalValue: contractData.totalValue,
+        startDate: contractData.startDate,
+        endDate: contractData.endDate,
+        sourceDocument: doc.fileName,
+        notes: [contractData.vendorName ? `Vendor: ${contractData.vendorName}` : "", contractData.notes || ""].filter(Boolean).join("\n"),
+      });
+
+      // Create deliverables
+      let deliverableCount = 0;
+      if (contractData.deliverables?.length > 0) {
+        const deliverables = storage.createDeliverablesBulk(
+          contractData.deliverables.map(d => ({
+            baselineId: baseline.id,
+            category: d.category || "documentation",
+            name: d.name,
+            description: d.description || null,
+            dueDate: d.dueDate || null,
+            status: "pending",
+            priority: d.priority || "medium",
+            contractReference: d.contractReference || null,
+          }))
+        );
+        deliverableCount = deliverables.length;
+      }
+
+      // Create checkpoints from milestones
+      let checkpointCount = 0;
+      if (contractData.milestones?.length > 0) {
+        for (const m of contractData.milestones) {
+          storage.createCheckpoint({
+            baselineId: baseline.id,
+            name: m.name,
+            phase: m.phase || "planning",
+            scheduledDate: m.scheduledDate || null,
+            status: "pending",
+          });
+          checkpointCount++;
+        }
+      }
+
+      // Also update the health check baseline if one exists
+      const existingBaseline = storage.getProjectBaseline(projectId);
+      if (!existingBaseline && contractData.totalValue) {
+        storage.upsertProjectBaseline({
+          projectId,
+          contractedAmount: parseInt(String(contractData.totalValue).replace(/\D/g, "")) || 0,
+          goLiveDate: contractData.endDate || "",
+          contractStartDate: contractData.startDate || "",
+          vendorName: contractData.vendorName || "",
+          notes: `Auto-extracted from ${doc.fileName}`,
+        });
+      }
+
+      res.json({
+        success: true,
+        contractId: baseline.id,
+        contractName: baseline.contractName,
+        deliverableCount,
+        checkpointCount,
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // ==================== CONTRACT BASELINES ====================
 
   app.post("/api/projects/:id/contracts", (req, res) => {
@@ -5612,6 +5700,52 @@ Write in professional consulting tone covering: overall posture assessment, key 
           logAction(req, "auto_applied_document", projectId, `${doc.fileName}: ${applied.raids} RAID, ${applied.budgetItems} budget, ${applied.scheduleItems} schedule, ${applied.findings} findings`);
         } catch (applyErr: any) {
           console.error("Auto-apply error:", applyErr.message);
+        }
+
+        // Auto-extract contract data for SOW/contract documents
+        if (doc.documentType === "sow_contract") {
+          try {
+            const { extractContractData } = await import("./ai");
+            const contractData = await extractContractData(doc.rawText!);
+            const existingContracts = storage.getContractBaselines(projectId);
+            if (existingContracts.length === 0) {
+              const baseline = storage.createContractBaseline({
+                projectId, vendorId: null,
+                contractName: contractData.contractName || doc.fileName,
+                contractDate: contractData.contractDate, totalValue: contractData.totalValue,
+                startDate: contractData.startDate, endDate: contractData.endDate,
+                sourceDocument: doc.fileName,
+                notes: [contractData.vendorName ? `Vendor: ${contractData.vendorName}` : "", contractData.notes || ""].filter(Boolean).join("\n"),
+              });
+              if (contractData.deliverables?.length > 0) {
+                storage.createDeliverablesBulk(contractData.deliverables.map(d => ({
+                  baselineId: baseline.id, category: d.category || "documentation", name: d.name,
+                  description: d.description || null, dueDate: d.dueDate || null,
+                  status: "pending", priority: d.priority || "medium", contractReference: d.contractReference || null,
+                })));
+              }
+              if (contractData.milestones?.length > 0) {
+                for (const m of contractData.milestones) {
+                  storage.createCheckpoint({ baselineId: baseline.id, name: m.name, phase: m.phase || "planning", scheduledDate: m.scheduledDate || null, status: "pending" });
+                }
+              }
+              // Also set health check baseline
+              const existingHcBaseline = storage.getProjectBaseline(projectId);
+              if (!existingHcBaseline && contractData.totalValue) {
+                storage.upsertProjectBaseline({
+                  projectId,
+                  contractedAmount: parseInt(String(contractData.totalValue).replace(/\D/g, "")) || 0,
+                  goLiveDate: contractData.endDate || "",
+                  contractStartDate: contractData.startDate || "",
+                  vendorName: contractData.vendorName || "",
+                  notes: `Auto-extracted from ${doc.fileName}`,
+                });
+              }
+              logAction(req, "auto_extracted_contract", projectId, `${baseline.contractName}: ${contractData.deliverables?.length || 0} deliverables, ${contractData.milestones?.length || 0} milestones`);
+            }
+          } catch (contractErr: any) {
+            console.error("Auto-contract extraction error:", contractErr.message);
+          }
         }
 
         // Auto-synthesize
