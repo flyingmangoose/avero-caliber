@@ -474,10 +474,11 @@ export const budgetTracking = sqliteTable("budget_tracking", {
   projectId: integer("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
   category: text("category").notNull(), // original_contract, change_order, additional_funding, actual_spend
   description: text("description").notNull(),
-  amount: integer("amount").notNull(), // in cents
+  amount: integer("amount").notNull(),
   date: text("date"),
   notes: text("notes"),
   createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
+  sourceDocId: integer("source_doc_id"),
 });
 
 export const scheduleTracking = sqliteTable("schedule_tracking", {
@@ -491,6 +492,7 @@ export const scheduleTracking = sqliteTable("schedule_tracking", {
   varianceDays: integer("variance_days"),
   notes: text("notes"),
   createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
+  sourceDocId: integer("source_doc_id"),
 });
 
 export const insertHealthCheckAssessmentSchema = createInsertSchema(healthCheckAssessments).omit({ id: true, createdAt: true });

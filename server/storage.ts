@@ -2723,7 +2723,7 @@ export class DatabaseStorage implements IStorage {
 
   // ==================== BUDGET TRACKING ====================
 
-  createBudgetEntry(data: { projectId: number; category: string; description: string; amount: number; date?: string | null; notes?: string | null }): BudgetTracking {
+  createBudgetEntry(data: { projectId: number; category: string; description: string; amount: number; date?: string | null; notes?: string | null; sourceDocId?: number | null }): BudgetTracking {
     const now = new Date().toISOString();
     return db.insert(budgetTracking).values({
       projectId: data.projectId,
@@ -2733,6 +2733,7 @@ export class DatabaseStorage implements IStorage {
       date: data.date ?? null,
       notes: data.notes ?? null,
       createdAt: now,
+      sourceDocId: data.sourceDocId ?? null,
     }).returning().get();
   }
 
@@ -2783,7 +2784,7 @@ export class DatabaseStorage implements IStorage {
 
   // ==================== SCHEDULE TRACKING ====================
 
-  createScheduleEntry(data: { projectId: number; milestone: string; originalDate?: string | null; currentDate?: string | null; actualDate?: string | null; status?: string; varianceDays?: number | null; notes?: string | null }): ScheduleTracking {
+  createScheduleEntry(data: { projectId: number; milestone: string; originalDate?: string | null; currentDate?: string | null; actualDate?: string | null; status?: string; varianceDays?: number | null; notes?: string | null; sourceDocId?: number | null }): ScheduleTracking {
     const now = new Date().toISOString();
     return db.insert(scheduleTracking).values({
       projectId: data.projectId,
@@ -2795,6 +2796,7 @@ export class DatabaseStorage implements IStorage {
       varianceDays: data.varianceDays ?? null,
       notes: data.notes ?? null,
       createdAt: now,
+      sourceDocId: data.sourceDocId ?? null,
     }).returning().get();
   }
 
