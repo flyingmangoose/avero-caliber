@@ -88,6 +88,22 @@ export default function ClientProfilePage() {
   });
 
   // Re-enrich dialog
+  const logoRef = useRef<HTMLInputElement>(null);
+  const logoUploadMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append("logo", file);
+      const res = await fetch(`/api/clients/${projectId}/logo`, { method: "POST", body: formData });
+      if (!res.ok) throw new Error("Upload failed");
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/clients", projectId] });
+      toast({ title: "Logo uploaded" });
+    },
+    onError: (e: any) => toast({ title: "Logo upload failed", description: e.message, variant: "destructive" }),
+  });
+
   const [enrichOpen, setEnrichOpen] = useState(false);
   const [enrichDomain, setEnrichDomain] = useState("");
   const enrichMutation = useMutation({
@@ -202,11 +218,19 @@ export default function ClientProfilePage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          {clientData?.logoPath ? (
-            <img src={clientData.logoPath} alt="Client logo" className="w-8 h-8 object-contain rounded" />
-          ) : (
-            <Building2 className="w-7 h-7 text-accent" />
-          )}
+          <button className="relative group cursor-pointer" onClick={() => logoRef.current?.click()} title="Upload logo">
+            {clientData?.logoPath ? (
+              <img src={clientData.logoPath} alt="Client logo" className="w-10 h-10 object-contain rounded" />
+            ) : (
+              <div className="w-10 h-10 rounded bg-muted flex items-center justify-center">
+                <Building2 className="w-6 h-6 text-accent" />
+              </div>
+            )}
+            <div className="absolute inset-0 bg-black/40 rounded opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+              <Upload className="w-4 h-4 text-white" />
+            </div>
+          </button>
+          <input ref={logoRef} type="file" className="hidden" accept="image/*" onChange={e => { const f = e.target.files?.[0]; if (f) logoUploadMutation.mutate(f); e.target.value = ""; }} />
           <h1 className="text-2xl font-bold">{profile?.entityName || "Client Profile"}</h1>
         </div>
         <div className="flex gap-2">
