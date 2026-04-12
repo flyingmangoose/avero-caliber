@@ -3064,7 +3064,7 @@ Write in professional consulting tone covering: overall posture assessment, key 
 
     try {
       const PDFDocument = (await import("pdfkit")).default;
-      const doc = new PDFDocument({ size: "LETTER", margins: { top: 72, bottom: 72, left: 72, right: 72 }, bufferPages: true });
+      const doc = new PDFDocument({ size: "LETTER", margins: { top: 72, bottom: 72, left: 72, right: 72 }, autoFirstPage: false });
 
       const chunks: Buffer[] = [];
       doc.on("data", (chunk: Buffer) => chunks.push(chunk));
@@ -3080,9 +3080,37 @@ Write in professional consulting tone covering: overall posture assessment, key 
       const darkText = "#1a1a2e";
       const gray = "#5a6478";
       const lightGray = "#e8eaed";
-      const pageW = doc.page.width;
-      const pageH = doc.page.height;
-      const contentW = pageW - 144;
+      let pageNum = 0;
+
+      // Helper: add a new page with header/footer built in
+      function newPage() {
+        doc.addPage();
+        pageNum++;
+        const pw = doc.page.width;
+        const ph = doc.page.height;
+        const cw = pw - 144;
+        if (pageNum > 1) {
+          doc.save();
+          doc.moveTo(72, 56).lineTo(pw - 72, 56).lineWidth(0.5).strokeColor(lightGray).stroke();
+          doc.fontSize(7).font("Helvetica").fillColor(gray);
+          doc.text("Avero Advisors", 72, 44, { lineBreak: false });
+          doc.text("Go-Live Readiness Report", pw - 72 - 150, 44, { width: 150, align: "right", lineBreak: false });
+          doc.restore();
+        }
+        // Footer
+        doc.save();
+        doc.moveTo(72, ph - 56).lineTo(pw - 72, ph - 56).lineWidth(0.5).strokeColor(lightGray).stroke();
+        doc.fontSize(7).fillColor(gray);
+        if (pageNum === 1) {
+          doc.text("CONFIDENTIAL", 72, ph - 48, { width: cw, align: "center", lineBreak: false });
+        } else {
+          doc.text(project.name, 72, ph - 48, { lineBreak: false });
+          doc.text(`Page ${pageNum}`, pw - 72 - 60, ph - 48, { width: 60, align: "right", lineBreak: false });
+        }
+        doc.restore();
+        // Reset cursor for content area
+        doc.y = pageNum === 1 ? 72 : 72;
+      }
 
       // Logo
       let logoPath = path.resolve("client/public/avero-logo.png");
@@ -3090,114 +3118,111 @@ Write in professional consulting tone covering: overall posture assessment, key 
       const hasLogo = fs.existsSync(logoPath);
 
       // ========== COVER PAGE ==========
+      newPage();
+      const pageW = doc.page.width;
+      const pageH = doc.page.height;
+      const contentW = pageW - 144;
       doc.rect(0, 0, pageW, 280).fill(blue);
       if (hasLogo) { try { doc.image(logoPath, 72, 60, { height: 50 }); } catch {} }
-      doc.fill("#ffffff").fontSize(32).font("Helvetica-Bold").text("Go-Live Readiness\nAssessment", 72, 140, { width: contentW });
+      doc.fill("#ffffff").fontSize(32).font("Helvetica-Bold").text("Go-Live Readiness\nAssessment", 72, 140, { width: contentW, lineBreak: true });
       doc.rect(72, 300, 80, 4).fill(orange);
-      doc.fill(darkText).fontSize(16).font("Helvetica-Bold").text(project.name, 72, 330, { width: contentW });
-      if (client) doc.fontSize(13).font("Helvetica").fillColor(gray).text(client.name, 72, 355);
-      doc.fontSize(10).font("Helvetica").fillColor(gray).text("Prepared by Avero Advisors", 72, 400);
-      doc.text(new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }), 72, 415);
+      doc.fill(darkText).fontSize(16).font("Helvetica-Bold").text(project.name, 72, 330, { lineBreak: false });
+      if (client) doc.fontSize(13).font("Helvetica").fillColor(gray).text(client.name, 72, 355, { lineBreak: false });
+      doc.fontSize(10).font("Helvetica").fillColor(gray).text("Prepared by Avero Advisors", 72, 400, { lineBreak: false });
+      doc.text(new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }), 72, 415, { lineBreak: false });
       if (baseline?.goLiveDate) {
         const days = Math.ceil((new Date(baseline.goLiveDate).getTime() - Date.now()) / 86400000);
-        doc.text(`Go-Live: ${baseline.goLiveDate} (${days > 0 ? days + " days" : Math.abs(days) + " days past"})`, 72, 445);
+        doc.text(`Go-Live: ${baseline.goLiveDate} (${days > 0 ? days + " days" : Math.abs(days) + " days past"})`, 72, 445, { lineBreak: false });
       }
-      doc.fontSize(8).fillColor(gray).text("CONFIDENTIAL", 72, pageH - 80, { width: contentW, align: "center" });
 
       // ========== READINESS SUMMARY ==========
-      doc.addPage();
-      doc.fontSize(20).font("Helvetica-Bold").fillColor(blue).text("Readiness Assessment", 72, 72);
+      newPage();
+      doc.fontSize(20).font("Helvetica-Bold").fillColor(blue).text("Readiness Assessment", 72, 72, { lineBreak: false });
       doc.rect(72, 100, 50, 3).fill(orange);
 
-      // Overall score badge
-      doc.y = 120;
       const scoreColor = overallScore >= 85 ? "#16a34a" : overallScore >= 70 ? "#d97706" : "#dc2626";
       const readinessLabels: Record<string, string> = { ready: "READY", ready_with_conditions: "READY WITH CONDITIONS", not_ready: "NOT READY", critical_hold: "CRITICAL HOLD" };
 
-      doc.fontSize(11).fillColor(gray).text("Overall Readiness:");
-      doc.moveDown(0.4);
-      const badgeY = doc.y;
-      doc.rect(72, badgeY, 200, 28).fill(scoreColor);
-      doc.fontSize(14).font("Helvetica-Bold").fillColor("#ffffff").text(`${readinessLabels[readiness] || readiness} — ${overallScore}/100`, 82, badgeY + 7);
-      doc.y = badgeY + 40;
+      doc.fontSize(11).fillColor(gray).text("Overall Readiness:", 72, 120, { lineBreak: false });
+      doc.rect(72, 138, 220, 28).fill(scoreColor);
+      doc.fontSize(14).font("Helvetica-Bold").fillColor("#ffffff").text(`${readinessLabels[readiness] || readiness} — ${overallScore}/100`, 82, 145, { lineBreak: false });
 
+      let curY = 180;
       if (assessorNotes) {
-        doc.moveDown(0.5);
-        doc.fontSize(9).font("Helvetica").fillColor(gray).text(assessorNotes, 72, doc.y, { width: contentW });
+        doc.fontSize(9).font("Helvetica").fillColor(gray);
+        const notesH = doc.heightOfString(assessorNotes, { width: contentW, fontSize: 9 });
+        doc.text(assessorNotes, 72, curY, { width: contentW });
+        curY += notesH + 20;
       }
 
       // ========== CRITERIA TABLE ==========
-      doc.moveDown(1.5);
-      doc.fontSize(14).font("Helvetica-Bold").fillColor(blue).text("Detailed Criteria Scores");
-      doc.rect(72, doc.y + 4, 40, 2.5).fill(orange);
-      doc.moveDown(1);
+      curY += 10;
+      doc.fontSize(14).font("Helvetica-Bold").fillColor(blue).text("Detailed Criteria Scores", 72, curY, { lineBreak: false });
+      curY += 20;
+      doc.rect(72, curY, 40, 2.5).fill(orange);
+      curY += 15;
 
       // Table header
-      const thY2 = doc.y;
-      doc.rect(72, thY2, contentW, 18).fill("#f1f3f5");
-      doc.fontSize(8).font("Helvetica-Bold").fillColor(gray);
-      doc.text("Criterion", 82, thY2 + 4, { width: 160 });
-      doc.text("Wt", 245, thY2 + 4, { width: 25 });
-      doc.text("Score", 275, thY2 + 4, { width: 35 });
-      doc.text("Evidence & Recommendation", 315, thY2 + 4, { width: 230 });
-      doc.y = thY2 + 22;
+      function drawTableHeader(y: number) {
+        doc.rect(72, y, contentW, 18).fill("#f1f3f5");
+        doc.fontSize(8).font("Helvetica-Bold").fillColor(gray);
+        doc.text("Criterion", 82, y + 4, { lineBreak: false });
+        doc.text("Wt", 245, y + 4, { lineBreak: false });
+        doc.text("Score", 275, y + 4, { lineBreak: false });
+        doc.text("Evidence & Recommendation", 315, y + 4, { lineBreak: false });
+        return y + 22;
+      }
+
+      curY = drawTableHeader(curY);
+      const maxY = pageH - 90; // leave room for footer
 
       let lastCategory = "";
       for (const c of criteriaData) {
-        if (doc.y > 680) doc.addPage();
+        // Estimate row height
+        let estH = 18;
+        if (c.evidence) estH += doc.heightOfString(c.evidence, { width: 220, fontSize: 7 }) + 2;
+        if (c.recommendation) estH += doc.heightOfString(`Rec: ${c.recommendation}`, { width: 220, fontSize: 7 }) + 2;
+        if (c.notes) estH += doc.heightOfString(`Note: ${c.notes}`, { width: 220, fontSize: 7 }) + 2;
+        if (c.category !== lastCategory) estH += 18;
+
+        if (curY + estH > maxY) {
+          newPage();
+          curY = 72;
+          curY = drawTableHeader(curY);
+        }
 
         if (c.category !== lastCategory) {
           lastCategory = c.category;
-          doc.rect(72, doc.y, contentW, 15).fill("#f8f9fa");
-          doc.fontSize(8).font("Helvetica-Bold").fillColor(darkText).text(c.category, 82, doc.y + 3);
-          doc.y += 18;
+          doc.rect(72, curY, contentW, 15).fill("#f8f9fa");
+          doc.fontSize(8).font("Helvetica-Bold").fillColor(darkText).text(c.category, 82, curY + 3, { lineBreak: false });
+          curY += 18;
         }
 
-        const rowY = doc.y;
+        const rowY = curY;
         const sc = c.score || 0;
-        const scColor = sc <= 3 ? "#dc2626" : sc <= 6 ? "#d97706" : "#16a34a";
+        const scColor2 = sc <= 3 ? "#dc2626" : sc <= 6 ? "#d97706" : "#16a34a";
 
-        doc.fontSize(8).font("Helvetica").fillColor(darkText).text(c.name, 82, rowY + 2, { width: 155 });
-        doc.fontSize(8).fillColor(gray).text(String(c.weight), 245, rowY + 2, { width: 25 });
-        doc.fontSize(9).font("Helvetica-Bold").fillColor(scColor).text(String(sc), 275, rowY + 1, { width: 35 });
+        doc.fontSize(8).font("Helvetica").fillColor(darkText).text(c.name, 82, rowY + 2, { width: 155, lineBreak: false });
+        doc.fontSize(8).fillColor(gray).text(String(c.weight), 245, rowY + 2, { lineBreak: false });
+        doc.fontSize(9).font("Helvetica-Bold").fillColor(scColor2).text(String(sc), 275, rowY + 1, { lineBreak: false });
 
         let detailY = rowY + 1;
         if (c.evidence) {
-          doc.fontSize(7).font("Helvetica").fillColor(gray).text(c.evidence, 315, detailY, { width: 230 });
-          detailY += doc.heightOfString(c.evidence, { width: 230, fontSize: 7 }) + 2;
+          doc.fontSize(7).font("Helvetica").fillColor(gray).text(c.evidence, 315, detailY, { width: 220 });
+          detailY += doc.heightOfString(c.evidence, { width: 220, fontSize: 7 }) + 2;
         }
         if (c.recommendation) {
-          doc.fontSize(7).font("Helvetica").fillColor(orange).text(`Rec: ${c.recommendation}`, 315, detailY, { width: 230 });
-          detailY += doc.heightOfString(`Rec: ${c.recommendation}`, { width: 230, fontSize: 7 }) + 2;
+          doc.fontSize(7).font("Helvetica").fillColor(orange).text(`Rec: ${c.recommendation}`, 315, detailY, { width: 220 });
+          detailY += doc.heightOfString(`Rec: ${c.recommendation}`, { width: 220, fontSize: 7 }) + 2;
         }
         if (c.notes) {
-          doc.fontSize(7).font("Helvetica-Oblique").fillColor(gray).text(`Note: ${c.notes}`, 315, detailY, { width: 230 });
-          detailY += doc.heightOfString(`Note: ${c.notes}`, { width: 230, fontSize: 7 }) + 2;
+          doc.fontSize(7).font("Helvetica-Oblique").fillColor(gray).text(`Note: ${c.notes}`, 315, detailY, { width: 220 });
+          detailY += doc.heightOfString(`Note: ${c.notes}`, { width: 220, fontSize: 7 }) + 2;
         }
 
-        doc.y = Math.max(rowY + 16, detailY + 2);
-        doc.moveTo(82, doc.y).lineTo(72 + contentW, doc.y).lineWidth(0.3).strokeColor(lightGray).stroke();
-        doc.y += 3;
-      }
-
-      // ========== HEADERS & FOOTERS ==========
-      const pageCount = doc.bufferedPageRange().count;
-      for (let i = 0; i < pageCount; i++) {
-        doc.switchToPage(i);
-        if (i > 0) {
-          doc.moveTo(72, 56).lineTo(pageW - 72, 56).lineWidth(0.5).strokeColor(lightGray).stroke();
-          doc.fontSize(7).font("Helvetica").fillColor(gray);
-          doc.text("Avero Advisors", 72, 44, { lineBreak: false });
-          doc.text("Go-Live Readiness Report", pageW - 72 - 150, 44, { width: 150, align: "right", lineBreak: false });
-        }
-        doc.moveTo(72, pageH - 56).lineTo(pageW - 72, pageH - 56).lineWidth(0.5).strokeColor(lightGray).stroke();
-        doc.fontSize(7).fillColor(gray);
-        if (i === 0) {
-          doc.text("CONFIDENTIAL", 72, pageH - 48, { width: contentW, align: "center", lineBreak: false });
-        } else {
-          doc.text(project.name, 72, pageH - 48, { lineBreak: false });
-          doc.text(`Page ${i + 1} of ${pageCount}`, pageW - 72 - 100, pageH - 48, { width: 100, align: "right", lineBreak: false });
-        }
+        curY = Math.max(rowY + 16, detailY + 2);
+        doc.moveTo(82, curY).lineTo(72 + contentW, curY).lineWidth(0.3).strokeColor(lightGray).stroke();
+        curY += 4;
       }
 
       doc.end();
