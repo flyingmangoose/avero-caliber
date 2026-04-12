@@ -36,11 +36,17 @@ export default function ClientProfilePage() {
   const qc = useQueryClient();
   const { toast } = useToast();
 
-  const { data: clientData } = useQuery<any>({
+  const { data: clientDataDirect } = useQuery<any>({
     queryKey: ["/api/clients", projectId],
     queryFn: () => apiRequest("GET", `/api/clients/${projectId}`).then(r => r.json()),
     enabled: isClientRoute,
   });
+  const { data: clientDataViaProject } = useQuery<any>({
+    queryKey: ["/api/clients", project?.clientId],
+    queryFn: () => apiRequest("GET", `/api/clients/${project?.clientId}`).then(r => r.json()),
+    enabled: !isClientRoute && !!project?.clientId,
+  });
+  const clientData = isClientRoute ? clientDataDirect : clientDataViaProject;
   const { data: orgProfile, isLoading } = useQuery<Profile>({
     queryKey: ["/api/projects", projectId, "org-profile"],
     queryFn: () => apiRequest("GET", `/api/projects/${projectId}/org-profile`).then(r => r.json()),
@@ -89,16 +95,19 @@ export default function ClientProfilePage() {
 
   // Re-enrich dialog
   const logoRef = useRef<HTMLInputElement>(null);
+  const actualClientId = isClientRoute ? projectId : project?.clientId;
   const logoUploadMutation = useMutation({
     mutationFn: async (file: File) => {
+      if (!actualClientId) throw new Error("No client ID");
       const formData = new FormData();
       formData.append("logo", file);
-      const res = await fetch(`/api/clients/${projectId}/logo`, { method: "POST", body: formData });
+      const res = await fetch(`/api/clients/${actualClientId}/logo`, { method: "POST", body: formData });
       if (!res.ok) throw new Error("Upload failed");
       return res.json();
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["/api/clients", projectId] });
+      qc.invalidateQueries({ queryKey: ["/api/clients"] });
+      qc.invalidateQueries({ queryKey: ["/api/clients", actualClientId] });
       toast({ title: "Logo uploaded" });
     },
     onError: (e: any) => toast({ title: "Logo upload failed", description: e.message, variant: "destructive" }),
