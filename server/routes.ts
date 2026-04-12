@@ -3187,16 +3187,16 @@ Write in professional consulting tone covering: overall posture assessment, key 
         if (i > 0) {
           doc.moveTo(72, 56).lineTo(pageW - 72, 56).lineWidth(0.5).strokeColor(lightGray).stroke();
           doc.fontSize(7).font("Helvetica").fillColor(gray);
-          doc.text("Avero Advisors", 72, 44, { width: contentW / 2 });
-          doc.text("Go-Live Readiness Report", pageW / 2, 44, { width: contentW / 2, align: "right" });
+          doc.text("Avero Advisors", 72, 44, { lineBreak: false });
+          doc.text("Go-Live Readiness Report", pageW - 72 - 150, 44, { width: 150, align: "right", lineBreak: false });
         }
         doc.moveTo(72, pageH - 56).lineTo(pageW - 72, pageH - 56).lineWidth(0.5).strokeColor(lightGray).stroke();
         doc.fontSize(7).fillColor(gray);
         if (i === 0) {
-          doc.text("CONFIDENTIAL", 72, pageH - 48, { width: contentW, align: "center" });
+          doc.text("CONFIDENTIAL", 72, pageH - 48, { width: contentW, align: "center", lineBreak: false });
         } else {
-          doc.text(project.name, 72, pageH - 48);
-          doc.text(`Page ${i + 1} of ${pageCount}`, 72, pageH - 48, { width: contentW, align: "right" });
+          doc.text(project.name, 72, pageH - 48, { lineBreak: false });
+          doc.text(`Page ${i + 1} of ${pageCount}`, pageW - 72 - 100, pageH - 48, { width: 100, align: "right", lineBreak: false });
         }
       }
 
