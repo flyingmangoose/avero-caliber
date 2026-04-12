@@ -576,16 +576,6 @@ export default function HealthCheckPage() {
           <h1 className="text-lg font-semibold text-foreground flex items-center gap-2">
             <Stethoscope className="w-5 h-5 text-accent" />Health Check & Rescue
           </h1>
-          <div className="ml-auto">
-            <Button variant="outline" className="gap-2 text-xs" data-testid="button-seed-health-check" onClick={() => {
-              apiRequest("POST", `/api/projects/${projectId}/seed-health-check-data`).then(() => {
-                invalidateAll();
-                toast({ title: "Sample health check data loaded" });
-              }).catch((err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }));
-            }}>
-              <Sparkles className="w-4 h-4" /> Load Sample Health Check Data
-            </Button>
-          </div>
         </div>
       </div>
 
