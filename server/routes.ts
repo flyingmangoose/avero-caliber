@@ -4234,6 +4234,165 @@ Write in professional consulting tone covering: overall posture assessment, key 
     }
   });
 
+  // ==================== SEED SAMPLE CLIENTS & PROJECTS ====================
+
+  app.post("/api/seed-sample-data", (req, res) => {
+    try {
+      const userId = (req as any).user?.id || 1;
+      const samples = [
+        {
+          client: {
+            name: "SAMPLE City of Denver",
+            domain: "denvergov.org",
+            entityType: "city",
+            state: "CO",
+            population: 715522,
+            employeeCount: 11500,
+            annualBudget: "$1.8B",
+            description: "Capital city of Colorado, undergoing ERP modernization from legacy PeopleSoft to Oracle Cloud.",
+            painSummary: "Aging PeopleSoft system reaching end of life. Manual processes across finance and HR. Difficulty recruiting IT talent to maintain legacy systems.",
+            departments: [{ name: "Finance", headcount: 180 }, { name: "Human Resources", headcount: 95 }, { name: "IT", headcount: 120 }, { name: "Public Works", headcount: 850 }, { name: "Parks & Recreation", headcount: 420 }],
+            currentSystems: [{ name: "PeopleSoft", module: "Finance & HR", vendor: "Oracle", yearsInUse: 18 }, { name: "Kronos", module: "Time & Attendance", vendor: "UKG", yearsInUse: 12 }],
+            leadership: [{ name: "Mike Johnston", title: "Mayor" }, { name: "Sarah Mitchell", title: "CFO" }],
+          },
+          project: {
+            name: "Oracle Cloud ERP Implementation",
+            description: "Full lifecycle Oracle Cloud ERP and HCM implementation replacing PeopleSoft",
+            engagementModules: JSON.stringify(["health_check", "selection"]),
+            engagementMode: "consulting",
+          },
+          healthCheck: true,
+        },
+        {
+          client: {
+            name: "SAMPLE Metro Transit Authority of Houston",
+            domain: "ridemetro.org",
+            entityType: "transit",
+            state: "TX",
+            population: 3500000,
+            employeeCount: 4200,
+            annualBudget: "$950M",
+            description: "Regional transit authority serving the greater Houston metropolitan area with bus, rail, and paratransit services.",
+            painSummary: "Fragmented systems across fleet management, finance, and operations. No single source of truth for asset data. Compliance reporting is manual and error-prone.",
+            departments: [{ name: "Operations", headcount: 2800 }, { name: "Maintenance", headcount: 650 }, { name: "Finance", headcount: 120 }, { name: "IT", headcount: 85 }],
+            currentSystems: [{ name: "SAP R/3", module: "Finance", vendor: "SAP", yearsInUse: 22 }, { name: "Trapeze", module: "Fleet Management", vendor: "Modaxo", yearsInUse: 15 }],
+            leadership: [{ name: "Thomas Lambert", title: "President & CEO" }, { name: "Angela Rodriguez", title: "VP of Finance" }],
+          },
+          project: {
+            name: "EAM/ERP Vendor Selection",
+            description: "Evaluating enterprise asset management and ERP platforms for fleet, facilities, and finance",
+            engagementModules: JSON.stringify(["selection"]),
+            engagementMode: "consulting",
+          },
+          healthCheck: false,
+        },
+        {
+          client: {
+            name: "SAMPLE Clark County Water Reclamation District",
+            domain: "cleanwaterteam.com",
+            entityType: "utility",
+            state: "NV",
+            population: 2300000,
+            employeeCount: 1800,
+            annualBudget: "$620M",
+            description: "Wastewater treatment and water reclamation utility serving the Las Vegas metropolitan area.",
+            painSummary: "Current Infor system is heavily customized and difficult to upgrade. Regulatory compliance tracking is manual. Need better work order and asset lifecycle management.",
+            departments: [{ name: "Operations", headcount: 900 }, { name: "Engineering", headcount: 200 }, { name: "Finance", headcount: 80 }, { name: "IT", headcount: 65 }, { name: "Compliance", headcount: 45 }],
+            currentSystems: [{ name: "Infor EAM", module: "Asset Management", vendor: "Infor", yearsInUse: 14 }, { name: "Tyler Munis", module: "Finance", vendor: "Tyler Technologies", yearsInUse: 10 }],
+            leadership: [{ name: "Robert Dotson", title: "General Manager" }, { name: "Lisa Chen", title: "Director of IT" }],
+          },
+          project: {
+            name: "Workday Implementation Health Check",
+            description: "Independent health check of in-progress Workday Finance and HCM implementation",
+            engagementModules: JSON.stringify(["health_check"]),
+            engagementMode: "consulting",
+          },
+          healthCheck: true,
+        },
+        {
+          client: {
+            name: "SAMPLE Port of Long Beach",
+            domain: "polb.com",
+            entityType: "port",
+            state: "CA",
+            population: null,
+            employeeCount: 950,
+            annualBudget: "$1.1B",
+            description: "Second-busiest container port in the US, handling over 9 million TEUs annually.",
+            painSummary: "Disparate systems across terminal operations, finance, and capital projects. Need unified platform for capital program management and grant tracking.",
+            departments: [{ name: "Operations", headcount: 350 }, { name: "Engineering", headcount: 180 }, { name: "Finance", headcount: 75 }, { name: "Environmental", headcount: 60 }, { name: "IT", headcount: 55 }],
+            currentSystems: [{ name: "Oracle E-Business Suite", module: "Finance", vendor: "Oracle", yearsInUse: 16 }, { name: "Maximo", module: "Asset Management", vendor: "IBM", yearsInUse: 12 }],
+            leadership: [{ name: "Mario Cordero", title: "Executive Director" }, { name: "Sam Joumblat", title: "CFO" }],
+          },
+          project: {
+            name: "SAP S/4HANA Migration Assessment",
+            description: "Pre-implementation assessment and vendor selection for SAP S/4HANA migration from Oracle EBS",
+            engagementModules: JSON.stringify(["selection", "health_check"]),
+            engagementMode: "consulting",
+          },
+          healthCheck: true,
+        },
+      ];
+
+      const created: any[] = [];
+      for (const s of samples) {
+        const client = storage.createClient(s.client);
+        const project = storage.createProject({
+          ...s.project,
+          clientId: client.id,
+          createdBy: userId,
+          status: "draft",
+        } as any);
+
+        // Seed health check data for HC projects
+        if (s.healthCheck) {
+          const domains = ["governance", "technical", "budget_schedule", "change_management", "testing_quality", "vendor_performance"];
+          const ratings = ["medium", "high", "low", "medium", "high", "medium"];
+          const summaries = [
+            "Governance structure exists but steering committee meetings are inconsistent. Decision-making authority is unclear for scope changes.",
+            "Technical architecture is sound but integration testing has been deferred. Performance testing has not begun.",
+            "Project is 15% over original budget due to two change orders. Schedule has slipped 3 months from original go-live.",
+            "Training plan exists but end-user adoption is a concern. Only 30% of super users have been identified.",
+            "SIT1 complete with 65% pass rate. Critical defect backlog of 45 items remains open. UAT has not started.",
+            "SI vendor staffing has been inconsistent. Key technical lead was replaced mid-project. Knowledge transfer gaps exist.",
+          ];
+          domains.forEach((domain, i) => {
+            storage.createHealthCheckAssessment({
+              projectId: project.id,
+              domain,
+              overallRating: ratings[i],
+              summary: summaries[i],
+              findings: JSON.stringify([
+                { severity: ratings[i], finding: summaries[i], evidence: "Based on document review and stakeholder interviews", recommendation: "Immediate attention required" },
+              ]),
+              assessedBy: "AI Synthesis (Sample)",
+            });
+          });
+
+          // Sample RAID items
+          const raidSamples = [
+            { type: "risk", title: "Go-live date at risk", description: "Current trajectory suggests 2-3 month delay", severity: "high", status: "open" },
+            { type: "issue", title: "Data migration quality below threshold", description: "Only 78% of converted records pass validation", severity: "critical", status: "open" },
+            { type: "risk", title: "Key resource departure", description: "Lead functional consultant leaving in 6 weeks", severity: "high", status: "open" },
+            { type: "dependency", title: "Third-party API availability", description: "Payroll integration depends on vendor releasing updated API", severity: "medium", status: "open" },
+            { type: "issue", title: "Scope creep in reporting module", description: "15 additional custom reports added without change order", severity: "medium", status: "open" },
+          ];
+          for (const r of raidSamples) {
+            storage.createRaidItem({ projectId: project.id, ...r } as any);
+          }
+        }
+
+        created.push({ client: client.name, project: project.name, id: project.id });
+      }
+
+      logAction(req, "seeded_sample_data", 0, `${created.length} sample clients and projects`);
+      res.json({ success: true, created });
+    } catch (err: any) {
+      console.error("Seed sample data error:", err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // ==================== ENGAGEMENT MODULES ====================
 
   app.patch("/api/projects/:id/modules", (req, res) => {
