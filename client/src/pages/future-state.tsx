@@ -202,7 +202,7 @@ function TransformationCard({ t, platform }: { t: any; platform: { label: string
                   const isManual = s.manual || s.isManual;
                   return (
                     <div key={i} className="flex items-start gap-2.5 text-sm">
-                      <span className={`w-2.5 h-2.5 rounded-full shrink-0 mt-1.5 ${isManual ? "bg-red-400" : "bg-gray-300 dark:bg-gray-600"}`} />
+                      <span className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-[10px] font-bold text-white ${isManual ? "bg-red-400" : "bg-gray-400 dark:bg-gray-600"}`}>{i + 1}</span>
                       <div className="flex-1 min-w-0">
                         <span className="font-medium">{s.description || s.step}</span>
                         <div className="flex gap-1 mt-0.5 flex-wrap">
