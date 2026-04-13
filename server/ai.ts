@@ -608,7 +608,20 @@ export async function generateRequirementsFromDiscovery(projectId: number): Prom
     .map(p => `- [${p.severity || "unknown"}] (priority: ${p.stakeholderPriority || "unranked"}) ${p.functionalArea}: ${p.description}`)
     .join("\n");
 
-  const text = await llmCall(`You are generating ERP/EAM requirements based on a comprehensive discovery process.
+  // Include outcomes
+  const outcomes = storage.getOutcomes(projectId);
+  const outcomesList = outcomes.map((o: any) => `[${o.priority}] ${o.functionalArea || "General"}: ${o.title} — ${o.description || ""}`).join("\n");
+
+  // Include process descriptions
+  const processDescs = storage.getProcessDescriptions(projectId);
+  const processText = processDescs.map(p => {
+    let steps: any[] = [];
+    try { steps = p.currentSteps ? JSON.parse(p.currentSteps) : []; } catch {}
+    const manualSteps = steps.filter((s: any) => s.isManual || s.manual);
+    return `${p.functionalArea} — ${p.processName}: ${p.description || ""} (${steps.length} steps, ${manualSteps.length} manual)`;
+  }).join("\n");
+
+  const text = await llmCall(`You are generating COMPREHENSIVE ERP/EAM requirements for a government organization based on discovery findings.
 
 ORGANIZATION PROFILE:
 ${orgSummary}
@@ -616,27 +629,35 @@ ${orgSummary}
 DISCOVERY FINDINGS BY AREA:
 ${areaFindings}
 
-PRIORITIZED PAIN POINTS (ranked by stakeholder priority):
+CURRENT PROCESSES:
+${processText || "No processes documented yet."}
+
+PRIORITIZED PAIN POINTS:
 ${ppList}
+
+DESIRED OUTCOMES:
+${outcomesList || "No outcomes defined yet."}
 
 VENDOR KNOWLEDGE:
 ${vendorKnowledge}
 
-Generate a focused set of requirements that:
-1. Directly address identified pain points (reference which pain point each requirement addresses)
-2. Are specific to this organization's size, type, and complexity
-3. Include criticality levels based on pain point severity and stakeholder priority
-4. Cover all functional areas that were interviewed
-5. Do NOT include generic requirements that weren't surfaced in discovery
+Generate a COMPREHENSIVE set of requirements. Each pain point and outcome should be broken into MULTIPLE specific, implementable requirements. For example:
+- "Invoice processing is too slow" should generate requirements for: electronic invoice capture, OCR/AI data extraction, automated 3-way matching, configurable approval workflows, early payment discount tracking, vendor self-service portal, exception handling workflows, etc.
+- "90-day time-to-hire" should generate: online job requisition, ATS integration, automated candidate screening, interview scheduling, digital offer letters, automated background checks, onboarding portal, etc.
+
+Target 8-15 requirements per functional area. Each requirement should be:
+- Specific enough to evaluate a vendor against
+- Tied to a pain point or outcome
+- Actionable (not vague platitudes like "improve efficiency")
 
 For each requirement, provide:
 - module: which functional area
-- description: the specific requirement text
-- criticality: Critical, Desired, or Not Required based on pain point severity
-- justification: 1-2 sentences explaining WHY this is needed, referencing discovery findings
-- painPointRef: description of the linked pain point
+- description: the specific requirement text (1-2 sentences, concrete and evaluable)
+- criticality: Critical, Desired, or Not Required based on pain point severity and outcome priority
+- justification: 1-2 sentences explaining WHY, referencing specific discovery findings
+- painPointRef: description of the linked pain point or outcome
 
-Return as a JSON array of objects with keys: module, description, criticality, justification, painPointRef`, undefined, 8192);
+Return as a JSON array of objects with keys: module, description, criticality, justification, painPointRef`, undefined, 16384);
 
   try {
     // text set by llmCall above
