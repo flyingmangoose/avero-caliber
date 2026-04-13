@@ -64,26 +64,26 @@ interface ClientWithProjects {
 
 // ── Mini Status Stepper for project rows ──────────────────────────────────────
 
-function MiniStepper({ projectId }: { projectId: number }) {
-  const { data } = useQuery<{ stages: { key: string; label: string; active: boolean; completed: boolean }[] }>({
+function MiniProgress({ projectId }: { projectId: number }) {
+  const { data } = useQuery<{ stages: { key: string; label: string; completed: boolean; checklist: { label: string; done: boolean }[] }[] }>({
     queryKey: ["/api/projects", projectId, "status-info"],
     queryFn: () => apiRequest("GET", `/api/projects/${projectId}/status-info`).then(r => r.json()),
   });
   if (!data?.stages) return null;
   return (
-    <div className="flex items-center gap-0.5">
-      {data.stages.map((s, i) => (
-        <div key={s.key} className="flex items-center" title={s.label}>
-          {i > 0 && <div className={`w-2 h-px ${s.completed || s.active ? "bg-accent" : "bg-border"}`} />}
-          {s.completed ? (
-            <CircleCheck className="w-3 h-3 text-green-500" />
-          ) : s.active ? (
-            <Circle className="w-3 h-3 text-accent fill-accent/20" />
-          ) : (
-            <Circle className="w-3 h-3 text-muted-foreground/30" />
-          )}
-        </div>
-      ))}
+    <div className="flex items-center gap-1.5">
+      {data.stages.map((s) => {
+        const done = s.checklist.filter(c => c.done).length;
+        const total = s.checklist.length;
+        const pct = total > 0 ? done / total : 0;
+        return (
+          <div key={s.key} className="flex items-center gap-0.5" title={`${s.label}: ${done}/${total}`}>
+            <div className="w-8 h-1.5 rounded-full bg-muted overflow-hidden">
+              <div className={`h-full rounded-full transition-all ${pct >= 1 ? "bg-green-500" : pct > 0 ? "bg-accent" : "bg-transparent"}`} style={{ width: `${pct * 100}%` }} />
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -560,7 +560,7 @@ export default function Dashboard() {
                                   <span className="text-base font-medium truncate text-foreground group-hover:text-accent transition-colors">
                                     {project.name}
                                   </span>
-                                  <MiniStepper projectId={project.id} />
+                                  <MiniProgress projectId={project.id} />
                                   <ModuleBadges modulesJson={project.engagementModules} />
                                 </Link>
                                 <Button

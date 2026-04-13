@@ -1984,23 +1984,15 @@ Return ONLY valid JSON.`, undefined, 4096);
       ],
     };
 
-    // Auto-determine active stage: first stage that isn't fully complete
+    // Each stage is independently tracked — no rigid linear flow
     const stages = STATUS_ORDER.map((key) => {
       const checklist = stageChecks[key] || [];
       const allDone = checklist.length > 0 && checklist.every(c => c.done);
-      return { key, label: STATUS_LABELS[key], completed: allDone, active: false, checklist, allDone };
+      const progress = checklist.length > 0 ? checklist.filter(c => c.done).length / checklist.length : 0;
+      return { key, label: STATUS_LABELS[key], completed: allDone, active: progress > 0 && !allDone, checklist, allDone, progress };
     });
 
-    // Set active = first incomplete stage
-    const firstIncomplete = stages.findIndex(s => !s.completed);
-    if (firstIncomplete >= 0) {
-      stages[firstIncomplete].active = true;
-    } else {
-      stages[stages.length - 1].active = true;
-      stages[stages.length - 1].completed = true;
-    }
-
-    const currentStatus = stages.find(s => s.active)?.key || "setup";
+    const currentStatus = project.status || "draft";
     res.json({ currentStatus, stages });
   });
 
