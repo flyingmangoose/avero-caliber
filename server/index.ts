@@ -168,6 +168,7 @@ app.post("/auth/logout", (req, res) => {
 function requireAuth(req: Request, res: Response, next: NextFunction) {
   // Public endpoints that don't require auth
   if (req.path.startsWith("/api/workshop/")) return next();
+  if (req.path === "/api/seed-sample-data") return next();
   if (req.path === "/auth/me" || req.path === "/auth/google" || req.path.startsWith("/auth/")) return next();
 
   // If Google OAuth is not configured, allow all requests (dev mode)
