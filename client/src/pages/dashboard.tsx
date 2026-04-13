@@ -36,6 +36,8 @@ import {
   DollarSign,
   BarChart3,
   Search,
+  CircleCheck,
+  Circle,
 } from "lucide-react";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -58,6 +60,32 @@ interface ClientWithProjects {
   annualBudget: string | null;
   projects: ProjectSummary[];
   projectCount: number;
+}
+
+// ── Mini Status Stepper for project rows ──────────────────────────────────────
+
+function MiniStepper({ projectId }: { projectId: number }) {
+  const { data } = useQuery<{ stages: { key: string; label: string; active: boolean; completed: boolean }[] }>({
+    queryKey: ["/api/projects", projectId, "status-info"],
+    queryFn: () => apiRequest("GET", `/api/projects/${projectId}/status-info`).then(r => r.json()),
+  });
+  if (!data?.stages) return null;
+  return (
+    <div className="flex items-center gap-0.5">
+      {data.stages.map((s, i) => (
+        <div key={s.key} className="flex items-center" title={s.label}>
+          {i > 0 && <div className={`w-2 h-px ${s.completed || s.active ? "bg-accent" : "bg-border"}`} />}
+          {s.completed ? (
+            <CircleCheck className="w-3 h-3 text-green-500" />
+          ) : s.active ? (
+            <Circle className="w-3 h-3 text-accent fill-accent/20" />
+          ) : (
+            <Circle className="w-3 h-3 text-muted-foreground/30" />
+          )}
+        </div>
+      ))}
+    </div>
+  );
 }
 
 // ── Constants ──────────────────────────────────────────────────────────────────
@@ -532,7 +560,7 @@ export default function Dashboard() {
                                   <span className="text-base font-medium truncate text-foreground group-hover:text-accent transition-colors">
                                     {project.name}
                                   </span>
-                                  <StatusBadge status={project.status} />
+                                  <MiniStepper projectId={project.id} />
                                   <ModuleBadges modulesJson={project.engagementModules} />
                                 </Link>
                                 <Button

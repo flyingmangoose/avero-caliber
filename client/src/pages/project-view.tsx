@@ -937,7 +937,6 @@ export default function ProjectView() {
       {/* Main content area */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Status Stepper */}
-        <StatusStepper projectId={projectId} />
         {/* Toolbar */}
         <div className="flex items-center gap-2 p-3 border-b shrink-0 bg-background">
           <div className="relative flex-1 max-w-sm">
