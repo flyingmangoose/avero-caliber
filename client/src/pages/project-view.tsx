@@ -72,6 +72,8 @@ import {
   Link as LinkIcon,
   CircleCheck,
   Circle,
+  Sparkles,
+  Loader2,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 
@@ -767,6 +769,20 @@ export default function ProjectView() {
     });
   };
 
+  const [autoPrioritizing, setAutoPrioritizing] = useState(false);
+  const autoPrioritize = async () => {
+    setAutoPrioritizing(true);
+    try {
+      const res = await apiRequest("POST", `/api/projects/${projectId}/requirements/auto-prioritize`);
+      const data = await res.json();
+      queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "requirements"] });
+      toast({ title: `Auto-prioritized ${data.updated}/${data.total} requirements` });
+    } catch (e: any) {
+      toast({ title: "Auto-prioritize failed", description: e.message, variant: "destructive" });
+    }
+    setAutoPrioritizing(false);
+  };
+
   const resetForm = () => {
     setFormSubCategory("");
     setFormDescription("");
@@ -952,6 +968,20 @@ export default function ProjectView() {
               <Upload className="w-3.5 h-3.5" />
               Import
             </Button>
+
+            {allRequirements.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs gap-1"
+                onClick={autoPrioritize}
+                disabled={autoPrioritizing}
+                data-testid="button-auto-prioritize"
+              >
+                {autoPrioritizing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                {autoPrioritizing ? "Prioritizing..." : "Auto-Prioritize"}
+              </Button>
+            )}
 
             {selectedArea && (
               <Button

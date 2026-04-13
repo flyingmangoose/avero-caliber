@@ -741,6 +741,75 @@ Only include fields that are clearly present in the document. Return ONLY valid 
     res.json({ updated });
   });
 
+  // POST /api/projects/:id/requirements/auto-prioritize — AI assigns criticality based on outcomes & discovery
+  app.post("/api/projects/:id/requirements/auto-prioritize", async (req, res) => {
+    const projectId = parseInt(req.params.id);
+    const project = storage.getProject(projectId);
+    if (!project) return res.status(404).json({ error: "Project not found" });
+
+    try {
+      const requirements = storage.getRequirements(projectId);
+      if (requirements.length === 0) return res.json({ updated: 0 });
+
+      const painPoints = storage.getPainPoints(projectId);
+      const outcomes = storage.getOutcomes(projectId);
+      const interviews = storage.getDiscoveryInterviews(projectId).filter(i => i.status === "completed");
+
+      const reqList = requirements.map(r => `[${r.id}] ${r.functionalArea} / ${r.description}`).join("\n");
+      const painList = painPoints.map(p => `[${p.severity}] ${p.functionalArea}: ${p.description}`).join("\n");
+      const outcomeList = outcomes.map((o: any) => `[${o.priority}] ${o.title}: ${o.description || ""}`).join("\n");
+      const interviewSummary = interviews.map(i => {
+        let findings: any = {};
+        try { findings = i.findings ? JSON.parse(i.findings) : {}; } catch {}
+        return `${i.functionalArea}: ${findings.keyThemes?.join(", ") || "no themes"}`;
+      }).join("\n");
+
+      const { llmCall } = await import("./ai");
+      const text = await llmCall(`You are prioritizing ERP requirements for a government organization.
+
+REQUIREMENTS:
+${reqList}
+
+PAIN POINTS (from discovery):
+${painList || "None documented"}
+
+DESIRED OUTCOMES:
+${outcomeList || "None defined"}
+
+DISCOVERY THEMES:
+${interviewSummary || "No interviews"}
+
+For each requirement, assign a criticality:
+- "Critical" = directly addresses a critical/high pain point or is essential for a high-priority outcome
+- "Desired" = addresses a medium pain point or supports a medium-priority outcome
+- "Not Required" = nice-to-have, not directly tied to any pain point or outcome
+
+Return a JSON array: [{"id": <requirement id>, "criticality": "Critical"|"Desired"|"Not Required", "reason": "brief justification"}]
+Return ONLY valid JSON.`, undefined, 4096);
+
+      const jsonMatch = text.match(/\[[\s\S]*\]/);
+      if (!jsonMatch) return res.json({ updated: 0 });
+
+      const assignments = JSON.parse(jsonMatch[0]);
+      let updated = 0;
+      for (const a of assignments) {
+        if (a.id && a.criticality) {
+          const result = storage.updateRequirement(a.id, {
+            criticality: a.criticality,
+            comments: a.reason ? `Auto-prioritized: ${a.reason}` : undefined,
+          });
+          if (result) updated++;
+        }
+      }
+
+      logAction(req, "auto_prioritized_requirements", projectId, `${updated}/${requirements.length} requirements`);
+      res.json({ updated, total: requirements.length, assignments });
+    } catch (err: any) {
+      console.error("Auto-prioritize error:", err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // DELETE /api/projects/:id/requirements/bulk-delete
   app.delete("/api/projects/:id/requirements/bulk-delete", (req, res) => {
     const projectId = parseInt(req.params.id);
