@@ -4380,6 +4380,133 @@ Write in professional consulting tone covering: overall posture assessment, key 
           for (const r of raidSamples) {
             storage.createRaidItem({ projectId: project.id, ...r } as any);
           }
+
+          // Sample interviews with findings, pain points, and process steps
+          const interviewData = [
+            {
+              functionalArea: "Finance",
+              interviewee: "Sarah Mitchell",
+              role: "Controller",
+              messages: [
+                { role: "assistant", content: "Tell me about your current accounts payable process.", timestamp: new Date().toISOString() },
+                { role: "user", content: "We process about 3,000 invoices per month. Everything starts with a paper invoice that gets scanned and manually keyed into PeopleSoft. We have 4 AP clerks doing data entry. The approval routing is done via email — we print the invoice, get a wet signature, then scan it back in. It takes 15-20 days on average to process a single invoice from receipt to payment. We miss early payment discounts constantly.", timestamp: new Date().toISOString() },
+                { role: "assistant", content: "What about your month-end close process?", timestamp: new Date().toISOString() },
+                { role: "user", content: "Month-end close takes us 12-15 business days. The biggest bottleneck is intercompany reconciliations — we have 6 funds and the journal entries between them are all manual. Our team works overtime every month-end. We also struggle with bank reconciliations because the data export from PeopleSoft doesn't match the bank format, so there's a manual mapping step in Excel.", timestamp: new Date().toISOString() },
+              ],
+              findings: {
+                keyThemes: ["Manual invoice processing", "Slow month-end close", "Lack of automation"],
+                systemGaps: ["No electronic invoice capture", "No automated approval workflow", "Manual intercompany reconciliation"],
+                processMaturity: "Low — heavily manual with paper-based approvals",
+              },
+              painPoints: [
+                { description: "Invoice processing takes 15-20 days due to paper-based workflow", severity: "high", frequency: "daily", impact: "Missing early payment discounts worth ~$200K/year" },
+                { description: "Month-end close takes 12-15 business days", severity: "high", frequency: "monthly", impact: "Delays financial reporting and decision-making" },
+                { description: "Manual intercompany reconciliation across 6 funds", severity: "medium", frequency: "monthly", impact: "Staff overtime, error-prone process" },
+              ],
+              processSteps: [
+                { step: "Receive paper invoice", actor: "Mailroom", system: "None", isManual: true },
+                { step: "Scan and key invoice data into PeopleSoft", actor: "AP Clerk", system: "PeopleSoft", isManual: true },
+                { step: "Print invoice for approval signature", actor: "AP Clerk", system: "None", isManual: true },
+                { step: "Route for department approval via email", actor: "AP Clerk", system: "Email", isManual: true },
+                { step: "Obtain wet signature from approver", actor: "Department Manager", system: "None", isManual: true },
+                { step: "Scan signed invoice back into system", actor: "AP Clerk", system: "PeopleSoft", isManual: true },
+                { step: "Schedule payment batch", actor: "AP Supervisor", system: "PeopleSoft", isManual: false },
+                { step: "Process payment", actor: "Treasury", system: "PeopleSoft/Bank", isManual: false },
+              ],
+            },
+            {
+              functionalArea: "Human Resources",
+              interviewee: "David Kim",
+              role: "HR Director",
+              messages: [
+                { role: "assistant", content: "Walk me through your hiring process from requisition to onboarding.", timestamp: new Date().toISOString() },
+                { role: "user", content: "It's painful. A hiring manager fills out a paper requisition form, routes it through 3 levels of approval. Then HR posts the job manually on our website and job boards. Applications come in via email. We track candidates in a shared Excel spreadsheet. Background checks are initiated by fax. The whole process from req to start date averages 90 days. We lose good candidates because we're too slow.", timestamp: new Date().toISOString() },
+                { role: "assistant", content: "How do you handle employee self-service and benefits enrollment?", timestamp: new Date().toISOString() },
+                { role: "user", content: "We don't really have self-service. Employees fill out paper forms for address changes, W-4 updates, benefits changes. HR staff manually keys everything into PeopleSoft. Open enrollment is a nightmare — we print packets for all 11,500 employees. Benefits reconciliation with carriers is a monthly manual process that takes 3 staff members a full week.", timestamp: new Date().toISOString() },
+              ],
+              findings: {
+                keyThemes: ["No applicant tracking system", "Paper-based HR processes", "No employee self-service"],
+                systemGaps: ["No ATS integration", "No employee self-service portal", "Manual benefits administration"],
+                processMaturity: "Very low — almost entirely paper-based",
+              },
+              painPoints: [
+                { description: "90-day average time-to-hire due to paper requisitions and manual tracking", severity: "critical", frequency: "ongoing", impact: "Losing qualified candidates to faster-moving employers" },
+                { description: "No employee self-service for HR transactions", severity: "high", frequency: "daily", impact: "HR staff spends 60% of time on data entry instead of strategic work" },
+                { description: "Paper-based benefits enrollment for 11,500 employees", severity: "high", frequency: "annually", impact: "3 weeks of staff time, high error rate, employee dissatisfaction" },
+              ],
+              processSteps: [
+                { step: "Manager submits paper requisition", actor: "Hiring Manager", system: "None", isManual: true },
+                { step: "Route through 3 approval levels", actor: "HR/Budget/Executive", system: "Email", isManual: true },
+                { step: "Post job on website and boards", actor: "HR Recruiter", system: "Website CMS", isManual: true },
+                { step: "Collect applications via email", actor: "HR Recruiter", system: "Email/Excel", isManual: true },
+                { step: "Screen candidates in spreadsheet", actor: "HR Recruiter", system: "Excel", isManual: true },
+                { step: "Schedule interviews via email", actor: "HR Recruiter", system: "Email/Calendar", isManual: true },
+                { step: "Initiate background check by fax", actor: "HR Staff", system: "Fax", isManual: true },
+                { step: "Generate offer letter", actor: "HR Staff", system: "Word", isManual: true },
+                { step: "Manual onboarding paperwork", actor: "HR Staff", system: "Paper forms", isManual: true },
+                { step: "Key new hire data into PeopleSoft", actor: "HR Staff", system: "PeopleSoft", isManual: true },
+              ],
+            },
+            {
+              functionalArea: "Procurement",
+              interviewee: "Maria Gonzalez",
+              role: "Procurement Manager",
+              messages: [
+                { role: "assistant", content: "Describe your procurement workflow from requisition to purchase order.", timestamp: new Date().toISOString() },
+                { role: "user", content: "Departments submit purchase requisitions through PeopleSoft but the approval routing is broken — it was customized years ago and nobody understands the code. So we export reqs to Excel, manually route for approvals via email, then go back into PeopleSoft to create the PO. For contracts over $50K we need board approval which adds 4-6 weeks. We have no visibility into spending by vendor or commodity code without running manual reports.", timestamp: new Date().toISOString() },
+                { role: "assistant", content: "How do you manage vendor relationships and contracts?", timestamp: new Date().toISOString() },
+                { role: "user", content: "We have about 2,500 active vendors. Contract management is done in a shared drive with Word documents and Excel trackers. There's no automated alerting for contract expirations — last year we had 3 contracts lapse without renewal, causing service disruptions. We also can't easily track insurance certificate compliance. Vendor performance evaluation is ad hoc at best.", timestamp: new Date().toISOString() },
+              ],
+              findings: {
+                keyThemes: ["Broken PeopleSoft customizations", "No contract lifecycle management", "Poor spend visibility"],
+                systemGaps: ["Broken approval routing in PeopleSoft", "No CLM system", "No spend analytics"],
+                processMaturity: "Low — workarounds for broken system customizations",
+              },
+              painPoints: [
+                { description: "PeopleSoft approval routing broken, requiring manual Excel workaround", severity: "critical", frequency: "daily", impact: "Adds 5-7 days to every purchase requisition" },
+                { description: "No contract lifecycle management — 3 contracts lapsed last year", severity: "high", frequency: "ongoing", impact: "Service disruptions and compliance risk" },
+                { description: "No spend visibility by vendor or commodity without manual reporting", severity: "medium", frequency: "weekly", impact: "Cannot identify savings opportunities or maverick spending" },
+              ],
+              processSteps: [
+                { step: "Department creates requisition in PeopleSoft", actor: "Department Staff", system: "PeopleSoft", isManual: false },
+                { step: "Export requisition to Excel (broken routing)", actor: "Procurement", system: "Excel", isManual: true },
+                { step: "Route approval via email with attached Excel", actor: "Procurement", system: "Email", isManual: true },
+                { step: "Collect approvals and update Excel tracker", actor: "Procurement", system: "Excel", isManual: true },
+                { step: "Create PO in PeopleSoft from approved req", actor: "Buyer", system: "PeopleSoft", isManual: true },
+                { step: "Email PO to vendor", actor: "Buyer", system: "Email", isManual: true },
+                { step: "Receive goods/services and match to PO", actor: "Department", system: "PeopleSoft", isManual: true },
+              ],
+            },
+          ];
+
+          for (const iv of interviewData) {
+            const interview = storage.createDiscoveryInterview({
+              projectId: project.id,
+              functionalArea: iv.functionalArea,
+              interviewee: iv.interviewee,
+              role: iv.role,
+            });
+            storage.updateDiscoveryInterview(interview.id, {
+              status: "completed",
+              messages: JSON.stringify(iv.messages),
+              findings: JSON.stringify(iv.findings),
+              painPoints: JSON.stringify(iv.painPoints),
+              processSteps: JSON.stringify(iv.processSteps),
+            });
+
+            // Also create pain points as standalone records
+            for (const pp of iv.painPoints) {
+              storage.createPainPoint({
+                projectId: project.id,
+                sourceInterviewId: interview.id,
+                functionalArea: iv.functionalArea,
+                description: pp.description,
+                severity: pp.severity,
+                frequency: pp.frequency,
+                impact: pp.impact,
+              });
+            }
+          }
         }
 
         created.push({ client: client.name, project: project.name, id: project.id });
