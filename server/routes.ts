@@ -1984,12 +1984,21 @@ Return ONLY valid JSON.`, undefined, 4096);
       ],
     };
 
-    // Each stage is independently tracked — no rigid linear flow
-    const stages = STATUS_ORDER.map((key) => {
+    // Each stage tracked independently but completion respects prerequisite order
+    // A stage only shows "complete" if all prior stages are also complete
+    const rawStages = STATUS_ORDER.map((key) => {
       const checklist = stageChecks[key] || [];
       const allDone = checklist.length > 0 && checklist.every(c => c.done);
       const progress = checklist.length > 0 ? checklist.filter(c => c.done).length / checklist.length : 0;
-      return { key, label: STATUS_LABELS[key], completed: allDone, active: progress > 0 && !allDone, checklist, allDone, progress };
+      return { key, label: STATUS_LABELS[key], rawComplete: allDone, active: false, checklist, allDone: false, progress };
+    });
+
+    // A stage is "complete" only if it AND all prior stages have their checklist done
+    const stages = rawStages.map((stage, i) => {
+      const priorAllDone = rawStages.slice(0, i).every(s => s.rawComplete);
+      const completed = stage.rawComplete && priorAllDone;
+      const active = stage.progress > 0 && !completed;
+      return { ...stage, completed, active };
     });
 
     const currentStatus = project.status || "draft";
