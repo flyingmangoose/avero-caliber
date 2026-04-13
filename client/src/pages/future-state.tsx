@@ -197,20 +197,34 @@ function TransformationCard({ t, platform }: { t: any; platform: { label: string
             )}
             <p className="text-sm text-muted-foreground mb-3">{t.currentDescription}</p>
             {curSteps.length > 0 && (
-              <div className="space-y-1.5">
-                {curSteps.map((s: any, i: number) => (
-                  <div key={i} className="flex items-start gap-2 text-sm">
-                    <span className="w-4 h-4 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center shrink-0 text-xs font-bold">{s.step || i + 1}</span>
-                    <div className="flex-1 min-w-0">
-                      <span>{s.description || s.step}</span>
-                      <div className="flex gap-1 mt-0.5">
-                        {(s.manual || s.isManual) && <Badge variant="outline" className="text-[10px] h-3.5 border-red-300 text-red-500">manual</Badge>}
-                        {s.system && <Badge variant="outline" className="text-[10px] h-3.5">{s.system}</Badge>}
-                        {s.actor && <Badge variant="outline" className="text-[10px] h-3.5">{s.actor}</Badge>}
+              <div className="space-y-2">
+                {curSteps.map((s: any, i: number) => {
+                  const isManual = s.manual || s.isManual;
+                  return (
+                    <div key={i} className="flex items-start gap-2.5 text-sm">
+                      <span className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-xs font-bold text-white ${isManual ? "bg-red-400" : "bg-gray-400 dark:bg-gray-600"}`}>{s.step || i + 1}</span>
+                      <div className="flex-1 min-w-0">
+                        <span className="font-medium">{s.description || s.step}</span>
+                        <div className="flex gap-1 mt-0.5 flex-wrap">
+                          {isManual ? (
+                            <Badge className="text-[10px] h-3.5 bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400">manual</Badge>
+                          ) : (
+                            <Badge className="text-[10px] h-3.5 bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">automated</Badge>
+                          )}
+                          {s.system && s.system !== "None" && <Badge variant="outline" className="text-[10px] h-3.5">{s.system}</Badge>}
+                          {s.actor && <Badge variant="outline" className="text-[10px] h-3.5 border-blue-200 text-blue-600 dark:text-blue-400">{s.actor}</Badge>}
+                        </div>
+                        {s.painPoints && Array.isArray(s.painPoints) && s.painPoints.length > 0 && (
+                          <div className="mt-1 flex gap-1 flex-wrap">
+                            {s.painPoints.map((pp: string, j: number) => (
+                              <Badge key={j} variant="outline" className="text-[10px] h-3.5 border-orange-300 text-orange-600 dark:text-orange-400">{pp}</Badge>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
