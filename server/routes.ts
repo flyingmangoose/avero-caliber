@@ -6566,75 +6566,97 @@ Write in professional consulting tone covering: overall posture assessment, key 
 
     const startTime = Date.now();
     try {
-      // Fetch the URL content
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 15000);
-      const response = await fetch(source.url, {
-        signal: controller.signal,
-        headers: { "User-Agent": "AveroCaliberMonitor/1.0" },
-      });
-      clearTimeout(timeout);
-
-      if (!response.ok) {
-        const run = storage.createMonitoringRun({
-          sourceId: source.id,
-          status: "failed",
-          errorMessage: `HTTP ${response.status}: ${response.statusText}`,
-          durationMs: Date.now() - startTime,
+      // Try to fetch URL content for context
+      let fetchedContent = "";
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 15000);
+        const response = await fetch(source.url, {
+          signal: controller.signal,
+          headers: { "User-Agent": "AveroCaliberMonitor/1.0" },
         });
-        storage.updateMonitoringSource(source.id, { lastCheckedAt: new Date().toISOString() });
-        return res.json({ run, changes: [] });
-      }
+        clearTimeout(timeout);
+        if (response.ok) {
+          const text = await response.text();
+          fetchedContent = text.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").substring(0, 5000);
+        }
+      } catch {}
 
-      const text = await response.text();
-      // Simple hash for change detection
+      // Get existing changes to avoid duplicates
+      const existingChanges = storage.getVendorChanges({ vendorPlatform: source.vendorPlatform, limit: 200 });
+      const existingTitles = existingChanges.map((c: any) => c.title?.toLowerCase()).filter(Boolean);
+
+      // Use AI to research recent vendor developments
+      const { llmCall } = await import("./ai");
+      const lastChecked = source.lastCheckedAt ? new Date(source.lastCheckedAt).toLocaleDateString() : "never";
+
+      const aiText = await llmCall(`You are a vendor intelligence analyst tracking ${source.vendorPlatform} for government ERP/EAM consulting.
+
+SOURCE: ${source.name} (${source.sourceType})
+URL: ${source.url}
+LAST CHECKED: ${lastChecked}
+
+${fetchedContent ? `FETCHED CONTENT FROM URL:\n${fetchedContent}\n` : ""}
+
+ALREADY KNOWN (do NOT repeat these):
+${existingTitles.slice(0, 30).join("\n") || "None"}
+
+Report ALL significant recent developments for ${source.vendorPlatform} that are relevant to government/public sector ERP implementations. Focus on:
+- New product features, AI capabilities, agentic AI, automation
+- Platform updates, cloud migrations, database changes
+- Government/public sector specific announcements
+- Pricing or licensing changes
+- Partnerships, acquisitions, certifications
+- Roadmap changes, deprecations, end-of-life notices
+- Major customer wins in government sector
+
+Be specific with dates, version numbers, and product names. Only include developments from the last 6 months that you are confident about.
+
+Return JSON array:
+[{
+  "changeType": "new_feature|deprecation|pricing_change|acquisition|partnership|certification|bug_fix|roadmap_update",
+  "severity": "critical|high|medium|low|info",
+  "title": "concise title",
+  "summary": "2-3 sentence summary",
+  "details": "fuller description with specifics",
+  "affectedModules": ["module names"],
+  "rawExcerpt": "key quote or data point"
+}]
+
+Return ONLY the JSON array. If no new developments found, return [].`, undefined, 8192);
+
+      let aiChanges: any[] = [];
+      try {
+        const match = aiText.match(/\[[\s\S]*\]/);
+        if (match) aiChanges = JSON.parse(match[0]);
+      } catch {}
+
       const crypto = await import("crypto");
-      const contentHash = crypto.createHash("md5").update(text.substring(0, 10000)).digest("hex");
-      const preview = text.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").substring(0, 500);
-
-      // Check if content changed
-      if (contentHash === source.lastContentHash) {
-        const run = storage.createMonitoringRun({
-          sourceId: source.id,
-          status: "no_change",
-          contentHash,
-          rawContentPreview: preview,
-          durationMs: Date.now() - startTime,
-        });
-        storage.updateMonitoringSource(source.id, { lastCheckedAt: new Date().toISOString() });
-        return res.json({ run, changes: [] });
-      }
-
-      // Content changed — use AI to analyze
-      const { analyzeVendorChanges } = await import("./ai");
-      const cleanText = text.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").substring(0, 8000);
-      const aiChanges = await analyzeVendorChanges(source.vendorPlatform, source.sourceType, source.name, cleanText, source.lastContentHash ? "Content has changed since last scan" : "First scan of this source");
+      const contentHash = crypto.createHash("md5").update(aiText.substring(0, 5000)).digest("hex");
 
       const run = storage.createMonitoringRun({
         sourceId: source.id,
-        status: "changes_detected",
+        status: aiChanges.length > 0 ? "changes_detected" : "no_change",
         contentHash,
-        rawContentPreview: preview,
+        rawContentPreview: aiChanges.length > 0 ? aiChanges.map((c: any) => c.title).join("; ").substring(0, 500) : "No new developments found",
         changesDetected: aiChanges.length,
         durationMs: Date.now() - startTime,
       });
 
       // Save changes with deduplication
-      const existingChanges = storage.getVendorChanges({ vendorPlatform: source.vendorPlatform, limit: 100 });
       const savedChanges = [];
       for (const change of aiChanges) {
-        // Skip duplicates — check if same title or very similar summary already exists
-        const isDuplicate = existingChanges.some((ec: any) =>
-          ec.title?.toLowerCase() === change.title?.toLowerCase() ||
-          (ec.summary && change.summary && ec.summary.substring(0, 80).toLowerCase() === change.summary.substring(0, 80).toLowerCase())
+        const isDuplicate = existingTitles.some((t: string) =>
+          t === change.title?.toLowerCase() ||
+          (t && change.title && t.includes(change.title.toLowerCase().substring(0, 30)))
         );
         if (isDuplicate) continue;
 
         const saved = storage.createVendorChange({
           runId: run.id,
           vendorPlatform: source.vendorPlatform,
-          changeType: change.changeType,
-          severity: change.severity,
+          changeType: change.changeType || "new_feature",
+          severity: change.severity || "medium",
           title: change.title,
           summary: change.summary,
           details: change.details,
@@ -6644,7 +6666,6 @@ Write in professional consulting tone covering: overall posture assessment, key 
         });
         savedChanges.push(saved);
 
-        // Auto-generate alert for high/critical changes
         if (change.severity === "critical" || change.severity === "high") {
           storage.createMonitoringAlert({
             changeId: saved.id,
@@ -6658,7 +6679,6 @@ Write in professional consulting tone covering: overall posture assessment, key 
         }
       }
 
-      // Update source with new hash
       storage.updateMonitoringSource(source.id, {
         lastCheckedAt: new Date().toISOString(),
         lastContentHash: contentHash,
@@ -6677,101 +6697,107 @@ Write in professional consulting tone covering: overall posture assessment, key 
     }
   });
 
-  // Scan all active sources
-  app.post("/api/monitoring/scan-all", async (_req, res) => {
+  // Scan all active sources — scan one per unique platform to avoid redundant AI calls
+  app.post("/api/monitoring/scan-all", async (req, res) => {
     const sources = storage.getMonitoringSources().filter(s => s.isActive === 1);
+    // Group by platform — only scan one source per platform (the first active one)
+    const platformSources = new Map<string, typeof sources[0]>();
+    for (const s of sources) {
+      if (!platformSources.has(s.vendorPlatform)) platformSources.set(s.vendorPlatform, s);
+    }
+
     const results = [];
-    for (const source of sources) {
+    for (const [platform, source] of platformSources) {
       try {
         const startTime = Date.now();
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 15000);
-        const response = await fetch(source.url, {
-          signal: controller.signal,
-          headers: { "User-Agent": "AveroCaliberMonitor/1.0" },
-        });
-        clearTimeout(timeout);
+        const existingChanges = storage.getVendorChanges({ vendorPlatform: platform, limit: 200 });
+        const existingTitles = existingChanges.map((c: any) => c.title?.toLowerCase()).filter(Boolean);
 
-        if (!response.ok) {
-          const run = storage.createMonitoringRun({
-            sourceId: source.id,
-            status: "failed",
-            errorMessage: `HTTP ${response.status}`,
-            durationMs: Date.now() - startTime,
-          });
-          storage.updateMonitoringSource(source.id, { lastCheckedAt: new Date().toISOString() });
-          results.push({ sourceId: source.id, name: source.name, status: "failed" });
-          continue;
-        }
-
-        const text = await response.text();
-        const crypto = await import("crypto");
-        const contentHash = crypto.createHash("md5").update(text.substring(0, 10000)).digest("hex");
-        const preview = text.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").substring(0, 500);
-
-        if (contentHash === source.lastContentHash) {
-          storage.createMonitoringRun({
-            sourceId: source.id,
-            status: "no_change",
-            contentHash,
-            rawContentPreview: preview,
-            durationMs: Date.now() - startTime,
-          });
-          storage.updateMonitoringSource(source.id, { lastCheckedAt: new Date().toISOString() });
-          results.push({ sourceId: source.id, name: source.name, status: "no_change" });
-        } else {
-          const { analyzeVendorChanges } = await import("./ai");
-          const cleanText = text.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").substring(0, 8000);
-          const aiChanges = await analyzeVendorChanges(source.vendorPlatform, source.sourceType, source.name, cleanText, source.lastContentHash ? "Content has changed since last scan" : "First scan of this source");
-
-          const run = storage.createMonitoringRun({
-            sourceId: source.id,
-            status: aiChanges.length > 0 ? "changes_detected" : "no_change",
-            contentHash,
-            rawContentPreview: preview,
-            changesDetected: aiChanges.length,
-            durationMs: Date.now() - startTime,
-          });
-
-          for (const change of aiChanges) {
-            const saved = storage.createVendorChange({
-              runId: run.id,
-              vendorPlatform: source.vendorPlatform,
-              changeType: change.changeType,
-              severity: change.severity,
-              title: change.title,
-              summary: change.summary,
-              details: change.details,
-              affectedModules: change.affectedModules,
-              sourceUrl: source.url,
-              rawExcerpt: change.rawExcerpt,
-            });
-            if (change.severity === "critical" || change.severity === "high") {
-              storage.createMonitoringAlert({
-                changeId: saved.id,
-                alertType: change.changeType === "deprecation" ? "deprecation_warning" : "capability_impact",
-                priority: change.severity === "critical" ? "urgent" : "high",
-                title: saved.title,
-                message: saved.summary,
-              });
-            }
+        let fetchedContent = "";
+        try {
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 15000);
+          const response = await fetch(source.url, { signal: controller.signal, headers: { "User-Agent": "AveroCaliberMonitor/1.0" } });
+          clearTimeout(timeout);
+          if (response.ok) {
+            const text = await response.text();
+            fetchedContent = text.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").substring(0, 5000);
           }
+        } catch {}
 
-          storage.updateMonitoringSource(source.id, { lastCheckedAt: new Date().toISOString(), lastContentHash: contentHash });
-          results.push({ sourceId: source.id, name: source.name, status: "changes_detected", count: aiChanges.length });
-        }
-      } catch (error: any) {
-        storage.createMonitoringRun({
+        const { llmCall } = await import("./ai");
+        const lastChecked = source.lastCheckedAt ? new Date(source.lastCheckedAt).toLocaleDateString() : "never";
+
+        const aiText = await llmCall(`You are a vendor intelligence analyst tracking ${platform} for government ERP/EAM consulting.
+
+PLATFORM: ${platform}
+LAST CHECKED: ${lastChecked}
+
+${fetchedContent ? `RECENT CONTENT FROM ${source.url}:\n${fetchedContent}\n` : ""}
+
+ALREADY KNOWN (do NOT repeat):
+${existingTitles.slice(0, 30).join("\n") || "None"}
+
+Report ALL significant recent developments for ${platform} relevant to government/public sector ERP implementations. Include:
+- New product features, AI capabilities, agentic AI, automation
+- Platform updates, cloud migrations, database changes
+- Government/public sector specific announcements
+- Pricing or licensing changes, partnerships, acquisitions
+- Roadmap changes, deprecations, end-of-life notices
+
+Be specific with dates and product names. Only include developments from the last 6 months you are confident about.
+
+Return JSON array:
+[{"changeType": "new_feature|deprecation|pricing_change|acquisition|partnership|certification|bug_fix|roadmap_update", "severity": "critical|high|medium|low|info", "title": "concise title", "summary": "2-3 sentences", "details": "fuller description", "affectedModules": ["modules"], "rawExcerpt": "key data point"}]
+
+Return [] if nothing new.`, undefined, 8192);
+
+        let aiChanges: any[] = [];
+        try { const m = aiText.match(/\[[\s\S]*\]/); if (m) aiChanges = JSON.parse(m[0]); } catch {}
+
+        const crypto = await import("crypto");
+        const contentHash = crypto.createHash("md5").update(aiText.substring(0, 5000)).digest("hex");
+
+        const run = storage.createMonitoringRun({
           sourceId: source.id,
-          status: "failed",
-          errorMessage: error.message,
-          durationMs: 0,
+          status: aiChanges.length > 0 ? "changes_detected" : "no_change",
+          contentHash,
+          rawContentPreview: aiChanges.map((c: any) => c.title).join("; ").substring(0, 500) || "No new developments",
+          changesDetected: aiChanges.length,
+          durationMs: Date.now() - startTime,
         });
+
+        let savedCount = 0;
+        for (const change of aiChanges) {
+          const isDup = existingTitles.some((t: string) => t === change.title?.toLowerCase() || (t && change.title && t.includes(change.title.toLowerCase().substring(0, 30))));
+          if (isDup) continue;
+
+          const saved = storage.createVendorChange({
+            runId: run.id, vendorPlatform: platform,
+            changeType: change.changeType || "new_feature", severity: change.severity || "medium",
+            title: change.title, summary: change.summary, details: change.details,
+            affectedModules: change.affectedModules, sourceUrl: source.url, rawExcerpt: change.rawExcerpt,
+          });
+          savedCount++;
+          if (change.severity === "critical" || change.severity === "high") {
+            storage.createMonitoringAlert({
+              changeId: saved.id,
+              alertType: change.changeType === "deprecation" ? "deprecation_warning" : change.changeType === "pricing_change" ? "pricing_alert" : "capability_impact",
+              priority: change.severity === "critical" ? "urgent" : "high",
+              title: saved.title, message: saved.summary,
+            });
+          }
+        }
+
+        storage.updateMonitoringSource(source.id, { lastCheckedAt: new Date().toISOString(), lastContentHash: contentHash });
+        results.push({ sourceId: source.id, platform, name: source.name, status: savedCount > 0 ? "changes_detected" : "no_change", count: savedCount });
+      } catch (error: any) {
+        storage.createMonitoringRun({ sourceId: source.id, status: "failed", errorMessage: error.message, durationMs: 0 });
         storage.updateMonitoringSource(source.id, { lastCheckedAt: new Date().toISOString() });
-        results.push({ sourceId: source.id, name: source.name, status: "failed", error: error.message });
+        results.push({ sourceId: source.id, platform, name: source.name, status: "failed", error: error.message });
       }
     }
-    res.json({ results, scanned: sources.length });
+    res.json({ results, scanned: platformSources.size });
   });
 
   return httpServer;
