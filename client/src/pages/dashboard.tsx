@@ -65,24 +65,36 @@ interface ClientWithProjects {
 // ── Mini Status Stepper for project rows ──────────────────────────────────────
 
 function MiniProgress({ projectId }: { projectId: number }) {
-  const { data } = useQuery<{ stages: { key: string; label: string; completed: boolean; checklist: { label: string; done: boolean }[] }[] }>({
+  const { toast } = useToast();
+  const { data, refetch } = useQuery<{ stages: { key: string; label: string; completed: boolean; manualComplete: boolean; active: boolean; checklist: { label: string; done: boolean }[] }[] }>({
     queryKey: ["/api/projects", projectId, "status-info"],
     queryFn: () => apiRequest("GET", `/api/projects/${projectId}/status-info`).then(r => r.json()),
   });
+
+  const toggleStage = async (key: string, complete: boolean) => {
+    try {
+      await apiRequest("PATCH", `/api/projects/${projectId}/stage-status`, { stage: key, complete });
+      refetch();
+    } catch (e: any) {
+      toast({ title: "Failed to update", description: e.message, variant: "destructive" });
+    }
+  };
+
   if (!data?.stages) return null;
   return (
     <div className="flex items-center gap-2">
-      {data.stages.map((s) => {
-        const done = s.checklist.filter(c => c.done).length;
-        const total = s.checklist.length;
-        const pct = total > 0 ? done / total : 0;
-        return (
-          <Badge key={s.key} variant="outline" className={`text-[10px] h-4 px-1.5 gap-1 font-normal ${pct >= 1 ? "border-green-400 text-green-600 bg-green-50 dark:bg-green-950/30 dark:text-green-400" : pct > 0 ? "border-accent/50 text-accent" : "text-muted-foreground/50"}`}>
-            {pct >= 1 ? <CircleCheck className="w-2.5 h-2.5" /> : pct > 0 ? <Circle className="w-2.5 h-2.5 fill-accent/30" /> : null}
-            {s.label}
-          </Badge>
-        );
-      })}
+      {data.stages.map((s) => (
+        <Badge
+          key={s.key}
+          variant="outline"
+          className={`text-[10px] h-4 px-1.5 gap-1 font-normal cursor-pointer select-none transition-colors ${s.completed ? "border-green-400 text-green-600 bg-green-50 dark:bg-green-950/30 dark:text-green-400" : s.active ? "border-accent/50 text-accent" : "text-muted-foreground/50"}`}
+          onClick={() => toggleStage(s.key, !s.completed)}
+          title={`Click to mark ${s.completed ? "incomplete" : "complete"}`}
+        >
+          {s.completed ? <CircleCheck className="w-2.5 h-2.5" /> : s.active ? <Circle className="w-2.5 h-2.5 fill-accent/30" /> : <Circle className="w-2.5 h-2.5" />}
+          {s.label}
+        </Badge>
+      ))}
     </div>
   );
 }

@@ -1984,19 +1984,22 @@ Return ONLY valid JSON.`, undefined, 4096);
       ],
     };
 
-    // Each stage tracked independently but completion respects prerequisite order
-    // A stage only shows "complete" if all prior stages are also complete
+    // Manual completions (PM override)
+    let manualCompletions: Record<string, boolean> = {};
+    try { manualCompletions = project.stageCompletions ? JSON.parse(project.stageCompletions) : {}; } catch {}
+
+    // Stage completion = manual override OR (auto-complete AND all prior complete)
     const rawStages = STATUS_ORDER.map((key) => {
       const checklist = stageChecks[key] || [];
-      const allDone = checklist.length > 0 && checklist.every(c => c.done);
+      const autoComplete = checklist.length > 0 && checklist.every(c => c.done);
       const progress = checklist.length > 0 ? checklist.filter(c => c.done).length / checklist.length : 0;
-      return { key, label: STATUS_LABELS[key], rawComplete: allDone, active: false, checklist, allDone: false, progress };
+      const manualComplete = !!manualCompletions[key];
+      return { key, label: STATUS_LABELS[key], autoComplete, manualComplete, active: false, checklist, completed: false, progress };
     });
 
-    // A stage is "complete" only if it AND all prior stages have their checklist done
     const stages = rawStages.map((stage, i) => {
-      const priorAllDone = rawStages.slice(0, i).every(s => s.rawComplete);
-      const completed = stage.rawComplete && priorAllDone;
+      const priorAllDone = rawStages.slice(0, i).every(s => s.autoComplete || s.manualComplete);
+      const completed = stage.manualComplete || (stage.autoComplete && priorAllDone);
       const active = stage.progress > 0 && !completed;
       return { ...stage, completed, active };
     });
@@ -2027,6 +2030,29 @@ Return ONLY valid JSON.`, undefined, 4096);
     const updated = storage.updateProject(projectId, { status });
     if (!updated) return res.status(500).json({ error: "Failed to update status" });
 
+    res.json(updated);
+  });
+
+  // Toggle stage completion (PM manual override)
+  app.patch("/api/projects/:id/stage-status", (req, res) => {
+    const projectId = parseInt(req.params.id);
+    const project = storage.getProject(projectId);
+    if (!project) return res.status(404).json({ error: "Project not found" });
+
+    const { stage, complete } = req.body;
+    if (!stage) return res.status(400).json({ error: "stage is required" });
+
+    let completions: Record<string, boolean> = {};
+    try { completions = project.stageCompletions ? JSON.parse(project.stageCompletions) : {}; } catch {}
+
+    if (complete) {
+      completions[stage] = true;
+    } else {
+      delete completions[stage];
+    }
+
+    const updated = storage.updateProject(projectId, { stageCompletions: JSON.stringify(completions) });
+    logAction(req, "stage_status_changed", projectId, `${stage}: ${complete ? "complete" : "incomplete"}`);
     res.json(updated);
   });
 

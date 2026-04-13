@@ -93,6 +93,7 @@ export const projects = sqliteTable("projects", {
   status: text("status").notNull().default("draft"),
   engagementModules: text("engagement_modules").default('["selection"]'), // JSON array: selection, ivv, health_check
   engagementMode: text("engagement_mode").default("consulting"), // 'consulting' | 'self_service'
+  stageCompletions: text("stage_completions"), // JSON: { setup: true, discovery: true, ... }
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at").notNull(),
 });
