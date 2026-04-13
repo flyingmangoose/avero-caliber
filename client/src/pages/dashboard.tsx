@@ -71,17 +71,16 @@ function MiniProgress({ projectId }: { projectId: number }) {
   });
   if (!data?.stages) return null;
   return (
-    <div className="flex items-center gap-1.5">
+    <div className="flex items-center gap-2">
       {data.stages.map((s) => {
         const done = s.checklist.filter(c => c.done).length;
         const total = s.checklist.length;
         const pct = total > 0 ? done / total : 0;
         return (
-          <div key={s.key} className="flex items-center gap-0.5" title={`${s.label}: ${done}/${total}`}>
-            <div className="w-8 h-1.5 rounded-full bg-muted overflow-hidden">
-              <div className={`h-full rounded-full transition-all ${pct >= 1 ? "bg-green-500" : pct > 0 ? "bg-accent" : "bg-transparent"}`} style={{ width: `${pct * 100}%` }} />
-            </div>
-          </div>
+          <Badge key={s.key} variant="outline" className={`text-[10px] h-4 px-1.5 gap-1 font-normal ${pct >= 1 ? "border-green-400 text-green-600 bg-green-50 dark:bg-green-950/30 dark:text-green-400" : pct > 0 ? "border-accent/50 text-accent" : "text-muted-foreground/50"}`}>
+            {pct >= 1 ? <CircleCheck className="w-2.5 h-2.5" /> : pct > 0 ? <Circle className="w-2.5 h-2.5 fill-accent/30" /> : null}
+            {s.label}
+          </Badge>
         );
       })}
     </div>
