@@ -1919,93 +1919,88 @@ Return ONLY valid JSON.`, undefined, 4096);
 
   // ==================== PROJECT STATUS WORKFLOW ====================
 
-  const STATUS_ORDER = ["draft", "requirements_review", "stakeholder_workshop", "vendor_evaluation", "final_report", "complete"];
+  const STATUS_ORDER = ["setup", "discovery", "requirements", "evaluation", "award"];
   const STATUS_LABELS: Record<string, string> = {
-    draft: "Draft",
-    requirements_review: "Requirements Review",
-    stakeholder_workshop: "Stakeholder Workshop",
-    vendor_evaluation: "Vendor Evaluation",
-    final_report: "Final Report",
-    complete: "Complete",
+    setup: "Setup",
+    discovery: "Discovery",
+    requirements: "Requirements",
+    evaluation: "Evaluation",
+    award: "Award",
   };
 
-  // Get project status info with checklists
+  // Get project status info — automatically computed from actual data
   app.get("/api/projects/:id/status-info", (req, res) => {
     const projectId = parseInt(req.params.id);
     const project = storage.getProject(projectId);
     if (!project) return res.status(404).json({ error: "Project not found" });
 
-    const currentStatus = project.status || "draft";
-    const currentIndex = STATUS_ORDER.indexOf(currentStatus);
-
     const requirements = storage.getRequirements(projectId);
-    const stats = storage.getProjectStats(projectId);
-    const workshopLinks = storage.getWorkshopLinks(projectId);
+    const interviews = storage.getDiscoveryInterviews(projectId);
+    const completedInterviews = interviews.filter(i => i.status === "completed");
+    const painPoints = storage.getPainPoints(projectId);
+    const processDescs = storage.getProcessDescriptions(projectId);
+    const outcomes = storage.getOutcomes(projectId);
     const settings = storage.getProjectVendorSettings(projectId);
     const scores = storage.getVendorScores(projectId);
-
-    // Count workshop feedback
-    let feedbackCount = 0;
-    for (const link of workshopLinks) {
-      const fb = storage.getWorkshopFeedback(link.id);
-      feedbackCount += fb.length;
-    }
-
-    // Check if evaluation exists
     const hasEvaluation = scores.length > 0;
 
-    const stages = STATUS_ORDER.map((key, index) => {
-      let checklist: Array<{ label: string; done: boolean }> = [];
+    // Check modules
+    let modules: string[] = [];
+    try { modules = project.engagementModules ? JSON.parse(project.engagementModules) : []; } catch {}
+    const isHealthCheck = modules.includes("health_check");
+    const isSelection = modules.includes("selection");
 
-      switch (key) {
-        case "draft":
-          checklist = [
-            { label: "Project created", done: true },
-            { label: "Description added", done: !!project.description && project.description.length > 0 },
-          ];
-          break;
-        case "requirements_review":
-          checklist = [
-            { label: "At least 1 requirement loaded", done: requirements.length >= 1 },
-            { label: "At least 1 module present", done: stats.moduleCoverage >= 1 },
-          ];
-          break;
-        case "stakeholder_workshop":
-          checklist = [
-            { label: "At least 1 workshop link created", done: workshopLinks.length >= 1 },
-            { label: "At least 1 feedback response", done: feedbackCount >= 1 },
-          ];
-          break;
-        case "vendor_evaluation":
-          checklist = [
-            { label: "At least 1 vendor selected", done: (settings?.selectedVendors ? JSON.parse(settings.selectedVendors).length : 0) >= 1 },
-            { label: "Scores loaded", done: hasEvaluation },
-          ];
-          break;
-        case "final_report":
-          checklist = [
-            { label: "Evaluation completed", done: hasEvaluation },
-          ];
-          break;
-        case "complete":
-          checklist = [
-            { label: "All previous stages complete", done: currentIndex >= STATUS_ORDER.length - 1 },
-          ];
-          break;
-      }
+    // Health check specific
+    const assessments = isHealthCheck ? storage.getHealthCheckAssessments(projectId) : [];
+    const documents = isHealthCheck ? storage.getProjectDocuments(projectId) : [];
 
-      const allDone = checklist.every(c => c.done);
+    const stageChecks: Record<string, Array<{ label: string; done: boolean }>> = {
+      setup: [
+        { label: "Project created", done: true },
+        { label: "Client profile set", done: !!project.clientId },
+      ],
+      discovery: isHealthCheck ? [
+        { label: "Documents uploaded", done: documents.length >= 1 },
+        { label: "Health check synthesized", done: assessments.length >= 1 },
+      ] : [
+        { label: "Interviews completed", done: completedInterviews.length >= 1 },
+        { label: "Pain points identified", done: painPoints.length >= 1 },
+        { label: "Processes documented", done: processDescs.length >= 1 },
+      ],
+      requirements: isHealthCheck ? [
+        { label: "Assessments complete", done: assessments.length >= 3 },
+      ] : [
+        { label: "Requirements generated", done: requirements.length >= 1 },
+        { label: "Outcomes defined", done: outcomes.length >= 1 },
+      ],
+      evaluation: isSelection ? [
+        { label: "Vendors selected", done: (settings?.selectedVendors ? JSON.parse(settings.selectedVendors).length : 0) >= 1 },
+        { label: "Scores loaded", done: hasEvaluation },
+      ] : [
+        { label: "Analysis complete", done: assessments.length >= 3 || hasEvaluation },
+      ],
+      award: [
+        { label: "Evaluation finalized", done: hasEvaluation && requirements.length > 0 },
+      ],
+    };
 
-      return {
-        key,
-        label: STATUS_LABELS[key],
-        completed: index < currentIndex,
-        active: index === currentIndex,
-        checklist,
-        allDone,
-      };
+    // Auto-determine active stage: first stage that isn't fully complete
+    const stages = STATUS_ORDER.map((key) => {
+      const checklist = stageChecks[key] || [];
+      const allDone = checklist.length > 0 && checklist.every(c => c.done);
+      return { key, label: STATUS_LABELS[key], completed: allDone, active: false, checklist, allDone };
     });
 
+    // Set active = first incomplete stage
+    const firstIncomplete = stages.findIndex(s => !s.completed);
+    if (firstIncomplete >= 0) {
+      stages[firstIncomplete].active = true;
+    } else {
+      stages[stages.length - 1].active = true;
+      stages[stages.length - 1].completed = true;
+    }
+
+    const currentStatus = stages.find(s => s.active)?.key || "setup";
     res.json({ currentStatus, stages });
   });
 
