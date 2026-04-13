@@ -776,17 +776,22 @@ Return ONLY valid JSON, no markdown fencing.`;
       };
     }
 
+    // Use actual interview data for current state stats, not AI-generated
+    const actualStepCount = currentSteps.length || transformation.currentStepCount;
+    const actualManualSteps = currentSteps.filter((s: any) => s.manual || s.isManual).length || transformation.currentManualSteps;
+    const actualSystems = new Set(currentSteps.map((s: any) => s.system).filter((s: any) => s && s !== "None")).size || transformation.currentSystems;
+
     const record = storage.createProcessTransformation({
       projectId,
       functionalArea: area,
       vendorPlatform,
-      currentStepCount: transformation.currentStepCount,
-      currentManualSteps: transformation.currentManualSteps,
-      currentSystems: transformation.currentSystems,
+      currentStepCount: actualStepCount,
+      currentManualSteps: actualManualSteps,
+      currentSystems: actualSystems,
       currentProcessingTime: transformation.currentProcessingTime,
       currentPainPoints: uniquePainPoints.length,
       currentDescription: transformation.currentDescription,
-      currentSteps: JSON.stringify(transformation.currentSteps || currentSteps),
+      currentSteps: JSON.stringify(currentSteps.length > 0 ? currentSteps : (transformation.currentSteps || [])),
       futureStepCount: transformation.futureStepCount,
       futureManualSteps: transformation.futureManualSteps,
       futureSystems: transformation.futureSystems,
