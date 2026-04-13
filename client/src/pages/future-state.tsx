@@ -54,14 +54,10 @@ export default function FutureStatePage() {
       queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "future-state", selected] });
       toast({ title: "Analysis complete" });
     },
-    onError: (e: any) => {
-      // Generation may have succeeded server-side but timed out at the proxy — refetch
+    onError: () => {
+      // Generation often succeeds server-side but nginx times out — always refetch
       queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "future-state", selected] });
-      if (e.message?.includes("504") || e.message?.includes("Gateway")) {
-        toast({ title: "Analysis is processing", description: "This may take a minute. Refresh if results don't appear." });
-      } else {
-        toast({ title: "Generation failed", description: e.message, variant: "destructive" });
-      }
+      toast({ title: "Analysis may still be processing", description: "Results will appear shortly. Refresh if needed." });
     },
   });
 
