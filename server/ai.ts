@@ -653,6 +653,7 @@ export async function generateFutureState(projectId: number, vendorPlatform: str
   const interviews = storage.getDiscoveryInterviews(projectId).filter(i => i.status === "completed");
   const painPoints = storage.getPainPoints(projectId);
   const vendorCaps = storage.getVendorCapabilities({ platform: vendorPlatform });
+  const processDescs = storage.getProcessDescriptions(projectId);
 
   if (interviews.length === 0) return [];
 
@@ -662,11 +663,14 @@ export async function generateFutureState(projectId: number, vendorPlatform: str
 
   const results: any[] = [];
 
-  // Get all existing transformations to reuse current state data
+  // Get existing transformations to reuse current state
   const allExisting = storage.getProcessTransformations(projectId);
 
-  for (const interview of interviews) {
-    const area = interview.functionalArea;
+  // Build unique functional areas from interviews
+  const areas = [...new Set(interviews.map(i => i.functionalArea))];
+
+  for (const area of areas) {
+    const interview = interviews.find(i => i.functionalArea === area)!;
     let currentSteps: any[] = [];
     try { currentSteps = interview.processSteps ? JSON.parse(interview.processSteps) : []; } catch {}
     let interviewPainPoints: any[] = [];
@@ -675,27 +679,28 @@ export async function generateFutureState(projectId: number, vendorPlatform: str
     // Reuse current state from any existing transformation for this area
     const existingForArea = allExisting.find(e => e.functionalArea === area && e.vendorPlatform !== vendorPlatform);
 
+    // Also check process descriptions for richer current state
+    const areaProcesses = processDescs.filter(p => p.functionalArea === area);
+
     const areaPainPoints = painPoints.filter(p => p.functionalArea === area);
     const allPainPointsList = [...interviewPainPoints, ...areaPainPoints.map(p => ({ description: p.description, severity: p.severity, impact: p.impact }))];
     const uniquePainPoints = allPainPointsList.filter((p, i, arr) => arr.findIndex(x => x.description === p.description) === i);
 
-    const areaCaps = vendorCaps.filter(c => {
-      const mod = (c.module || "").toLowerCase();
-      const areaLower = area.toLowerCase();
-      return mod.includes(areaLower) || areaLower.includes(mod) ||
-        (areaLower.includes("finance") && (mod.includes("financ") || mod.includes("accounting") || mod.includes("budget"))) ||
-        (areaLower.includes("human resources") && (mod.includes("hr") || mod.includes("human") || mod.includes("payroll") || mod.includes("talent"))) ||
-        (areaLower.includes("procurement") && (mod.includes("procur") || mod.includes("supply") || mod.includes("sourcing"))) ||
-        (areaLower.includes("asset") && (mod.includes("asset") || mod.includes("eam") || mod.includes("maintenance")));
-    });
+    const capsText = `Use your knowledge of ${vendorPlatform}'s capabilities for ${area}. This is a government/public sector organization.`;
 
-    const capsText = areaCaps.length > 0
-      ? areaCaps.map(c => `- ${c.capabilityName}: ${c.description || ""} (Maturity: ${c.maturityLevel || "N/A"}, Automation: ${c.automationLevel || "N/A"})`).join("\n")
-      : `No specific capabilities found for ${vendorPlatform} in ${area}. Use general knowledge of ${vendorPlatform} platform capabilities.`;
-
-    const stepsText = currentSteps.length > 0
-      ? currentSteps.map((s: any, i: number) => `${i + 1}. ${s.description || s.step || "Step"} ${s.manual ? "(MANUAL)" : "(automated)"} ${s.system ? `[${s.system}]` : ""}`).join("\n")
-      : "No detailed steps recorded.";
+    // Build current state text from process descriptions if available, else from interview
+    let stepsText: string;
+    if (areaProcesses.length > 0) {
+      stepsText = areaProcesses.map(proc => {
+        let steps: any[] = [];
+        try { steps = proc.currentSteps ? JSON.parse(proc.currentSteps) : []; } catch {}
+        return `Process: ${proc.processName}\n${steps.map((s: any, i: number) => `${i + 1}. ${s.description || s.step || "Step"} ${(s.manual || s.isManual) ? "(MANUAL)" : "(automated)"} ${s.system ? `[${s.system}]` : ""} ${s.actor ? `— ${s.actor}` : ""}`).join("\n")}`;
+      }).join("\n\n");
+    } else {
+      stepsText = currentSteps.length > 0
+        ? currentSteps.map((s: any, i: number) => `${i + 1}. ${s.description || s.step || "Step"} ${(s.manual || s.isManual) ? "(MANUAL)" : "(automated)"} ${s.system ? `[${s.system}]` : ""}`).join("\n")
+        : "No detailed steps recorded.";
+    }
 
     const painText = uniquePainPoints.length > 0
       ? uniquePainPoints.map((p: any) => `- [${p.severity || "medium"}] ${p.description}${p.impact ? ` — Impact: ${p.impact}` : ""}`).join("\n")
@@ -782,22 +787,55 @@ Return ONLY valid JSON, no markdown fencing.`;
       };
     }
 
-    // Use actual interview data or reuse from existing transformation
-    const actualStepCount = currentSteps.length || transformation.currentStepCount;
-    const actualManualSteps = currentSteps.filter((s: any) => s.manual || s.isManual).length || transformation.currentManualSteps;
-    const actualSystems = new Set(currentSteps.map((s: any) => s.system).filter((s: any) => s && s !== "None")).size || transformation.currentSystems;
+    // Lock current state: reuse from existing, or compute from interview/process data (never from AI)
+    let lockedCurrentSteps: string;
+    let lockedStepCount: number;
+    let lockedManualSteps: number;
+    let lockedSystems: number;
+    let lockedProcessingTime: string;
+    let lockedDescription: string;
+    let lockedPainPoints: number;
+
+    if (existingForArea) {
+      lockedCurrentSteps = existingForArea.currentSteps || "[]";
+      lockedStepCount = existingForArea.currentStepCount || 0;
+      lockedManualSteps = existingForArea.currentManualSteps || 0;
+      lockedSystems = existingForArea.currentSystems || 0;
+      lockedProcessingTime = existingForArea.currentProcessingTime || "";
+      lockedDescription = existingForArea.currentDescription || "";
+      lockedPainPoints = existingForArea.currentPainPoints || 0;
+    } else {
+      // Build from process descriptions or interview data
+      let allSteps: any[] = [];
+      if (areaProcesses.length > 0) {
+        for (const proc of areaProcesses) {
+          try { const s = proc.currentSteps ? JSON.parse(proc.currentSteps) : []; allSteps.push(...s); } catch {}
+        }
+      }
+      if (allSteps.length === 0) allSteps = currentSteps;
+
+      lockedCurrentSteps = JSON.stringify(allSteps);
+      lockedStepCount = allSteps.length;
+      lockedManualSteps = allSteps.filter((s: any) => s.manual || s.isManual).length;
+      lockedSystems = new Set(allSteps.map((s: any) => s.system).filter((s: any) => s && s !== "None")).size;
+      lockedProcessingTime = areaProcesses[0]?.avgDuration || transformation.currentProcessingTime || "";
+      lockedDescription = areaProcesses.length > 0
+        ? areaProcesses.map(p => `${p.processName}: ${p.description || ""}`).join(". ")
+        : transformation.currentDescription || "";
+      lockedPainPoints = uniquePainPoints.length;
+    }
 
     const record = storage.createProcessTransformation({
       projectId,
       functionalArea: area,
       vendorPlatform,
-      currentStepCount: existingForArea?.currentStepCount ?? actualStepCount,
-      currentManualSteps: existingForArea?.currentManualSteps ?? actualManualSteps,
-      currentSystems: existingForArea?.currentSystems ?? actualSystems,
-      currentProcessingTime: existingForArea?.currentProcessingTime ?? transformation.currentProcessingTime,
-      currentPainPoints: existingForArea?.currentPainPoints ?? uniquePainPoints.length,
-      currentDescription: existingForArea?.currentDescription ?? transformation.currentDescription,
-      currentSteps: existingForArea?.currentSteps ?? JSON.stringify(currentSteps.length > 0 ? currentSteps : (transformation.currentSteps || [])),
+      currentStepCount: lockedStepCount,
+      currentManualSteps: lockedManualSteps,
+      currentSystems: lockedSystems,
+      currentProcessingTime: lockedProcessingTime,
+      currentPainPoints: lockedPainPoints,
+      currentDescription: lockedDescription,
+      currentSteps: lockedCurrentSteps,
       futureStepCount: transformation.futureStepCount,
       futureManualSteps: transformation.futureManualSteps,
       futureSystems: transformation.futureSystems,
