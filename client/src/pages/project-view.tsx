@@ -783,6 +783,33 @@ export default function ProjectView() {
     setAutoPrioritizing(false);
   };
 
+  const [generatingFromDiscovery, setGeneratingFromDiscovery] = useState(false);
+  const generateFromDiscovery = async () => {
+    setGeneratingFromDiscovery(true);
+    try {
+      // Step 1: Generate requirements from discovery
+      const genRes = await apiRequest("POST", `/api/projects/${projectId}/discovery/generate-requirements`);
+      const genData = await genRes.json();
+      const count = genData.count || 0;
+
+      // Step 2: Auto-prioritize based on outcomes + pain points
+      if (count > 0) {
+        try {
+          await apiRequest("POST", `/api/projects/${projectId}/requirements/auto-prioritize`);
+        } catch {}
+      }
+
+      queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "requirements"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId] });
+      toast({ title: `Generated ${count} requirements from discovery` });
+    } catch (e: any) {
+      // May have timed out but still succeeded
+      queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "requirements"] });
+      toast({ title: "Generation may still be processing", description: "Refresh to check results." });
+    }
+    setGeneratingFromDiscovery(false);
+  };
+
   const resetForm = () => {
     setFormSubCategory("");
     setFormDescription("");
@@ -937,6 +964,31 @@ export default function ProjectView() {
           </Select>
 
           <div className="ml-auto flex items-center gap-1.5">
+            <Button
+              size="sm"
+              className="h-8 text-xs gap-1"
+              onClick={generateFromDiscovery}
+              disabled={generatingFromDiscovery}
+              data-testid="button-generate-from-discovery"
+            >
+              {generatingFromDiscovery ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+              {generatingFromDiscovery ? "Generating..." : "Generate from Discovery"}
+            </Button>
+
+            {allRequirements.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs gap-1"
+                onClick={autoPrioritize}
+                disabled={autoPrioritizing}
+                data-testid="button-auto-prioritize"
+              >
+                {autoPrioritizing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                {autoPrioritizing ? "Prioritizing..." : "Re-Prioritize"}
+              </Button>
+            )}
+
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button variant="outline" size="sm" className="h-8 text-xs gap-1" onClick={() => setShowLegend(!showLegend)} data-testid="button-legend">
@@ -968,20 +1020,6 @@ export default function ProjectView() {
               <Upload className="w-3.5 h-3.5" />
               Import
             </Button>
-
-            {allRequirements.length > 0 && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 text-xs gap-1"
-                onClick={autoPrioritize}
-                disabled={autoPrioritizing}
-                data-testid="button-auto-prioritize"
-              >
-                {autoPrioritizing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-                {autoPrioritizing ? "Prioritizing..." : "Auto-Prioritize"}
-              </Button>
-            )}
 
             {selectedArea && (
               <Button
