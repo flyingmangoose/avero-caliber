@@ -662,12 +662,18 @@ export async function generateFutureState(projectId: number, vendorPlatform: str
 
   const results: any[] = [];
 
+  // Get all existing transformations to reuse current state data
+  const allExisting = storage.getProcessTransformations(projectId);
+
   for (const interview of interviews) {
     const area = interview.functionalArea;
     let currentSteps: any[] = [];
     try { currentSteps = interview.processSteps ? JSON.parse(interview.processSteps) : []; } catch {}
     let interviewPainPoints: any[] = [];
     try { interviewPainPoints = interview.painPoints ? JSON.parse(interview.painPoints) : []; } catch {}
+
+    // Reuse current state from any existing transformation for this area
+    const existingForArea = allExisting.find(e => e.functionalArea === area && e.vendorPlatform !== vendorPlatform);
 
     const areaPainPoints = painPoints.filter(p => p.functionalArea === area);
     const allPainPointsList = [...interviewPainPoints, ...areaPainPoints.map(p => ({ description: p.description, severity: p.severity, impact: p.impact }))];
@@ -776,7 +782,7 @@ Return ONLY valid JSON, no markdown fencing.`;
       };
     }
 
-    // Use actual interview data for current state stats, not AI-generated
+    // Use actual interview data or reuse from existing transformation
     const actualStepCount = currentSteps.length || transformation.currentStepCount;
     const actualManualSteps = currentSteps.filter((s: any) => s.manual || s.isManual).length || transformation.currentManualSteps;
     const actualSystems = new Set(currentSteps.map((s: any) => s.system).filter((s: any) => s && s !== "None")).size || transformation.currentSystems;
@@ -785,13 +791,13 @@ Return ONLY valid JSON, no markdown fencing.`;
       projectId,
       functionalArea: area,
       vendorPlatform,
-      currentStepCount: actualStepCount,
-      currentManualSteps: actualManualSteps,
-      currentSystems: actualSystems,
-      currentProcessingTime: transformation.currentProcessingTime,
-      currentPainPoints: uniquePainPoints.length,
-      currentDescription: transformation.currentDescription,
-      currentSteps: JSON.stringify(currentSteps.length > 0 ? currentSteps : (transformation.currentSteps || [])),
+      currentStepCount: existingForArea?.currentStepCount ?? actualStepCount,
+      currentManualSteps: existingForArea?.currentManualSteps ?? actualManualSteps,
+      currentSystems: existingForArea?.currentSystems ?? actualSystems,
+      currentProcessingTime: existingForArea?.currentProcessingTime ?? transformation.currentProcessingTime,
+      currentPainPoints: existingForArea?.currentPainPoints ?? uniquePainPoints.length,
+      currentDescription: existingForArea?.currentDescription ?? transformation.currentDescription,
+      currentSteps: existingForArea?.currentSteps ?? JSON.stringify(currentSteps.length > 0 ? currentSteps : (transformation.currentSteps || [])),
       futureStepCount: transformation.futureStepCount,
       futureManualSteps: transformation.futureManualSteps,
       futureSystems: transformation.futureSystems,
