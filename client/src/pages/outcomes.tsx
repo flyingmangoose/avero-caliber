@@ -80,11 +80,34 @@ export default function OutcomesPage() {
     onSuccess: () => { invalidateAll(); toast({ title: "Deleted" }); },
   });
 
+  const [generatingId, setGeneratingId] = useState<number | null>(null);
+  const [generatingAll, setGeneratingAll] = useState(false);
+
   const generateScenarios = useMutation({
-    mutationFn: (outcomeId: number) => apiRequest("POST", `/api/outcomes/${outcomeId}/scenarios/generate`).then(r => r.json()),
-    onSuccess: (data: any) => { invalidateAll(); toast({ title: `${data.count} scenarios generated` }); },
-    onError: (e: any) => toast({ title: "Generation failed", description: e.message, variant: "destructive" }),
+    mutationFn: (outcomeId: number) => {
+      setGeneratingId(outcomeId);
+      return apiRequest("POST", `/api/outcomes/${outcomeId}/scenarios/generate`).then(r => r.json());
+    },
+    onSuccess: (data: any) => { setGeneratingId(null); invalidateAll(); toast({ title: `${data.count} scenarios generated` }); },
+    onError: (e: any) => { setGeneratingId(null); toast({ title: "Generation failed", description: e.message, variant: "destructive" }); },
   });
+
+  const generateAllScenarios = async () => {
+    setGeneratingAll(true);
+    let total = 0;
+    for (const o of outcomes) {
+      try {
+        setGeneratingId(o.id);
+        const res = await apiRequest("POST", `/api/outcomes/${o.id}/scenarios/generate`);
+        const data = await res.json();
+        total += data.count || 0;
+      } catch {}
+    }
+    setGeneratingId(null);
+    setGeneratingAll(false);
+    invalidateAll();
+    toast({ title: `${total} scenarios generated across ${outcomes.length} outcomes` });
+  };
 
   return (
     <div className="flex flex-col h-full">
@@ -201,17 +224,24 @@ export default function OutcomesPage() {
                 </Card>
               ) : (
                 <div className="space-y-4">
+                  <div className="flex justify-end">
+                    <Button size="sm" className="gap-1.5 text-xs" onClick={generateAllScenarios} disabled={generatingAll || generatingId !== null}>
+                      {generatingAll ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                      {generatingAll ? "Generating All..." : "Generate All Scripts"}
+                    </Button>
+                  </div>
                   {outcomes.map((o: any) => {
                     const scenarios = allScenarios.filter((s: any) => s.outcomeId === o.id);
+                    const isGenerating = generatingId === o.id;
                     return (
                       <Collapsible key={o.id} defaultOpen>
                         <CollapsibleTrigger className="flex items-center gap-2 w-full text-left p-2 rounded hover:bg-muted/30">
                           <ChevronDown className="w-4 h-4 text-muted-foreground" />
                           <span className="text-base font-semibold flex-1">{o.title}</span>
                           <Badge className={`text-xs ${PRI_COLORS[o.priority] || ""}`}>{o.priority}</Badge>
-                          <Button size="sm" className="h-7 text-xs gap-1" onClick={(e) => { e.stopPropagation(); generateScenarios.mutate(o.id); }} disabled={generateScenarios.isPending} data-testid={`btn-gen-scenarios-${o.id}`}>
-                            {generateScenarios.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
-                            Generate
+                          <Button size="sm" className="h-7 text-xs gap-1" onClick={(e) => { e.stopPropagation(); generateScenarios.mutate(o.id); }} disabled={generatingId !== null || generatingAll} data-testid={`btn-gen-scenarios-${o.id}`}>
+                            {isGenerating ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                            {isGenerating ? "Generating..." : "Generate"}
                           </Button>
                         </CollapsibleTrigger>
                         <CollapsibleContent>
