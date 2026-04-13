@@ -686,7 +686,37 @@ export async function generateFutureState(projectId: number, vendorPlatform: str
     const allPainPointsList = [...interviewPainPoints, ...areaPainPoints.map(p => ({ description: p.description, severity: p.severity, impact: p.impact }))];
     const uniquePainPoints = allPainPointsList.filter((p, i, arr) => arr.findIndex(x => x.description === p.description) === i);
 
-    const capsText = `Use your knowledge of ${vendorPlatform}'s capabilities for ${area}. This is a government/public sector organization.`;
+    // Pull vendor capabilities from knowledge base (across all projects/clients)
+    const areaCaps = vendorCaps.filter(c => {
+      const mod = (c.module || "").toLowerCase();
+      const proc = (c.processArea || "").toLowerCase();
+      const areaLower = area.toLowerCase();
+      return mod.includes(areaLower) || areaLower.includes(mod) || proc.includes(areaLower) ||
+        (areaLower.includes("finance") && (mod.includes("financ") || mod.includes("accounting") || mod.includes("budget") || mod.includes("payable") || mod.includes("receivable") || mod.includes("ledger"))) ||
+        (areaLower.includes("human resources") && (mod.includes("hr") || mod.includes("human") || mod.includes("payroll") || mod.includes("talent") || mod.includes("recruit") || mod.includes("benefit"))) ||
+        (areaLower.includes("procurement") && (mod.includes("procur") || mod.includes("supply") || mod.includes("sourcing") || mod.includes("contract") || mod.includes("vendor") || mod.includes("purchasing"))) ||
+        (areaLower.includes("asset") && (mod.includes("asset") || mod.includes("eam") || mod.includes("maintenance") || mod.includes("work order")));
+    });
+
+    // Also pull vendor process details
+    const areaProcessDetails = storage.getProcessDetails({ platform: vendorPlatform }).filter(d => {
+      const mod = (d.module || "").toLowerCase();
+      const areaLower = area.toLowerCase();
+      return mod.includes(areaLower) || areaLower.includes(mod);
+    });
+
+    let capsText: string;
+    if (areaCaps.length > 0 || areaProcessDetails.length > 0) {
+      const capLines = areaCaps.map(c =>
+        `- ${c.processArea}: ${c.workflowDescription || ""} (Automation: ${c.automationLevel || "N/A"}, Maturity: ${c.maturityRating || "N/A"}/5)${c.differentiators ? ` Differentiators: ${c.differentiators}` : ""}`
+      );
+      const detailLines = areaProcessDetails.slice(0, 20).map(d =>
+        `- ${d.capability}${d.howHandled ? `: ${d.howHandled}` : ""}${d.score ? ` [${d.score}]` : ""}`
+      );
+      capsText = [...capLines, ...detailLines].join("\n") || `Use general knowledge of ${vendorPlatform} for ${area}.`;
+    } else {
+      capsText = `No specific capabilities found in knowledge base for ${vendorPlatform} in ${area}. Use your general knowledge of ${vendorPlatform}'s platform capabilities for government/public sector ${area} operations.`;
+    }
 
     // Build current state text from process descriptions if available, else from interview
     let stepsText: string;
