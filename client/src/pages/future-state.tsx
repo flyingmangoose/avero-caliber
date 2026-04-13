@@ -202,10 +202,11 @@ function TransformationCard({ t, platform }: { t: any; platform: { label: string
                   <div key={i} className="flex items-start gap-2 text-sm">
                     <span className="w-4 h-4 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center shrink-0 text-xs font-bold">{s.step || i + 1}</span>
                     <div className="flex-1 min-w-0">
-                      <span>{s.description}</span>
+                      <span>{s.description || s.step}</span>
                       <div className="flex gap-1 mt-0.5">
-                        {s.manual && <Badge variant="outline" className="text-[10px] h-3.5 border-red-300 text-red-500">manual</Badge>}
+                        {(s.manual || s.isManual) && <Badge variant="outline" className="text-[10px] h-3.5 border-red-300 text-red-500">manual</Badge>}
                         {s.system && <Badge variant="outline" className="text-[10px] h-3.5">{s.system}</Badge>}
+                        {s.actor && <Badge variant="outline" className="text-[10px] h-3.5">{s.actor}</Badge>}
                       </div>
                     </div>
                   </div>
