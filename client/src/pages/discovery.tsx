@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Compass, Plus, Trash2, Save, ArrowLeft, Send, Loader2, CheckCircle, MessageSquare, Sparkles, ClipboardList, AlertTriangle, ChevronDown, BarChart3, FileText, Target, ChevronRight, Edit2, Upload, Check, SkipForward, AlertCircle, X } from "lucide-react";
+import { Compass, Plus, Trash2, Save, ArrowLeft, Send, Loader2, CheckCircle, MessageSquare, Sparkles, ClipboardList, AlertTriangle, ChevronDown, BarChart3, FileText, Target, ChevronRight, Edit2, Upload, Check, SkipForward, AlertCircle, X, Circle } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
@@ -782,8 +782,103 @@ function InterviewList({
   const interviewMap: Record<string, InterviewData> = {};
   for (const iv of interviews) interviewMap[iv.functionalArea] = iv;
 
+  // Bulk document upload
+  const [bulkUploading, setBulkUploading] = useState(false);
+  const [bulkFiles, setBulkFiles] = useState<{ file: File; area: string; status: string }[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const guessArea = (name: string): string => {
+    const lower = name.toLowerCase();
+    if (lower.includes("financ") || lower.includes("budget") || lower.includes("accounting") || lower.includes("ap") || lower.includes("ar")) return "Finance";
+    if (lower.includes("hr") || lower.includes("human") || lower.includes("payroll") || lower.includes("recruit") || lower.includes("benefit")) return "Human Resources";
+    if (lower.includes("procur") || lower.includes("purchas") || lower.includes("vendor") || lower.includes("contract") || lower.includes("supply")) return "Procurement";
+    if (lower.includes("asset") || lower.includes("maintenance") || lower.includes("fleet") || lower.includes("work order") || lower.includes("facility")) return "Asset Management";
+    if (lower.includes("public works") || lower.includes("infrastructure") || lower.includes("operations")) return "Public Works & Operations";
+    if (lower.includes("it") || lower.includes("tech") || lower.includes("cyber") || lower.includes("security")) return "IT & Security";
+    if (lower.includes("planning") || lower.includes("capital") || lower.includes("project")) return "Planning & Capital Projects";
+    return "General";
+  };
+
+  const handleBulkFiles = (files: FileList) => {
+    const newFiles = Array.from(files).map(f => ({ file: f, area: guessArea(f.name), status: "queued" }));
+    setBulkFiles(prev => [...prev, ...newFiles]);
+  };
+
+  const processAllFiles = async () => {
+    setBulkUploading(true);
+    for (let i = 0; i < bulkFiles.length; i++) {
+      const bf = bulkFiles[i];
+      if (bf.status !== "queued") continue;
+      setBulkFiles(prev => prev.map((f, j) => j === i ? { ...f, status: "uploading" } : f));
+      try {
+        // Create interview if needed
+        let iv = interviews.find(x => x.functionalArea === bf.area);
+        if (!iv) {
+          const res = await apiRequest("POST", `/api/projects/${projectId}/discovery/interviews`, { functionalArea: bf.area });
+          iv = await res.json();
+          queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "discovery", "interviews"] });
+        }
+        // Upload file to extract text
+        const formData = new FormData();
+        formData.append("file", bf.file);
+        const uploadRes = await fetch(`/api/discovery/interviews/${iv!.id}/upload-notes`, { method: "POST", body: formData });
+        if (!uploadRes.ok) throw new Error("Upload failed");
+        const uploadData = await uploadRes.json();
+        // Process transcript
+        await apiRequest("POST", `/api/discovery/interviews/${iv!.id}/import-transcript`, { transcript: uploadData.extractedText });
+        setBulkFiles(prev => prev.map((f, j) => j === i ? { ...f, status: "done" } : f));
+      } catch (e: any) {
+        setBulkFiles(prev => prev.map((f, j) => j === i ? { ...f, status: "error" } : f));
+      }
+    }
+    queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "discovery", "interviews"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "discovery", "pain-points"] });
+    toast({ title: `Processed ${bulkFiles.filter(f => f.status === "done").length} documents` });
+    setBulkUploading(false);
+  };
+
   return (
-    <div className="grid grid-cols-2 gap-3">
+    <div className="space-y-4">
+      {/* Bulk upload area */}
+      <Card className="border-dashed border-2 border-border hover:border-accent/50 transition-colors">
+        <CardContent className="p-4">
+          <div className="flex items-center gap-3">
+            <label className="flex-1 cursor-pointer">
+              <div className="text-center py-3">
+                <Upload className="w-5 h-5 mx-auto text-muted-foreground mb-1" />
+                <p className="text-sm font-medium">Upload Interview Notes & Documents</p>
+                <p className="text-xs text-muted-foreground">PDF, DOCX, TXT — multiple files supported. AI will auto-detect functional area.</p>
+              </div>
+              <input ref={fileInputRef} type="file" className="hidden" multiple accept=".pdf,.docx,.doc,.txt,.md" onChange={e => { if (e.target.files) handleBulkFiles(e.target.files); e.target.value = ""; }} />
+            </label>
+          </div>
+          {bulkFiles.length > 0 && (
+            <div className="mt-3 space-y-1.5">
+              {bulkFiles.map((bf, i) => (
+                <div key={i} className="flex items-center gap-2 text-sm px-2 py-1 rounded bg-muted/40">
+                  <FileText className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                  <span className="flex-1 truncate">{bf.file.name}</span>
+                  <Badge variant="outline" className="text-[10px] h-4">{bf.area}</Badge>
+                  {bf.status === "queued" && <Circle className="w-3 h-3 text-muted-foreground" />}
+                  {bf.status === "uploading" && <Loader2 className="w-3 h-3 animate-spin text-accent" />}
+                  {bf.status === "done" && <CheckCircle className="w-3 h-3 text-green-500" />}
+                  {bf.status === "error" && <AlertCircle className="w-3 h-3 text-red-500" />}
+                </div>
+              ))}
+              <div className="flex gap-2 mt-2">
+                <Button size="sm" className="h-7 text-xs gap-1" onClick={processAllFiles} disabled={bulkUploading || bulkFiles.every(f => f.status !== "queued")}>
+                  {bulkUploading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                  {bulkUploading ? "Processing..." : `Process ${bulkFiles.filter(f => f.status === "queued").length} Files`}
+                </Button>
+                <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setBulkFiles([])} disabled={bulkUploading}>Clear</Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Interview grid */}
+      <div className="grid grid-cols-2 gap-3">
       {FUNCTIONAL_AREAS.map(area => {
         const iv = interviewMap[area];
         const status = iv?.status || "not_started";
@@ -873,6 +968,7 @@ function InterviewList({
           </Card>
         );
       })}
+      </div>
     </div>
   );
 }
