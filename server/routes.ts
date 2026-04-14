@@ -3576,7 +3576,7 @@ Write in professional consulting tone covering: overall posture assessment, key 
     res.json({ success: true });
   });
 
-  // Import transcript from Fireflies, Otter, or manual paste and extract answers
+  // Import transcript from Fireflies, Otter, or manual paste and extract findings
   app.post("/api/discovery/interviews/:interviewId/import-transcript", async (req, res) => {
     const id = parseInt(req.params.interviewId);
     const interview = storage.getDiscoveryInterview(id);
@@ -3584,27 +3584,84 @@ Write in professional consulting tone covering: overall posture assessment, key 
     const { transcript } = req.body;
     if (!transcript) return res.status(400).json({ error: "Transcript is required" });
     try {
-      const { processTranscript } = await import("./ai");
-      const data = interview.messages ? JSON.parse(interview.messages) : {};
-      const questions = (data.guide || []).map((q: any) => ({ id: q.id, question: q.question }));
-      const result = await processTranscript(interview.functionalArea, transcript, questions);
-      // Merge extracted answers into existing answers
-      if (!data.answers) data.answers = {};
-      for (const ans of result.answers) {
-        data.answers[ans.questionId] = {
-          answer: ans.extractedAnswer,
-          keyPoints: ans.keyPoints,
-          painPoints: ans.painPoints,
-          followUpNeeded: ans.followUpNeeded,
-          status: ans.followUpNeeded ? "follow_up" : "answered",
-          source: "transcript",
-          updatedAt: new Date().toISOString(),
-        };
+      let messages: any = {};
+      try { messages = interview.messages ? JSON.parse(interview.messages) : {}; } catch {}
+
+      // Check if messages is a structured guide format or chat array
+      const isGuideFormat = messages && messages.guide && Array.isArray(messages.guide);
+      const isChatFormat = Array.isArray(messages);
+
+      if (isGuideFormat) {
+        // Structured interview — map transcript answers to questions
+        const { processTranscript } = await import("./ai");
+        const questions = messages.guide.map((q: any) => ({ id: q.id, question: q.question }));
+        const result = await processTranscript(interview.functionalArea, transcript, questions);
+        if (!messages.answers) messages.answers = {};
+        for (const ans of result.answers) {
+          messages.answers[ans.questionId] = {
+            answer: ans.extractedAnswer, keyPoints: ans.keyPoints,
+            painPoints: ans.painPoints, followUpNeeded: ans.followUpNeeded,
+            status: ans.followUpNeeded ? "follow_up" : "answered",
+            source: "transcript", updatedAt: new Date().toISOString(),
+          };
+        }
+        messages.additionalFindings = result.additionalFindings;
+        messages.transcriptImported = true;
+        storage.updateDiscoveryInterview(id, { messages: JSON.stringify(messages) });
+        res.json(result);
+      } else {
+        // Chat format or empty — extract findings directly from transcript via AI
+        const { llmCall } = await import("./ai");
+        const aiText = await llmCall(`You are analyzing a stakeholder interview transcript for a ${interview.functionalArea} discovery session.
+
+TRANSCRIPT:
+${transcript.substring(0, 20000)}
+
+Extract the following as JSON:
+{
+  "findings": { "keyThemes": ["theme1", "theme2"], "systemGaps": ["gap1"], "processMaturity": "description" },
+  "painPoints": [{ "description": "pain point", "severity": "critical|high|medium|low", "frequency": "daily|weekly|monthly|ongoing", "impact": "description" }],
+  "processSteps": [{ "step": "step description", "actor": "who does it", "system": "what system", "isManual": true/false }],
+  "messages": [{ "role": "user", "content": "key statement from transcript", "timestamp": "${new Date().toISOString()}" }]
+}
+
+Return ONLY valid JSON.`, undefined, 8192);
+
+        const jsonMatch = aiText.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) return res.status(500).json({ error: "Failed to parse transcript" });
+        const extracted = JSON.parse(jsonMatch[0]);
+
+        // Build chat messages from transcript
+        const chatMessages = isChatFormat ? [...messages] : [];
+        if (extracted.messages) chatMessages.push(...extracted.messages);
+
+        storage.updateDiscoveryInterview(id, {
+          status: "completed",
+          messages: JSON.stringify(chatMessages),
+          findings: JSON.stringify(extracted.findings || {}),
+          painPoints: JSON.stringify(extracted.painPoints || []),
+          processSteps: JSON.stringify(extracted.processSteps || []),
+        });
+
+        // Auto-create pain points
+        if (extracted.painPoints?.length > 0) {
+          const existingPP = storage.getPainPoints(interview.projectId);
+          for (const pp of extracted.painPoints) {
+            const isDup = existingPP.some(e => e.description?.toLowerCase().includes(pp.description?.toLowerCase().substring(0, 30)));
+            if (!isDup) {
+              storage.createPainPoint({
+                projectId: interview.projectId, sourceInterviewId: id,
+                functionalArea: interview.functionalArea,
+                description: pp.description, severity: pp.severity,
+                frequency: pp.frequency, impact: pp.impact,
+              });
+            }
+          }
+        }
+
+        logAction(req, "imported_transcript", interview.projectId, `${interview.functionalArea}: ${extracted.painPoints?.length || 0} pain points, ${extracted.processSteps?.length || 0} process steps`);
+        res.json({ success: true, findings: extracted.findings, painPoints: extracted.painPoints, processSteps: extracted.processSteps });
       }
-      data.additionalFindings = result.additionalFindings;
-      data.transcriptImported = true;
-      storage.updateDiscoveryInterview(id, { messages: JSON.stringify(data) });
-      res.json(result);
     } catch (error: any) {
       console.error("Transcript processing error:", error);
       res.status(500).json({ error: error.message });
