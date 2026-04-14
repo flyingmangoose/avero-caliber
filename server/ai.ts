@@ -1,43 +1,42 @@
 import OpenAI from "openai";
 import { storage } from "./storage";
 
-// Use xAI Grok API (OpenAI-compatible)
-const xai = new OpenAI({
-  apiKey: process.env.XAI_API_KEY || process.env.ANTHROPIC_API_KEY || "",
-  baseURL: process.env.XAI_API_KEY ? "https://api.x.ai/v1" : undefined,
-});
-
-const MODEL = process.env.XAI_API_KEY ? "grok-3-mini" : "gpt-4o";
-
-// Perplexity API for web search (OpenAI-compatible)
-const perplexity = process.env.PERPLEXITY_API_KEY ? new OpenAI({
+// Primary LLM: Perplexity > xAI > OpenAI
+const perplexityClient = process.env.PERPLEXITY_API_KEY ? new OpenAI({
   apiKey: process.env.PERPLEXITY_API_KEY,
   baseURL: "https://api.perplexity.ai",
 }) : null;
 
-// Web search via Perplexity — returns sourced, real-time information
+const xaiClient = process.env.XAI_API_KEY ? new OpenAI({
+  apiKey: process.env.XAI_API_KEY,
+  baseURL: "https://api.x.ai/v1",
+}) : null;
+
+// Use Perplexity as primary, xAI as fallback
+const primaryClient = perplexityClient || xaiClient || new OpenAI({ apiKey: process.env.OPENAI_API_KEY || "" });
+const PRIMARY_MODEL = perplexityClient ? "sonar-pro" : xaiClient ? "grok-3-mini" : "gpt-4o";
+const SEARCH_MODEL = "sonar"; // Perplexity search model
+
+// Web search via Perplexity sonar — returns sourced, real-time information
 export async function webSearch(query: string, systemPrompt?: string): Promise<string> {
-  if (!perplexity) {
-    // Fallback to regular LLM if no Perplexity key
-    return llmCall(query, systemPrompt);
-  }
+  if (!perplexityClient) return llmCall(query, systemPrompt);
   const messages: any[] = [];
   if (systemPrompt) messages.push({ role: "system", content: systemPrompt });
   messages.push({ role: "user", content: query });
-  const response = await perplexity.chat.completions.create({
-    model: "sonar",
+  const response = await perplexityClient.chat.completions.create({
+    model: SEARCH_MODEL,
     messages,
   });
   return response.choices[0]?.message?.content || "";
 }
 
-// Helper to call the LLM (replaces anthropic.messages.create)
+// General LLM call — uses Perplexity sonar-pro, xAI, or OpenAI
 async function llmCall(prompt: string, systemPrompt?: string, maxTokens = 4096): Promise<string> {
   const messages: any[] = [];
   if (systemPrompt) messages.push({ role: "system", content: systemPrompt });
   messages.push({ role: "user", content: prompt });
-  const response = await xai.chat.completions.create({
-    model: MODEL,
+  const response = await primaryClient.chat.completions.create({
+    model: PRIMARY_MODEL,
     max_tokens: maxTokens,
     messages,
   });
@@ -49,8 +48,8 @@ async function llmStream(prompt: string, systemPrompt?: string, maxTokens = 4096
   const messages: any[] = [];
   if (systemPrompt) messages.push({ role: "system", content: systemPrompt });
   messages.push({ role: "user", content: prompt });
-  return xai.chat.completions.create({
-    model: MODEL,
+  return primaryClient.chat.completions.create({
+    model: PRIMARY_MODEL,
     max_tokens: maxTokens,
     messages,
     stream: true,
