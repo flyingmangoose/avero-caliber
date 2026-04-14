@@ -218,7 +218,7 @@ export async function registerRoutes(
     }
 
     try {
-      const { llmCall } = await import("./ai");
+      const { webSearch } = await import("./ai");
 
       const websiteSection = websiteText.length > 200
         ? `\n\nWEBSITE CONTENT FROM ${domain}:\n${websiteText.substring(0, 30000)}`
@@ -261,10 +261,11 @@ IMPORTANT:
 
 Return ONLY the JSON object.`;
 
-      const text = await llmCall(prompt);
+      const text = await webSearch(prompt);
       const jsonStr = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-      const data = JSON.parse(jsonStr);
-      res.json({ success: true, data, source: websiteText.length > 200 ? "website" : "knowledge" });
+      const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
+      const data = JSON.parse(jsonMatch ? jsonMatch[0] : jsonStr);
+      res.json({ success: true, data, source: "perplexity" });
     } catch (err: any) {
       console.error("Domain research error:", err);
       // Fallback: basic info from domain name
@@ -480,9 +481,9 @@ Return ONLY the JSON.`);
           websiteText = html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").substring(0, 8000);
         }
       } catch {}
-      const { llmCall } = await import("./ai");
-      const prompt = `Analyze this government entity's website and your knowledge to create a comprehensive profile.\n\nDomain: ${domain}\nWebsite content: ${websiteText || "(unable to fetch)"}\n\nReturn JSON with: entityType, entityName, state, population, employeeCount, annualBudget, description, painSummary, currentSystems (array of {name, module, vendor, yearsInUse}), departments (array of {name, headcount, keyProcesses}), leadership (array of {name, title}).\n\nReturn ONLY valid JSON.`;
-      const text = await llmCall(prompt);
+      const { webSearch } = await import("./ai");
+      const prompt = `Research the government entity at domain "${domain}" and create a comprehensive profile. Use current, real-world data.\n\n${websiteText ? `Website content: ${websiteText}\n\n` : ""}Return JSON with: entityType, entityName, state, population, employeeCount, annualBudget, description, painSummary, currentSystems (array of {name, module, vendor, yearsInUse}), departments (array of {name, headcount, keyProcesses}), leadership (array of {name, title}).\n\nReturn ONLY valid JSON.`;
+      const text = await webSearch(prompt);
       const jsonStr = text.replace(/\`\`\`json\n?/g, "").replace(/\`\`\`\n?/g, "").trim();
       const raw = JSON.parse(jsonStr);
       // Map and sanitize to valid client columns only
@@ -6586,11 +6587,11 @@ Write in professional consulting tone covering: overall posture assessment, key 
       const existingChanges = storage.getVendorChanges({ vendorPlatform: source.vendorPlatform, limit: 200 });
       const existingTitles = existingChanges.map((c: any) => c.title?.toLowerCase()).filter(Boolean);
 
-      // Use AI to research recent vendor developments
-      const { llmCall } = await import("./ai");
+      // Use Perplexity web search for real-time vendor intelligence
+      const { webSearch, llmCall } = await import("./ai");
       const lastChecked = source.lastCheckedAt ? new Date(source.lastCheckedAt).toLocaleDateString() : "never";
 
-      const aiText = await llmCall(`You are a vendor intelligence analyst tracking ${source.vendorPlatform} for government ERP/EAM consulting.
+      const aiText = await webSearch(`You are a vendor intelligence analyst tracking ${source.vendorPlatform} for government ERP/EAM consulting.
 
 SOURCE: ${source.name} (${source.sourceType})
 URL: ${source.url}
@@ -6725,10 +6726,10 @@ Return ONLY the JSON array. If no new developments found, return [].`, undefined
           }
         } catch {}
 
-        const { llmCall } = await import("./ai");
+        const { webSearch } = await import("./ai");
         const lastChecked = source.lastCheckedAt ? new Date(source.lastCheckedAt).toLocaleDateString() : "never";
 
-        const aiText = await llmCall(`You are a vendor intelligence analyst tracking ${platform} for government ERP/EAM consulting.
+        const aiText = await webSearch(`You are a vendor intelligence analyst tracking ${platform} for government ERP/EAM consulting.
 
 PLATFORM: ${platform}
 LAST CHECKED: ${lastChecked}

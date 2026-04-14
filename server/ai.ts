@@ -9,6 +9,28 @@ const xai = new OpenAI({
 
 const MODEL = process.env.XAI_API_KEY ? "grok-3-mini" : "gpt-4o";
 
+// Perplexity API for web search (OpenAI-compatible)
+const perplexity = process.env.PERPLEXITY_API_KEY ? new OpenAI({
+  apiKey: process.env.PERPLEXITY_API_KEY,
+  baseURL: "https://api.perplexity.ai",
+}) : null;
+
+// Web search via Perplexity — returns sourced, real-time information
+export async function webSearch(query: string, systemPrompt?: string): Promise<string> {
+  if (!perplexity) {
+    // Fallback to regular LLM if no Perplexity key
+    return llmCall(query, systemPrompt);
+  }
+  const messages: any[] = [];
+  if (systemPrompt) messages.push({ role: "system", content: systemPrompt });
+  messages.push({ role: "user", content: query });
+  const response = await perplexity.chat.completions.create({
+    model: "sonar",
+    messages,
+  });
+  return response.choices[0]?.message?.content || "";
+}
+
 // Helper to call the LLM (replaces anthropic.messages.create)
 async function llmCall(prompt: string, systemPrompt?: string, maxTokens = 4096): Promise<string> {
   const messages: any[] = [];
