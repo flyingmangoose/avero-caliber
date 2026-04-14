@@ -3576,6 +3576,39 @@ Write in professional consulting tone covering: overall posture assessment, key 
     res.json({ success: true });
   });
 
+  // Upload document and extract text for interview notes
+  const interviewUpload = multer({ dest: os.tmpdir(), limits: { fileSize: 50 * 1024 * 1024 } });
+  app.post("/api/discovery/interviews/:interviewId/upload-notes", interviewUpload.single("file"), async (req, res) => {
+    if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+    try {
+      const fileBuffer = fs.readFileSync(req.file.path);
+      const ext = req.file.originalname.split(".").pop()?.toLowerCase();
+      let extractedText = "";
+
+      if (ext === "txt" || ext === "csv" || ext === "md") {
+        extractedText = fileBuffer.toString("utf-8");
+      } else if (ext === "pdf") {
+        const { PDFParse } = require("pdf-parse");
+        const pdfParser = new PDFParse(new Uint8Array(fileBuffer));
+        const pdfResult = await pdfParser.getText();
+        extractedText = pdfResult.pages ? pdfResult.pages.map((p: any) => p.text).join("\n\n") : "";
+      } else if (ext === "docx" || ext === "doc") {
+        const mammoth = require("mammoth");
+        const result = await mammoth.extractRawText({ buffer: fileBuffer });
+        extractedText = result.value;
+      } else {
+        extractedText = fileBuffer.toString("utf-8").substring(0, 50000);
+      }
+
+      try { fs.unlinkSync(req.file.path); } catch {}
+      res.json({ extractedText: extractedText.substring(0, 100000), fileName: req.file.originalname });
+    } catch (err: any) {
+      try { if (req.file?.path) fs.unlinkSync(req.file.path); } catch {}
+      console.error("Interview notes upload error:", err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // Import transcript from Fireflies, Otter, or manual paste and extract findings
   app.post("/api/discovery/interviews/:interviewId/import-transcript", async (req, res) => {
     const id = parseInt(req.params.interviewId);

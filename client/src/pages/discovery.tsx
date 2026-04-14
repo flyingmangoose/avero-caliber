@@ -605,8 +605,32 @@ function ImportTranscriptDialog({
 }: ImportTranscriptDialogProps) {
   const { toast } = useToast();
   const [transcript, setTranscript] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [result, setResult] = useState<{ answers: number; followUps: number } | null>(null);
+
+  const handleFileUpload = async (f: File) => {
+    setFile(f);
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", f);
+      const res = await fetch(`/api/discovery/interviews/${interviewId}/upload-notes`, {
+        method: "POST",
+        body: formData,
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      setTranscript(data.extractedText || "");
+      toast({ title: "File uploaded", description: `Extracted ${(data.extractedText || "").length} characters of text.` });
+    } catch (e: any) {
+      toast({ title: "Upload failed", description: e.message, variant: "destructive" });
+      setFile(null);
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handleProcess = async () => {
     if (!transcript.trim()) return;
@@ -623,9 +647,10 @@ function ImportTranscriptDialog({
       const followUps = Array.isArray(data.answers)
         ? data.answers.filter((a: any) => a.followUpNeeded).length
         : 0;
-      setResult({ answers, followUps });
+      setResult({ answers: data.painPoints?.length || answers, followUps });
       queryClient.invalidateQueries({ queryKey: ["/api/discovery/interviews", interviewId] });
-      toast({ title: "Transcript imported", description: `${answers} answers extracted.` });
+      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+      toast({ title: "Notes imported", description: `Findings extracted successfully.` });
       onImported();
     } catch (e: any) {
       toast({ title: "Import failed", description: e.message, variant: "destructive" });
@@ -636,6 +661,7 @@ function ImportTranscriptDialog({
 
   const handleClose = () => {
     setTranscript("");
+    setFile(null);
     setResult(null);
     onOpenChange(false);
   };
@@ -646,21 +672,38 @@ function ImportTranscriptDialog({
         <DialogHeader>
           <DialogTitle className="text-base font-semibold flex items-center gap-2">
             <Upload className="w-4 h-4 text-accent" />
-            Import Meeting Notes
+            Import Interview Notes
           </DialogTitle>
           <p className="text-sm text-muted-foreground mt-1">
-            Paste your transcript from Fireflies, Otter, or other meeting capture tools. AI will
-            extract answers and map them to interview questions.
+            Upload a document (PDF, DOCX, TXT) or paste notes directly. AI will extract findings, pain points, and process steps.
           </p>
         </DialogHeader>
 
         <div className="space-y-3">
+          {/* File upload */}
+          <div className="flex items-center gap-2">
+            <label className="flex-1">
+              <div className={`border-2 border-dashed rounded-lg p-3 text-center cursor-pointer transition-colors ${file ? "border-accent bg-accent/5" : "border-border hover:border-accent/50"}`}>
+                {uploading ? (
+                  <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" />Extracting text...</div>
+                ) : file ? (
+                  <div className="text-sm text-accent font-medium">{file.name}</div>
+                ) : (
+                  <div className="text-sm text-muted-foreground">Drop a file here or click to upload (PDF, DOCX, TXT)</div>
+                )}
+                <input type="file" className="hidden" accept=".pdf,.docx,.doc,.txt,.md,.csv" onChange={e => { const f = e.target.files?.[0]; if (f) handleFileUpload(f); e.target.value = ""; }} />
+              </div>
+            </label>
+          </div>
+
+          <div className="text-xs text-center text-muted-foreground">— or paste notes directly —</div>
+
           <Textarea
             className="text-xs min-h-[200px] resize-none font-mono"
-            placeholder="Paste transcript here…"
+            placeholder="Paste transcript or notes here…"
             value={transcript}
             onChange={e => setTranscript(e.target.value)}
-            disabled={processing}
+            disabled={processing || uploading}
             data-testid="textarea-transcript"
           />
 
