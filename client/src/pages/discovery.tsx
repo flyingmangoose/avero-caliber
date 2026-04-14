@@ -1030,18 +1030,16 @@ function GuidedInterview({
 
         {/* Action buttons */}
         <div className="flex items-center gap-2 shrink-0 flex-wrap">
-          {!isCompleted && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-7 text-xs gap-1"
-              onClick={() => setImportOpen(true)}
-              data-testid="btn-import-transcript"
-            >
-              <Upload className="w-3 h-3" />
-              Import Transcript
-            </Button>
-          )}
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 text-xs gap-1"
+            onClick={() => setImportOpen(true)}
+            data-testid="btn-import-transcript"
+          >
+            <Upload className="w-3 h-3" />
+            Import Transcript
+          </Button>
           {!isCompleted && guide.length > 0 && (
             <Button
               size="sm"
