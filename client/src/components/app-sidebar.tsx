@@ -1,4 +1,4 @@
-import { LayoutDashboard, FolderOpen, BookTemplate, Sun, Moon, BarChart3, PieChart, MessageSquare, Shield, Rocket, Stethoscope, BookOpen, Compass, ArrowRightLeft, Building2, Radar, Info, Target, Trophy } from "lucide-react";
+import { LayoutDashboard, FolderOpen, BookTemplate, Sun, Moon, BarChart3, PieChart, MessageSquare, Shield, Rocket, Stethoscope, BookOpen, Compass, ArrowRightLeft, Building2, Radar, Info, Target, Trophy, LogOut } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -218,26 +218,46 @@ export function AppSidebar() {
           </SidebarGroup>
       </SidebarContent>
       <SidebarFooter className="px-3 py-2 border-t border-sidebar-border">
-        <div className="flex items-center gap-1">
-          {(() => {
-            const { data: me } = useQuery<any>({ queryKey: ["/auth/me"], queryFn: () => fetch("/auth/me").then(r => r.json()), retry: false, staleTime: 5 * 60 * 1000 });
-            return me?.role === "admin" ? (
-              <Link href="/admin">
-                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-sidebar-foreground/50 hover:text-sidebar-foreground" title="Admin">
-                  <Shield className="w-3.5 h-3.5" />
+        {(() => {
+          // eslint-disable-next-line react-hooks/rules-of-hooks
+          const { data: me } = useQuery<any>({ queryKey: ["/auth/me"], queryFn: () => fetch("/auth/me").then(r => r.json()), retry: false, staleTime: 5 * 60 * 1000 });
+          return (
+            <div className="space-y-2">
+              {me?.name && (
+                <div className="flex items-center gap-2 px-1">
+                  {me.picture && <img src={me.picture} alt="" className="w-6 h-6 rounded-full" />}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium text-sidebar-foreground truncate">{me.name}</p>
+                    <p className="text-[10px] text-sidebar-foreground/50 truncate">{me.email}</p>
+                  </div>
+                </div>
+              )}
+              <div className="flex items-center gap-1">
+                {me?.role === "admin" && (
+                  <Link href="/admin">
+                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-sidebar-foreground/50 hover:text-sidebar-foreground" title="Admin">
+                      <Shield className="w-3.5 h-3.5" />
+                    </Button>
+                  </Link>
+                )}
+                <Link href="/about">
+                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-sidebar-foreground/50 hover:text-sidebar-foreground" title="About">
+                    <Info className="w-3.5 h-3.5" />
+                  </Button>
+                </Link>
+                <Button variant="ghost" size="sm" onClick={toggleTheme} className="h-7 w-7 p-0 text-sidebar-foreground/50 hover:text-sidebar-foreground" data-testid="button-theme-toggle" title={theme === "dark" ? "Light mode" : "Dark mode"}>
+                  {theme === "dark" ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
                 </Button>
-              </Link>
-            ) : null;
-          })()}
-          <Link href="/about">
-            <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-sidebar-foreground/50 hover:text-sidebar-foreground" title="About">
-              <Info className="w-3.5 h-3.5" />
-            </Button>
-          </Link>
-          <Button variant="ghost" size="sm" onClick={toggleTheme} className="h-7 w-7 p-0 text-sidebar-foreground/50 hover:text-sidebar-foreground" data-testid="button-theme-toggle" title={theme === "dark" ? "Light mode" : "Dark mode"}>
-            {theme === "dark" ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
-          </Button>
-        </div>
+                {me?.id && (
+                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-sidebar-foreground/50 hover:text-sidebar-foreground" title="Log out"
+                    onClick={() => { fetch("/auth/logout", { method: "POST" }).then(() => window.location.href = "/"); }}>
+                    <LogOut className="w-3.5 h-3.5" />
+                  </Button>
+                )}
+              </div>
+            </div>
+          );
+        })()}
       </SidebarFooter>
     </Sidebar>
   );
