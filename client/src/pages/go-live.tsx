@@ -123,6 +123,8 @@ export default function GoLivePage() {
       }));
       setAiNotes(data.overallNotes || "");
       setInitialized(true);
+      queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "go-live", "history"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/contracts", contractId, "go-live-scorecard"] });
       toast({ title: `Auto-assessed: ${data.overallReadiness?.replace(/_/g, " ")} (${data.overallScore}/100)` });
     },
     onError: (e: any) => toast({ title: "Auto-assess failed", description: e.message, variant: "destructive" }),

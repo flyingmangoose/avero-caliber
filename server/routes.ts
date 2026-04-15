@@ -3397,6 +3397,19 @@ Write in professional consulting tone covering: overall posture assessment, key 
       const overallScore = totalWeight > 0 ? Math.round((weightedSum / totalWeight) * 10) : 0;
       const readiness = overallScore >= 85 ? "ready" : overallScore >= 70 ? "ready_with_conditions" : overallScore >= 50 ? "not_ready" : "critical_hold";
 
+      // Auto-save scorecard for trend tracking
+      const contracts = storage.getContractBaselines(projectId);
+      if (contracts.length > 0) {
+        storage.saveGoLiveScorecard({
+          baselineId: contracts[0].id,
+          criteria: JSON.stringify(result.criteria),
+          overallScore,
+          overallReadiness: readiness,
+          assessorNotes: result.overallNotes || "",
+          assessedAt: new Date().toISOString(),
+        });
+      }
+
       logAction(req, "auto_assessed_golive", projectId, `Score: ${overallScore}, Readiness: ${readiness}`);
       res.json({
         criteria: result.criteria,
