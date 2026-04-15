@@ -452,6 +452,7 @@ export const healthCheckAssessments = sqliteTable("health_check_assessments", {
   findings: text("findings"), // JSON array of {severity, finding, evidence, recommendation}
   summary: text("summary"),
   assessedBy: text("assessed_by"),
+  sourceDocId: integer("source_doc_id"), // links to projectDocuments.id for traceability
   createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
 });
 
@@ -468,6 +469,7 @@ export const raidItems = sqliteTable("raid_items", {
   resolution: text("resolution"),
   siReported: integer("si_reported").default(0), // 1 if SI has this in their RAID, 0 if only IV&V found it
   siDiscrepancy: text("si_discrepancy"), // note about gap between SI's version and reality
+  sourceDocId: integer("source_doc_id"), // links to projectDocuments.id for traceability
   createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
 });
 

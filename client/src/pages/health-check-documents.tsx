@@ -249,12 +249,28 @@ function DocumentRow({
 
           {/* Applied status indicator */}
           {(applyResult || doc.appliedAt) && (
-            <div className="flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 rounded p-2">
-              <Check className="w-3.5 h-3.5 shrink-0" />
-              {applyResult
-                ? <>Applied: {applyResult.applied.raids ?? 0} RAID, {applyResult.applied.budgetItems ?? 0} budget, {applyResult.applied.scheduleItems ?? 0} schedule, {applyResult.applied.findings ?? 0} findings</>
-                : <>Applied on {formatDate(doc.appliedAt!)}</>
-              }
+            <div className="text-sm text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 rounded p-2">
+              <div className="flex items-center gap-2">
+                <Check className="w-3.5 h-3.5 shrink-0" />
+                {applyResult
+                  ? <>Applied: {applyResult.applied.raids ?? 0} RAID, {applyResult.applied.budgetItems ?? 0} budget, {applyResult.applied.scheduleItems ?? 0} schedule, {applyResult.applied.findings ?? 0} findings</>
+                  : <>Applied on {formatDate(doc.appliedAt!)}</>
+                }
+              </div>
+              {/* Show which domains received findings from this document */}
+              {analysis?.findings && analysis.findings.length > 0 && (() => {
+                const domains = [...new Set(analysis.findings.map((f: any) => f.domain || "governance"))];
+                const DOMAIN_NAMES: Record<string, string> = {
+                  governance: "Governance", raid: "RAID", technical: "Technical", budget_schedule: "Budget & Schedule",
+                  change_management: "Change Mgmt", data_migration: "Data Migration", testing_quality: "Testing",
+                  vendor_performance: "Vendor/SI", compliance_security: "Compliance", scope_requirements: "Scope",
+                };
+                return (
+                  <p className="text-xs text-emerald-600/80 dark:text-emerald-400/80 mt-1 ml-5.5">
+                    Findings applied to: {domains.map((d: string) => DOMAIN_NAMES[d] || d).join(", ")}
+                  </p>
+                );
+              })()}
             </div>
           )}
 

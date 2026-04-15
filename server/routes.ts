@@ -6607,6 +6607,9 @@ Return ONLY valid JSON.`, undefined, 8192);
           for (const f of (items.findings || [])) {
             const domain = f.domain || "governance";
             if (!findingsByDomain[domain]) findingsByDomain[domain] = [];
+            // Tag each finding with its source document for traceability
+            f.sourceDocId = docId;
+            f.sourceFileName = doc.fileName;
             findingsByDomain[domain].push(f);
           }
           for (const [domain, findings] of Object.entries(findingsByDomain)) {
@@ -6624,6 +6627,7 @@ Return ONLY valid JSON.`, undefined, 8192);
                 findings: JSON.stringify(mergedFindings),
                 summary: mergedFindings.map((f: any) => f.finding).join(". "),
                 assessedBy: `AI Analysis - ${doc.fileName}`,
+                sourceDocId: docId,
               });
             } else if (!existing) {
               storage.createHealthCheckAssessment({
@@ -6631,6 +6635,7 @@ Return ONLY valid JSON.`, undefined, 8192);
                 findings: JSON.stringify(findings),
                 summary: findings.map((f: any) => f.finding).join(". "),
                 assessedBy: `AI Analysis - ${doc.fileName}`,
+                sourceDocId: docId,
               });
             }
             applied.findings += findings.length;
@@ -6816,6 +6821,7 @@ Return ONLY valid JSON.`, undefined, 8192);
         status: raid.status || "open",
         owner: raid.owner || null,
         dueDate: raid.dueDate || null,
+        sourceDocId: docId,
       });
       applied.raids++;
     }
@@ -6831,6 +6837,7 @@ Return ONLY valid JSON.`, undefined, 8192);
         amount: budget.amount || 0,
         date: budget.date || null,
         notes: budget.notes || null,
+        sourceDocId: docId,
       });
       applied.budgetItems++;
     }
@@ -6845,6 +6852,7 @@ Return ONLY valid JSON.`, undefined, 8192);
         status: sched.status || "on_track",
         varianceDays: sched.varianceDays || null,
         notes: sched.notes || null,
+        sourceDocId: docId,
       });
       applied.scheduleItems++;
     }
@@ -6855,6 +6863,9 @@ Return ONLY valid JSON.`, undefined, 8192);
     for (const f of (items.findings || [])) {
       const domain = f.domain || "governance";
       if (!findingsByDomain[domain]) findingsByDomain[domain] = [];
+      // Tag each finding with source document for traceability
+      f.sourceDocId = docId;
+      f.sourceFileName = doc.fileName;
       findingsByDomain[domain].push(f);
     }
     for (const [domain, findings] of Object.entries(findingsByDomain)) {
@@ -6880,6 +6891,7 @@ Return ONLY valid JSON.`, undefined, 8192);
           findings: JSON.stringify(mergedFindings),
           summary: mergedFindings.map((f: any) => f.finding).join(". "),
           assessedBy: `AI Analysis - ${doc.fileName}`,
+          sourceDocId: docId,
         });
         // Record history if rating changed
         if (previousRating && previousRating !== mergedWorst) {
@@ -6893,6 +6905,7 @@ Return ONLY valid JSON.`, undefined, 8192);
           findings: JSON.stringify(findings),
           summary: findings.map((f: any) => f.finding).join(". "),
           assessedBy: `AI Analysis - ${doc.fileName}`,
+          sourceDocId: docId,
         });
       }
       applied.findings += findings.length;

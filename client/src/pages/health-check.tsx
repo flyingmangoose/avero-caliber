@@ -409,6 +409,11 @@ export default function HealthCheckPage() {
   const { data: scheduleItems = [] } = useQuery<any[]>({ queryKey: ["/api/projects", projectId, "schedule"], queryFn: () => apiRequest("GET", `/api/projects/${projectId}/schedule`).then(r => r.json()), enabled: !!projectId });
   const { data: baseline } = useQuery<any>({ queryKey: ["/api/projects", projectId, "baseline"], queryFn: () => apiRequest("GET", `/api/projects/${projectId}/baseline`).then(r => r.json()), enabled: !!projectId });
   const { data: assessmentHistoryData = [] } = useQuery<any[]>({ queryKey: ["/api/projects", projectId, "hc-history"], queryFn: () => apiRequest("GET", `/api/projects/${projectId}/health-check/history`).then(r => r.json()), enabled: !!projectId });
+  const { data: projectDocs = [] } = useQuery<any[]>({ queryKey: ["/api/projects", projectId, "documents"], queryFn: () => apiRequest("GET", `/api/projects/${projectId}/documents`).then(r => r.json()), enabled: !!projectId });
+
+  // Map document IDs to filenames for source traceability
+  const docNameMap: Record<number, string> = {};
+  for (const d of projectDocs) { docNameMap[d.id] = d.fileName; }
 
   const invalidateAll = () => {
     queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "hc-assessments"] });
@@ -625,6 +630,9 @@ export default function HealthCheckPage() {
                       <CardContent>
                         <p className="text-sm text-muted-foreground">{a?.summary || d.desc}</p>
                         {a?.assessedBy && <p className="text-xs text-muted-foreground/60 mt-2">Assessed by {a.assessedBy}</p>}
+                        {a?.sourceDocId && docNameMap[a.sourceDocId] && (
+                          <p className="text-xs text-blue-600 dark:text-blue-400 mt-1 flex items-center gap-1"><FileText className="w-3 h-3" />{docNameMap[a.sourceDocId]}</p>
+                        )}
                       </CardContent>
                     </Card>
                   );
@@ -692,6 +700,7 @@ export default function HealthCheckPage() {
                         <TableHead className="text-xs w-20">Severity</TableHead>
                         <TableHead className="text-xs w-20">Status</TableHead>
                         <TableHead className="text-xs w-20">Owner</TableHead>
+                        <TableHead className="text-xs w-24">Source</TableHead>
                         <TableHead className="text-xs w-20">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -703,6 +712,11 @@ export default function HealthCheckPage() {
                           <TableCell>{item.severity && <Badge className={`text-xs ${RATING_COLORS[item.severity] || "bg-muted text-muted-foreground"}`}>{item.severity}</Badge>}</TableCell>
                           <TableCell><Badge variant="outline" className="text-xs">{item.status}</Badge></TableCell>
                           <TableCell className="text-sm text-muted-foreground">{item.owner || "—"}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground">
+                            {item.sourceDocId && docNameMap[item.sourceDocId] ? (
+                              <span className="text-blue-600 dark:text-blue-400 flex items-center gap-1" title={docNameMap[item.sourceDocId]}><FileText className="w-3 h-3 shrink-0" /><span className="truncate max-w-[80px]">{docNameMap[item.sourceDocId]}</span></span>
+                            ) : "—"}
+                          </TableCell>
                           <TableCell>
                             <div className="flex gap-1">
                               <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => openRaidEdit(item)} data-testid={`edit-raid-${item.id}`}><Edit2 className="w-3 h-3" /></Button>

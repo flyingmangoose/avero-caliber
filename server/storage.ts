@@ -685,6 +685,7 @@ try { sqlite.exec(`ALTER TABLE raid_items ADD COLUMN source_doc_id INTEGER`); } 
 try { sqlite.exec(`ALTER TABLE budget_tracking ADD COLUMN source_doc_id INTEGER`); } catch {}
 try { sqlite.exec(`ALTER TABLE schedule_tracking ADD COLUMN source_doc_id INTEGER`); } catch {}
 try { sqlite.exec(`ALTER TABLE health_check_assessments ADD COLUMN is_manual INTEGER DEFAULT 0`); } catch {}
+try { sqlite.exec(`ALTER TABLE health_check_assessments ADD COLUMN source_doc_id INTEGER`); } catch {}
 try { sqlite.exec(`ALTER TABLE outcomes ADD COLUMN linked_requirement_ids TEXT`); } catch {}
 try { sqlite.exec(`ALTER TABLE process_descriptions ADD COLUMN swimlane_diagram TEXT`); } catch {}
 
@@ -937,9 +938,9 @@ export interface IStorage {
   updateProjectModules(projectId: number, modules: string[]): Project | undefined;
 
   // Health Check Assessments
-  createHealthCheckAssessment(data: { projectId: number; domain: string; overallRating?: string | null; findings?: string | null; summary?: string | null; assessedBy?: string | null }): HealthCheckAssessment;
+  createHealthCheckAssessment(data: { projectId: number; domain: string; overallRating?: string | null; findings?: string | null; summary?: string | null; assessedBy?: string | null; sourceDocId?: number | null }): HealthCheckAssessment;
   getHealthCheckAssessments(projectId: number): HealthCheckAssessment[];
-  updateHealthCheckAssessment(id: number, data: Partial<{ domain: string; overallRating: string | null; findings: string | null; summary: string | null; assessedBy: string | null }>): HealthCheckAssessment | undefined;
+  updateHealthCheckAssessment(id: number, data: Partial<{ domain: string; overallRating: string | null; findings: string | null; summary: string | null; assessedBy: string | null; sourceDocId: number | null }>): HealthCheckAssessment | undefined;
   deleteHealthCheckAssessment(id: number): void;
 
   // RAID Items
@@ -2657,7 +2658,7 @@ export class DatabaseStorage implements IStorage {
 
   // ==================== HEALTH CHECK ASSESSMENTS ====================
 
-  createHealthCheckAssessment(data: { projectId: number; domain: string; overallRating?: string | null; findings?: string | null; summary?: string | null; assessedBy?: string | null }): HealthCheckAssessment {
+  createHealthCheckAssessment(data: { projectId: number; domain: string; overallRating?: string | null; findings?: string | null; summary?: string | null; assessedBy?: string | null; sourceDocId?: number | null }): HealthCheckAssessment {
     const now = new Date().toISOString();
     return db.insert(healthCheckAssessments).values({
       projectId: data.projectId,
@@ -2666,6 +2667,7 @@ export class DatabaseStorage implements IStorage {
       findings: data.findings ?? null,
       summary: data.summary ?? null,
       assessedBy: data.assessedBy ?? null,
+      sourceDocId: data.sourceDocId ?? null,
       createdAt: now,
     }).returning().get();
   }
@@ -2677,7 +2679,7 @@ export class DatabaseStorage implements IStorage {
       .all();
   }
 
-  updateHealthCheckAssessment(id: number, data: Partial<{ domain: string; overallRating: string | null; findings: string | null; summary: string | null; assessedBy: string | null }>): HealthCheckAssessment | undefined {
+  updateHealthCheckAssessment(id: number, data: Partial<{ domain: string; overallRating: string | null; findings: string | null; summary: string | null; assessedBy: string | null; sourceDocId: number | null }>): HealthCheckAssessment | undefined {
     return db.update(healthCheckAssessments).set(data).where(eq(healthCheckAssessments.id, id)).returning().get();
   }
 
@@ -2687,7 +2689,7 @@ export class DatabaseStorage implements IStorage {
 
   // ==================== RAID ITEMS ====================
 
-  createRaidItem(data: { projectId: number; type: string; title: string; description?: string | null; severity?: string | null; status?: string; owner?: string | null; dueDate?: string | null; resolution?: string | null; siReported?: number; siDiscrepancy?: string | null }): RaidItem {
+  createRaidItem(data: { projectId: number; type: string; title: string; description?: string | null; severity?: string | null; status?: string; owner?: string | null; dueDate?: string | null; resolution?: string | null; siReported?: number; siDiscrepancy?: string | null; sourceDocId?: number | null }): RaidItem {
     const now = new Date().toISOString();
     return db.insert(raidItems).values({
       projectId: data.projectId,
@@ -2701,6 +2703,7 @@ export class DatabaseStorage implements IStorage {
       resolution: data.resolution ?? null,
       siReported: data.siReported ?? 0,
       siDiscrepancy: data.siDiscrepancy ?? null,
+      sourceDocId: data.sourceDocId ?? null,
       createdAt: now,
     }).returning().get();
   }
