@@ -524,6 +524,124 @@ Return ONLY the JSON.`);
   });
 
   // Upload and extract document for client (stores in project_documents + enriches client profile)
+  // Multipart upload for client documents — extracts text server-side from PDF/DOCX/XLSX/TXT
+  const clientDocUpload = multer({ dest: os.tmpdir(), limits: { fileSize: 50 * 1024 * 1024 } });
+  app.post("/api/clients/:id/upload-document", clientDocUpload.single("file"), async (req, res) => {
+    const clientId = parseInt(req.params.id);
+    const client = storage.getClient(clientId);
+    if (!client) return res.status(404).json({ error: "Client not found" });
+    if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+
+    const force = req.body.force === "true" || req.body.force === true;
+    const documentType = req.body.documentType || "sow_contract";
+
+    try {
+      const fileBuffer = fs.readFileSync(req.file.path);
+      const ext = req.file.originalname.split(".").pop()?.toLowerCase();
+
+      // Compute hash for dedup
+      const crypto = await import("crypto");
+      const fileHash = crypto.createHash("sha256").update(fileBuffer).digest("hex");
+
+      if (!force) {
+        const existing = storage.findClientDocumentByHash(clientId, fileHash);
+        if (existing) {
+          try { fs.unlinkSync(req.file.path); } catch {}
+          return res.status(409).json({
+            duplicate: true,
+            existingDocument: existing,
+            message: `This file was already uploaded as "${existing.fileName}" on ${existing.createdAt?.split("T")[0]}.`,
+          });
+        }
+      }
+
+      // Extract text
+      let documentText = "";
+      if (ext === "txt" || ext === "csv" || ext === "md") {
+        documentText = fileBuffer.toString("utf-8");
+      } else if (ext === "pdf") {
+        const { PDFParse } = require("pdf-parse");
+        const pdfParser = new PDFParse(new Uint8Array(fileBuffer));
+        const pdfResult = await pdfParser.getText();
+        documentText = pdfResult.pages ? pdfResult.pages.map((p: any) => p.text).join("\n\n") : "";
+      } else if (ext === "docx" || ext === "doc") {
+        const mammoth = require("mammoth");
+        const result = await mammoth.extractRawText({ buffer: fileBuffer });
+        documentText = result.value;
+      } else if (ext === "xlsx" || ext === "xls") {
+        const workbook = XLSX.read(fileBuffer, { type: "buffer" });
+        const sheets: string[] = [];
+        for (const sheetName of workbook.SheetNames) {
+          sheets.push(`=== ${sheetName} ===\n` + XLSX.utils.sheet_to_csv(workbook.Sheets[sheetName]));
+        }
+        documentText = sheets.join("\n\n");
+      } else {
+        documentText = fileBuffer.toString("utf-8");
+      }
+
+      try { fs.unlinkSync(req.file.path); } catch {}
+
+      if (!documentText || documentText.length < 20) {
+        return res.status(400).json({ error: "Could not extract text from this file." });
+      }
+
+      // Store the document at client level with hash
+      const doc = storage.createProjectDocument({
+        clientId,
+        projectId: null,
+        fileName: req.file.originalname,
+        fileSize: req.file.size,
+        mimeType: req.file.mimetype,
+        documentType,
+        source: "upload",
+        rawText: documentText.substring(0, 100000),
+        analysisStatus: "processing",
+        fileHash,
+      });
+
+      // AI extraction of client profile fields
+      try {
+        const { llmCall } = await import("./ai");
+        const prompt = `Extract government entity profile information from this document. The document is "${req.file.originalname}".
+
+Existing client data (fill gaps only):
+- Name: ${client.name}
+- Type: ${client.entityType || "unknown"}
+- State: ${client.state || "unknown"}
+
+Document text:
+${documentText.substring(0, 20000)}
+
+Return JSON with any fields you can extract: entityType, entityName, state, population, employeeCount, annualBudget, description, painSummary, currentSystems (array of {name, module, vendor, yearsInUse}), departments (array of {name, headcount, keyProcesses}), leadership (array of {name, title}), challenges.
+
+Only include fields that are clearly present in the document. Return ONLY valid JSON.`;
+        const text = await llmCall(prompt);
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        const data = jsonMatch ? JSON.parse(jsonMatch[0]) : {};
+        if (data.entityName) { data.name = data.entityName; delete data.entityName; }
+        const updates: any = {};
+        for (const [key, val] of Object.entries(data)) {
+          if (val != null && val !== "" && ((client as any)[key] == null || (client as any)[key] === "")) {
+            updates[key] = val;
+          }
+        }
+        const updated = Object.keys(updates).length > 0 ? storage.updateClient(clientId, updates) : client;
+        storage.updateProjectDocument(doc.id, {
+          analysisStatus: "completed",
+          aiAnalysis: JSON.stringify(data),
+        });
+        res.json({ success: true, data: updated, extractedFields: Object.keys(updates).length, documentId: doc.id, fileName: req.file.originalname });
+      } catch (aiErr: any) {
+        storage.updateProjectDocument(doc.id, { analysisStatus: "failed" });
+        res.json({ success: true, data: client, extractedFields: 0, documentId: doc.id, fileName: req.file.originalname, warning: "Document uploaded but AI extraction failed." });
+      }
+    } catch (err: any) {
+      try { if (req.file?.path) fs.unlinkSync(req.file.path); } catch {}
+      console.error("Client doc upload error:", err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   app.post("/api/clients/:id/extract-document", async (req, res) => {
     const clientId = parseInt(req.params.id);
     const client = storage.getClient(clientId);

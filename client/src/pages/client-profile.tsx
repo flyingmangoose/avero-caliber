@@ -171,12 +171,22 @@ export default function ClientProfilePage() {
   const uploadMutation = useMutation({
     mutationFn: async (file: File) => {
       if (isClientRoute) {
-        // For client route: read file text and send to extract-document-text endpoint
-        const text = await file.text();
-        const res = await apiRequest("POST", `/api/clients/${projectId}/extract-document`, {
-          fileName: file.name,
-          documentText: text.substring(0, 30000),
+        // For client route: use multipart upload so server can extract PDF/DOCX text
+        const fd = new FormData();
+        fd.append("file", file);
+        const res = await fetch(`${API_BASE}/api/clients/${projectId}/upload-document`, {
+          method: "POST",
+          body: fd,
+          credentials: "same-origin",
         });
+        if (res.status === 409) {
+          const dup = await res.json();
+          throw new Error(dup.message || "This file was already uploaded.");
+        }
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ error: "Upload failed" }));
+          throw new Error(err.error || "Upload failed");
+        }
         return res.json();
       }
       // For project route: use FormData upload
@@ -188,10 +198,14 @@ export default function ClientProfilePage() {
     onSuccess: (result) => {
       if (!result.success) { toast({ title: "Extraction failed", variant: "destructive" }); return; }
       if (isClientRoute) {
-        // Backend already merged data and saved to client — just refresh
         qc.invalidateQueries({ queryKey: ["/api/clients", projectId] });
         qc.invalidateQueries({ queryKey: ["/api/clients"] });
-        toast({ title: "Document processed", description: `Extracted ${result.extractedFields || 0} fields` });
+        qc.invalidateQueries({ queryKey: ["/api/clients", projectId, "documents"] });
+        toast({
+          title: "Document processed",
+          description: result.warning || `Extracted ${result.extractedFields || 0} field${result.extractedFields === 1 ? "" : "s"}`,
+          variant: result.warning ? "destructive" : undefined,
+        });
         return;
       }
       const d = result.data;
@@ -207,7 +221,7 @@ export default function ClientProfilePage() {
       saveMutation.mutate(merged);
       toast({ title: "Document processed and merged" });
     },
-    onError: () => toast({ title: "Upload failed", variant: "destructive" }),
+    onError: (e: any) => toast({ title: "Upload failed", description: e?.message || "Could not process file", variant: "destructive" }),
   });
 
   // Inline editing helpers

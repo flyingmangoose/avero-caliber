@@ -1011,6 +1011,7 @@ export interface IStorage {
   // Project Documents
   createProjectDocument(data: any): ProjectDocument;
   findProjectDocumentByHash(projectId: number, fileHash: string): ProjectDocument | undefined;
+  findClientDocumentByHash(clientId: number, fileHash: string): ProjectDocument | undefined;
   getProjectDocuments(projectId: number, documentType?: string): ProjectDocument[];
   getProjectDocument(id: number): ProjectDocument | undefined;
   updateProjectDocument(id: number, data: any): ProjectDocument | undefined;
@@ -3160,6 +3161,12 @@ export class DatabaseStorage implements IStorage {
     if (clientId) conditions.push(eq(projectDocuments.clientId, clientId));
     return db.select().from(projectDocuments)
       .where(and(or(...conditions), eq(projectDocuments.fileHash, fileHash)))
+      .get();
+  }
+
+  findClientDocumentByHash(clientId: number, fileHash: string): ProjectDocument | undefined {
+    return db.select().from(projectDocuments)
+      .where(and(eq(projectDocuments.clientId, clientId), eq(projectDocuments.fileHash, fileHash)))
       .get();
   }
 
