@@ -1,4 +1,4 @@
-import { LayoutDashboard, FolderOpen, BookTemplate, Sun, Moon, BarChart3, PieChart, MessageSquare, Shield, Rocket, Stethoscope, BookOpen, Compass, ArrowRightLeft, Building2, Radar, Info, Target, Trophy, LogOut } from "lucide-react";
+import { LayoutDashboard, FolderOpen, BookTemplate, Sun, Moon, BarChart3, PieChart, MessageSquare, Shield, Rocket, Stethoscope, BookOpen, Compass, ArrowRightLeft, Building2, Radar, Info, Target, Trophy, LogOut, TrendingUp } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 const navItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
   { title: "Portfolio", url: "/portfolio", icon: PieChart },
+  { title: "Executive", url: "/executive", icon: TrendingUp },
   { title: "Template Library", url: "/templates", icon: BookTemplate },
   { title: "Knowledge Base", url: "/knowledge-base", icon: BookOpen },
   { title: "Vendor Intelligence", url: "/vendor-monitoring", icon: Radar },

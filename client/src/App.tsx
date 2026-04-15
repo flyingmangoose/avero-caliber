@@ -24,6 +24,7 @@ import ClientProfilePage from "@/pages/client-profile";
 import NotFound from "@/pages/not-found";
 import WorkshopView from "@/pages/workshop";
 import Portfolio from "@/pages/portfolio";
+import ExecutiveDashboard from "@/pages/executive-dashboard";
 import VendorMonitoringPage from "@/pages/vendor-monitoring";
 import AboutPage from "@/pages/about";
 import AdminPage from "@/pages/admin";
@@ -89,6 +90,7 @@ function AppLayout() {
             <Switch>
               <Route path="/" component={Dashboard} />
               <Route path="/portfolio" component={Portfolio} />
+              <Route path="/executive" component={ExecutiveDashboard} />
               <Route path="/projects/:id/evaluation" component={VendorEvaluation} />
               <Route path="/projects/:id/stakeholder-feedback" component={StakeholderFeedback} />
               <Route path="/projects/:id/compliance" component={CompliancePage} />

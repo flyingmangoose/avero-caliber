@@ -1626,6 +1626,191 @@ Return ONLY valid JSON.`, undefined, 4096);
     res.json({ projects, aggregates: { totalCritical, totalHighRisks, projectsAtRisk, totalProjects: projects.length } });
   });
 
+  // Executive dashboard with trends, heatmap, and cross-project analytics
+  app.get("/api/analytics/executive-dashboard", (req, res) => {
+    const allProjectsRaw = storage.getProjects();
+    const user = getUserFromReq(req);
+    const isAdmin = !user || user.role === "admin";
+    const userProjectIds = user ? storage.getUserProjects(user.id) : [];
+    const allProjects = allProjectsRaw.filter(p => {
+      if (isAdmin) return true;
+      if (userProjectIds.includes(p.id)) return true;
+      if ((p as any).createdBy === user?.id) return true;
+      const members = storage.getProjectMembers(p.id);
+      return members.length === 0;
+    });
+
+    const RATING_NUMERIC: Record<string, number> = {
+      critical: 1, high: 2, medium: 3, low: 4, satisfactory: 5,
+    };
+    const RATING_ORDER = ["critical", "high", "medium", "low", "satisfactory"];
+
+    const ALL_DOMAINS = [
+      "governance", "raid", "technical", "budget_schedule",
+      "change_management", "data_migration", "testing_quality",
+      "vendor_performance", "compliance_security", "scope_requirements",
+    ];
+
+    const healthTrend: any[] = [];
+    const raidByProject: any[] = [];
+    const budgetOverview: any[] = [];
+    const heatmapCells: any[] = [];
+    const projectList: { id: number; name: string }[] = [];
+    const allMilestones: any[] = [];
+    const allRisks: any[] = [];
+    let totalCriticalExec = 0, totalHighExec = 0, projectsAtRiskExec = 0;
+    const readinessScores: number[] = [];
+    const previousReadinessScores: number[] = [];
+
+    for (const p of allProjects) {
+      const client = p.clientId ? storage.getClient(p.clientId) : undefined;
+      const projectName = p.name;
+      projectList.push({ id: p.id, name: projectName });
+
+      // Health trend from assessmentHistory
+      const history = storage.getAssessmentHistory(p.id);
+      for (const h of history) {
+        healthTrend.push({
+          date: h.createdAt.substring(0, 10),
+          projectId: p.id,
+          projectName,
+          domain: h.domain,
+          ratingNumeric: RATING_NUMERIC[h.newRating] ?? 3,
+          rating: h.newRating,
+        });
+      }
+
+      // Current assessments for heatmap
+      const assessments = storage.getHealthCheckAssessments(p.id);
+      const latestByDomain: Record<string, string> = {};
+      for (const a of assessments) {
+        if (a.overallRating) latestByDomain[a.domain] = a.overallRating;
+      }
+      for (const domain of ALL_DOMAINS) {
+        heatmapCells.push({
+          projectId: p.id,
+          domain,
+          rating: latestByDomain[domain] || null,
+        });
+      }
+
+      // Worst rating for "at risk"
+      const ratings = Object.values(latestByDomain);
+      if (ratings.length > 0) {
+        const worstIdx = Math.min(...ratings.map(r => RATING_ORDER.indexOf(r)).filter(i => i >= 0));
+        if (worstIdx <= 1) projectsAtRiskExec++;
+      }
+
+      // RAID
+      const raids = storage.getRaidItems(p.id);
+      const openRaids = raids.filter(r => r.status === "open" || r.status === "escalated");
+      const critCount = openRaids.filter(r => r.severity === "critical").length;
+      const highCount = openRaids.filter(r => r.severity === "high").length;
+      const medCount = openRaids.filter(r => r.severity === "medium").length;
+      const lowCount = openRaids.filter(r => !r.severity || r.severity === "low").length;
+      totalCriticalExec += critCount;
+      totalHighExec += highCount;
+      raidByProject.push({ projectId: p.id, projectName, critical: critCount, high: highCount, medium: medCount, low: lowCount });
+
+      // Top risks for cross-project register
+      const topItems = openRaids
+        .filter(r => r.severity === "critical" || r.severity === "high")
+        .map(r => ({
+          id: r.id, projectId: p.id, projectName,
+          type: r.type, title: r.title, description: r.description,
+          severity: r.severity, status: r.status, owner: r.owner,
+          dueDate: r.dueDate, createdAt: r.createdAt,
+        }));
+      allRisks.push(...topItems);
+
+      // Budget
+      const budget = storage.getBudgetSummary(p.id);
+      const authorized = (budget.originalContract || 0) + (budget.totalChangeOrders || 0) + (budget.totalAdditionalFunding || 0);
+      if (authorized > 0 || budget.totalActualSpend > 0) {
+        budgetOverview.push({
+          projectId: p.id, projectName, authorized,
+          actualSpend: budget.totalActualSpend,
+          variance: budget.variance,
+          spendPct: authorized > 0 ? Math.round(budget.totalActualSpend / authorized * 100) : 0,
+        });
+      }
+
+      // Milestones
+      const schedules = storage.getScheduleEntries(p.id);
+      const upcoming = schedules
+        .filter(s => s.status !== "completed" && s.currentDate)
+        .map(s => ({
+          projectId: p.id, projectName,
+          milestone: s.milestone, currentDate: s.currentDate,
+          originalDate: s.originalDate, status: s.status,
+          varianceDays: s.varianceDays,
+        }));
+      allMilestones.push(...upcoming);
+
+      // Go-live scorecard for readiness
+      const contracts = storage.getContractBaselines(p.id);
+      if (contracts.length > 0) {
+        const scorecardHistory = storage.getGoLiveScorecardHistory(contracts[0].id);
+        if (scorecardHistory.length > 0) {
+          const latest = scorecardHistory[scorecardHistory.length - 1];
+          if (latest.overallScore) readinessScores.push(latest.overallScore);
+          if (scorecardHistory.length > 1) {
+            const prev = scorecardHistory[scorecardHistory.length - 2];
+            if (prev.overallScore) previousReadinessScores.push(prev.overallScore);
+          }
+        }
+      }
+    }
+
+    // Sort milestones by date, take top 15
+    allMilestones.sort((a: any, b: any) => (a.currentDate || "").localeCompare(b.currentDate || ""));
+    const topMilestones = allMilestones.slice(0, 15);
+
+    // Sort risks by severity
+    const severityOrder = ["critical", "high", "medium", "low"];
+    allRisks.sort((a: any, b: any) => severityOrder.indexOf(a.severity || "low") - severityOrder.indexOf(b.severity || "low"));
+    const topRisks = allRisks.slice(0, 20);
+
+    // KPI trend for readiness
+    const avgReadiness = readinessScores.length > 0
+      ? Math.round(readinessScores.reduce((s, v) => s + v, 0) / readinessScores.length)
+      : null;
+    const prevAvgReadiness = previousReadinessScores.length > 0
+      ? Math.round(previousReadinessScores.reduce((s, v) => s + v, 0) / previousReadinessScores.length)
+      : null;
+
+    res.json({
+      kpis: {
+        totalProjects: allProjects.length,
+        projectsAtRisk: projectsAtRiskExec,
+        totalCriticalItems: totalCriticalExec,
+        totalHighRisks: totalHighExec,
+        avgReadinessScore: avgReadiness,
+        readinessScoreTrend: avgReadiness && prevAvgReadiness
+          ? (avgReadiness > prevAvgReadiness ? "up" : avgReadiness < prevAvgReadiness ? "down" : "flat")
+          : "flat",
+      },
+      healthTrend,
+      raidSummary: {
+        byProject: raidByProject,
+        totals: {
+          critical: totalCriticalExec,
+          high: totalHighExec,
+          medium: raidByProject.reduce((s: number, p: any) => s + p.medium, 0),
+          low: raidByProject.reduce((s: number, p: any) => s + p.low, 0),
+        },
+      },
+      budgetOverview,
+      heatmap: {
+        projects: projectList,
+        domains: ALL_DOMAINS,
+        cells: heatmapCells,
+      },
+      milestones: topMilestones,
+      topRisks,
+    });
+  });
+
   app.get("/api/analytics/portfolio", (req, res) => {
     const allProjectsRaw = storage.getProjects();
     // Filter by user access (same as dashboard)
