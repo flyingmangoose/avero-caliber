@@ -193,6 +193,20 @@ Created: ${project.createdAt}
     context += `\n`;
   }
 
+  // Avero's SOW/scope — pull from uploaded SOW docs at client or project level
+  const allDocs = storage.getProjectDocuments(projectId);
+  const sowDocs = allDocs.filter(d => d.documentType === "sow_contract" || d.fileName?.toLowerCase().match(/sow|statement.of.work|engagement.letter|scope.of.work/));
+  if (sowDocs.length > 0) {
+    context += `\nAVERO'S SOW / SCOPE OF WORK (from uploaded contract documents):`;
+    for (const d of sowDocs.slice(0, 3)) {
+      const excerpt = (d.rawText || "").substring(0, 2000);
+      if (excerpt.length > 50) {
+        context += `\nFrom "${d.fileName}":\n${excerpt}${(d.rawText?.length || 0) > 2000 ? "..." : ""}\n`;
+      }
+    }
+    context += `\nUse the above SOW content to assess whether the current engagement work is in-scope for Avero, and flag any scope drift or gaps.\n`;
+  }
+
   // Client/Organization context
   if (client) {
     context += `\nCLIENT ORGANIZATION:
@@ -1279,7 +1293,7 @@ export async function synthesizeHealthCheck(data: {
 
   const text = await llmCall(`You are a senior IV&V consultant synthesizing a comprehensive health check assessment for a government ERP/EAM implementation project.
 
-You have been given the full project context including client information, discovery findings, vendor evaluation data, and all current health check data (RAID log, budget, schedule, documents, prior assessments).
+You have been given the full project context including client information, discovery findings, vendor evaluation data, and all current health check data (RAID log, budget, schedule, documents, prior assessments). CRITICALLY: the project context includes Avero's Statement of Work (SOW) extracted from uploaded contract documents — use it to assess whether the observed work is within Avero's contracted scope.
 
 Your job is to produce a UNIFIED health assessment that:
 1. Synthesizes across ALL data sources — don't just repeat individual findings
@@ -1287,6 +1301,7 @@ Your job is to produce a UNIFIED health assessment that:
 3. Identifies patterns and systemic issues, not just individual items
 4. Provides actionable, specific recommendations
 5. Rates each domain honestly — don't sugarcoat problems
+6. Uses Avero's SOW to check for scope alignment — flag any scope drift, out-of-scope work, or contract compliance concerns in the scope_requirements domain
 
 HEALTH CHECK DATA:
 ${snapshot}
@@ -1305,7 +1320,7 @@ Return a JSON response with this exact structure:
     {"domain": "testing_quality", "rating": "...", "summary": "SIT/UAT progress, defect trends, test coverage", "findings": [...]},
     {"domain": "vendor_performance", "rating": "...", "summary": "SI delivery quality, resource availability, contract performance", "findings": [...]},
     {"domain": "compliance_security", "rating": "...", "summary": "Regulatory compliance, audit readiness, security posture", "findings": [...]},
-    {"domain": "scope_requirements", "rating": "...", "summary": "Scope management, requirements coverage, gap analysis status", "findings": [...]}
+    {"domain": "scope_requirements", "rating": "...", "summary": "Scope management, requirements coverage, gap analysis, AND Avero SOW scope alignment (is observed work in-scope per the uploaded SOW?)", "findings": [...]}
   ],
   "topRisks": [
     {"title": "Risk title", "severity": "critical|high|medium|low", "impact": "Brief description of potential impact"}
