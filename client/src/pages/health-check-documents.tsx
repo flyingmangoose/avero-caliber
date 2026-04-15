@@ -409,7 +409,7 @@ interface QueuedFile {
   file: File;
   documentType: string;
   period: string;
-  status: "queued" | "uploading" | "done" | "error";
+  status: "queued" | "uploading" | "done" | "error" | "duplicate";
   error?: string;
 }
 
@@ -479,6 +479,7 @@ export function DocumentsTab({ projectId, onApplyComplete }: { projectId: number
 
     // Upload each queued file
     let successCount = 0;
+    let duplicateCount = 0;
     for (const qf of fileQueue) {
       setFileQueue(prev => prev.map(f => f.id === qf.id ? { ...f, status: "uploading" as const } : f));
       try {
@@ -491,12 +492,17 @@ export function DocumentsTab({ projectId, onApplyComplete }: { projectId: number
           body: fd,
           credentials: "same-origin",
         });
+        if (uploadRes.status === 409) {
+          const dup = await uploadRes.json().catch(() => ({ message: "Already uploaded" }));
+          setFileQueue(prev => prev.map(f => f.id === qf.id ? { ...f, status: "duplicate" as const, error: dup.message } : f));
+          duplicateCount++;
+          continue;
+        }
         if (!uploadRes.ok) {
           const err = await uploadRes.json().catch(() => ({ error: "Upload failed" }));
           throw new Error(err.error || "Upload failed");
         }
         const created = await uploadRes.json();
-        // Fire off analysis (don't await — let it process in background)
         apiRequest("POST", `/api/projects/${projectId}/documents/${created.id}/analyze`).catch(() => {});
         setFileQueue(prev => prev.map(f => f.id === qf.id ? { ...f, status: "done" as const } : f));
         successCount++;
@@ -507,7 +513,12 @@ export function DocumentsTab({ projectId, onApplyComplete }: { projectId: number
 
     queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "documents"] });
     if (successCount > 0) {
-      toast({ title: `${successCount} document${successCount > 1 ? "s" : ""} uploaded`, description: "AI analysis started. Results will appear shortly." });
+      toast({
+        title: `${successCount} document${successCount > 1 ? "s" : ""} uploaded`,
+        description: duplicateCount > 0 ? `${duplicateCount} duplicate(s) skipped. AI analysis started.` : "AI analysis started. Results will appear shortly.",
+      });
+    } else if (duplicateCount > 0) {
+      toast({ title: `${duplicateCount} duplicate(s) skipped`, description: "These files were already uploaded to this project.", variant: "destructive" });
     }
     // Clear queue after a moment so user can see status
     setTimeout(() => {
@@ -627,6 +638,7 @@ export function DocumentsTab({ projectId, onApplyComplete }: { projectId: number
                   {qf.status === "uploading" && <Loader2 className="w-3.5 h-3.5 animate-spin text-accent shrink-0" />}
                   {qf.status === "done" && <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />}
                   {qf.status === "error" && <AlertTriangle className="w-3.5 h-3.5 text-destructive shrink-0" title={qf.error} />}
+                  {qf.status === "duplicate" && <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium shrink-0" title={qf.error}>duplicate</span>}
                   {qf.status === "queued" && (
                     <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive shrink-0" onClick={() => removeFromQueue(qf.id)}>
                       <Trash2 className="w-3.5 h-3.5" />

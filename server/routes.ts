@@ -3593,11 +3593,30 @@ Write in professional consulting tone covering: overall posture assessment, key 
   const interviewUpload = multer({ dest: os.tmpdir(), limits: { fileSize: 50 * 1024 * 1024 } });
   app.post("/api/discovery/interviews/:interviewId/upload-notes", interviewUpload.single("file"), async (req, res) => {
     if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+    const interviewId = parseInt(req.params.interviewId);
+    const interview = storage.getDiscoveryInterview(interviewId);
+    const force = req.body.force === "true" || req.body.force === true;
     try {
       const fileBuffer = fs.readFileSync(req.file.path);
       const ext = req.file.originalname.split(".").pop()?.toLowerCase();
-      let extractedText = "";
 
+      // Compute hash for dedup
+      const crypto = await import("crypto");
+      const fileHash = crypto.createHash("sha256").update(fileBuffer).digest("hex");
+
+      if (!force && interview?.projectId) {
+        const existing = storage.findProjectDocumentByHash(interview.projectId, fileHash);
+        if (existing) {
+          try { fs.unlinkSync(req.file.path); } catch {}
+          return res.status(409).json({
+            duplicate: true,
+            existingDocument: existing,
+            message: `This file was already uploaded as "${existing.fileName}" on ${existing.createdAt?.split("T")[0]}.`,
+          });
+        }
+      }
+
+      let extractedText = "";
       if (ext === "txt" || ext === "csv" || ext === "md") {
         extractedText = fileBuffer.toString("utf-8");
       } else if (ext === "pdf") {
@@ -3611,6 +3630,21 @@ Write in professional consulting tone covering: overall posture assessment, key 
         extractedText = result.value;
       } else {
         extractedText = fileBuffer.toString("utf-8").substring(0, 50000);
+      }
+
+      // Record upload as a project document for dedup tracking
+      if (interview?.projectId) {
+        storage.createProjectDocument({
+          projectId: interview.projectId,
+          fileName: req.file.originalname,
+          fileSize: req.file.size,
+          mimeType: req.file.mimetype,
+          documentType: "interview_notes",
+          rawText: extractedText.substring(0, 100000),
+          source: "upload",
+          analysisStatus: "completed",
+          fileHash,
+        });
       }
 
       try { fs.unlinkSync(req.file.path); } catch {}
@@ -6116,10 +6150,28 @@ Return ONLY valid JSON.`, undefined, 8192);
 
     let rawText = "";
     const ext = file.originalname.split(".").pop()?.toLowerCase();
+    const force = req.body.force === "true" || req.body.force === true;
 
     try {
       const filePath = file.path;
       const fileBuffer = fs.readFileSync(filePath);
+
+      // Compute SHA-256 hash for duplicate detection
+      const crypto = await import("crypto");
+      const fileHash = crypto.createHash("sha256").update(fileBuffer).digest("hex");
+
+      // Check for existing document with same hash in this project
+      if (!force) {
+        const existing = storage.findProjectDocumentByHash(projectId, fileHash);
+        if (existing) {
+          try { fs.unlinkSync(filePath); } catch {}
+          return res.status(409).json({
+            duplicate: true,
+            existingDocument: existing,
+            message: `This file was already uploaded as "${existing.fileName}" on ${existing.createdAt?.split("T")[0]}.`,
+          });
+        }
+      }
 
       if (ext === "txt" || ext === "csv" || ext === "md" || ext === "json") {
         rawText = fileBuffer.toString("utf-8");
@@ -6174,6 +6226,7 @@ Return ONLY valid JSON.`, undefined, 8192);
         period,
         source: "upload",
         analysisStatus: "pending",
+        fileHash,
       });
 
       logAction(req, "uploaded_document", parseInt(req.params.id), doc.fileName);

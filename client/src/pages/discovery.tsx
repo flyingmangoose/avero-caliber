@@ -806,25 +806,28 @@ function InterviewList({
 
   const processAllFiles = async () => {
     setBulkUploading(true);
+    let duplicates = 0;
     for (let i = 0; i < bulkFiles.length; i++) {
       const bf = bulkFiles[i];
       if (bf.status !== "queued") continue;
       setBulkFiles(prev => prev.map((f, j) => j === i ? { ...f, status: "uploading" } : f));
       try {
-        // Create interview if needed
         let iv = interviews.find(x => x.functionalArea === bf.area);
         if (!iv) {
           const res = await apiRequest("POST", `/api/projects/${projectId}/discovery/interviews`, { functionalArea: bf.area });
           iv = await res.json();
           queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "discovery", "interviews"] });
         }
-        // Upload file to extract text
         const formData = new FormData();
         formData.append("file", bf.file);
         const uploadRes = await fetch(`/api/discovery/interviews/${iv!.id}/upload-notes`, { method: "POST", body: formData });
+        if (uploadRes.status === 409) {
+          duplicates++;
+          setBulkFiles(prev => prev.map((f, j) => j === i ? { ...f, status: "duplicate" } : f));
+          continue;
+        }
         if (!uploadRes.ok) throw new Error("Upload failed");
         const uploadData = await uploadRes.json();
-        // Process transcript
         await apiRequest("POST", `/api/discovery/interviews/${iv!.id}/import-transcript`, { transcript: uploadData.extractedText });
         setBulkFiles(prev => prev.map((f, j) => j === i ? { ...f, status: "done" } : f));
       } catch (e: any) {
@@ -833,7 +836,8 @@ function InterviewList({
     }
     queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "discovery", "interviews"] });
     queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "discovery", "pain-points"] });
-    toast({ title: `Processed ${bulkFiles.filter(f => f.status === "done").length} documents` });
+    const done = bulkFiles.filter(f => f.status === "done").length;
+    toast({ title: `Processed ${done} documents`, description: duplicates > 0 ? `${duplicates} duplicate(s) skipped` : undefined });
     setBulkUploading(false);
   };
 
@@ -863,6 +867,7 @@ function InterviewList({
                   {bf.status === "uploading" && <Loader2 className="w-3 h-3 animate-spin text-accent" />}
                   {bf.status === "done" && <CheckCircle className="w-3 h-3 text-green-500" />}
                   {bf.status === "error" && <AlertCircle className="w-3 h-3 text-red-500" />}
+                  {bf.status === "duplicate" && <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">duplicate</span>}
                 </div>
               ))}
               <div className="flex gap-2 mt-2">

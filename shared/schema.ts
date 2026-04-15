@@ -789,6 +789,7 @@ export const projectDocuments = sqliteTable("project_documents", {
   appliedAt: text("applied_at"), // ISO timestamp when items were applied to health check; null = not yet applied
   period: text("period"), // e.g. "Week ending 2026-03-28" or "Q1 2026"
   uploadedBy: text("uploaded_by"),
+  fileHash: text("file_hash"), // SHA-256 of file contents for dedup
   createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
 });
 

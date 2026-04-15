@@ -1010,6 +1010,7 @@ export interface IStorage {
 
   // Project Documents
   createProjectDocument(data: any): ProjectDocument;
+  findProjectDocumentByHash(projectId: number, fileHash: string): ProjectDocument | undefined;
   getProjectDocuments(projectId: number, documentType?: string): ProjectDocument[];
   getProjectDocument(id: number): ProjectDocument | undefined;
   updateProjectDocument(id: number, data: any): ProjectDocument | undefined;
@@ -3148,7 +3149,18 @@ export class DatabaseStorage implements IStorage {
       extractedItems: data.extractedItems ?? null,
       period: data.period ?? null,
       uploadedBy: data.uploadedBy ?? null,
+      fileHash: data.fileHash ?? null,
     }).returning().get();
+  }
+
+  findProjectDocumentByHash(projectId: number, fileHash: string): ProjectDocument | undefined {
+    const project = db.select().from(projects).where(eq(projects.id, projectId)).get();
+    const clientId = project?.clientId;
+    const conditions: any[] = [eq(projectDocuments.projectId, projectId)];
+    if (clientId) conditions.push(eq(projectDocuments.clientId, clientId));
+    return db.select().from(projectDocuments)
+      .where(and(or(...conditions), eq(projectDocuments.fileHash, fileHash)))
+      .get();
   }
 
   getProjectDocuments(projectId: number, documentType?: string): ProjectDocument[] {
