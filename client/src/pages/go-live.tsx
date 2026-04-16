@@ -123,6 +123,8 @@ export default function GoLivePage() {
       }));
       setAiNotes(data.overallNotes || "");
       setInitialized(true);
+      // Refetch compliance summary in case a contract baseline was auto-created
+      queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "compliance-summary"] });
       queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "go-live", "history"] });
       queryClient.invalidateQueries({ queryKey: ["/api/contracts", contractId, "go-live-scorecard"] });
       toast({ title: `Auto-assessed: ${data.overallReadiness?.replace(/_/g, " ")} (${data.overallScore}/100)` });
