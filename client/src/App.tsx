@@ -70,8 +70,8 @@ function ProjectRedirect() {
 }
 
 const sidebarStyle = {
-  "--sidebar-width": "15rem",
-  "--sidebar-width-icon": "3.5rem",
+  "--sidebar-width": "17.5rem",
+  "--sidebar-width-icon": "4.5rem",
 };
 
 function AppLayout() {
@@ -82,11 +82,11 @@ function AppLayout() {
 
   return (
     <SidebarProvider style={sidebarStyle as React.CSSProperties}>
-      <div className="flex h-screen w-full overflow-hidden">
+      <div className="flex h-screen w-full overflow-hidden bg-transparent">
         <AppSidebar />
-        <div className="flex flex-col flex-1 min-w-0">
+        <div className="flex flex-col flex-1 min-w-0 px-3 py-3 md:pl-0 md:pr-4 md:py-4">
           <AppHeader />
-          <main className="flex-1 overflow-y-auto overscroll-contain">
+          <main className="glass-panel-strong flex-1 overflow-y-auto overscroll-contain rounded-[28px] border border-white/40">
             <Switch>
               <Route path="/" component={Dashboard} />
               <Route path="/portfolio" component={Portfolio} />

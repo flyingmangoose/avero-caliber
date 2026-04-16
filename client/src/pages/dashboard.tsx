@@ -197,6 +197,14 @@ function formatNumber(n: number | null | undefined): string {
   return n.toLocaleString();
 }
 
+function getInitials(name: string): string {
+  return name
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join("");
+}
+
 // ── Main Dashboard ─────────────────────────────────────────────────────────────
 
 export default function Dashboard() {
@@ -252,7 +260,11 @@ export default function Dashboard() {
       setClientName("");
       setClientDomain("");
       // Auto-expand new client
-      setExpandedClients((prev) => new Set([...prev, client.id]));
+      setExpandedClients((prev) => {
+        const next = new Set(prev);
+        next.add(client.id);
+        return next;
+      });
     },
     onError: (e: any) =>
       toast({ title: "Error creating client", description: e.message, variant: "destructive" }),
@@ -316,6 +328,14 @@ export default function Dashboard() {
       0
     ) ?? 0;
   const totalProjects = clients?.reduce((sum, c) => sum + c.projectCount, 0) ?? 0;
+  const filteredClients = clients?.filter((client) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    return client.name.toLowerCase().includes(q) ||
+      client.state?.toLowerCase().includes(q) ||
+      client.entityType?.toLowerCase().includes(q) ||
+      client.projects.some(p => p.name.toLowerCase().includes(q));
+  }) ?? [];
 
   // ── Helpers ──
 
@@ -345,66 +365,101 @@ export default function Dashboard() {
   // ── Render ──
 
   return (
-    <div className="p-4 sm:p-8 max-w-5xl mx-auto space-y-6 sm:space-y-8" data-testid="page-dashboard">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-            Clients & Projects
-          </h1>
-          <p className="text-base text-muted-foreground mt-1">
-            Manage your client engagements
-          </p>
+    <div className="mx-auto max-w-6xl space-y-6 p-4 sm:p-8" data-testid="page-dashboard">
+      <section className="hero-surface relative overflow-hidden rounded-[32px] px-6 py-7 text-white sm:px-8 sm:py-8">
+        <div className="absolute inset-0 opacity-20">
+          <div className="absolute -right-12 top-0 h-40 w-40 rounded-full bg-white/20 blur-3xl" />
+          <div className="absolute bottom-0 left-8 h-24 w-24 rounded-full bg-amber-200/30 blur-2xl" />
         </div>
-        <Button
-          onClick={openNewClient}
-          className="gap-2 bg-accent hover:bg-accent/90 text-accent-foreground shadow-sm"
-          data-testid="button-new-client"
-        >
-          <Plus className="w-4 h-4" />
-          New Client
-        </Button>
-      </div>
+        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-2xl">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-white/70">
+              Client Operations
+            </p>
+            <h1 className="mt-3 text-4xl font-semibold tracking-[-0.05em] sm:text-5xl">
+              Modern program oversight,
+              <span className="display-serif ml-2 text-amber-100">without the clutter.</span>
+            </h1>
+            <p className="mt-4 max-w-xl text-sm leading-6 text-white/76 sm:text-base">
+              Manage client engagements, launch new work quickly, and keep project health visible across selection, IV&V, and health check programs.
+            </p>
+          </div>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <Button
+              onClick={openNewClient}
+              className="min-w-[170px] gap-2 bg-white text-slate-950 hover:bg-white/90"
+              data-testid="button-new-client"
+            >
+              <Plus className="w-4 h-4" />
+              New Client
+            </Button>
+            <div className="rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-sm text-white/75 backdrop-blur">
+              Active delivery book across public-sector advisory work.
+            </div>
+          </div>
+        </div>
+      </section>
 
-      {/* Stats Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="px-5 py-4 rounded-lg bg-muted/50">
-          <p className="text-sm text-muted-foreground mb-1">Clients</p>
-          <p className="text-2xl font-semibold tracking-tight">{isLoading ? "—" : totalClients}</p>
-        </div>
-        <div className="px-5 py-4 rounded-lg bg-muted/50">
-          <p className="text-sm text-muted-foreground mb-1">Active Projects</p>
-          <p className="text-2xl font-semibold tracking-tight">{isLoading ? "—" : activeProjects}</p>
-        </div>
-        <div className="px-5 py-4 rounded-lg bg-muted/50">
-          <p className="text-sm text-muted-foreground mb-1">Total Projects</p>
-          <p className="text-2xl font-semibold tracking-tight">{isLoading ? "—" : totalProjects}</p>
-        </div>
-      </div>
+      <section className="grid gap-4 lg:grid-cols-[minmax(0,1.8fr)_minmax(300px,1fr)]">
+        <div className="glass-panel rounded-[28px] p-5 sm:p-6">
+          <div className="flex flex-col gap-5">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">Portfolio Snapshot</p>
+                <h2 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-foreground">Clients and projects at a glance</h2>
+              </div>
+              <p className="text-sm text-muted-foreground">Use search to jump straight to a client, project, or entity type.</p>
+            </div>
 
-      {/* Search */}
-      <div className="relative">
-        <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-        <Input className="pl-9 h-10 text-sm" placeholder="Search clients or projects..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
-      </div>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="rounded-[24px] border border-white/55 bg-white/80 p-4 shadow-xs dark:border-white/10 dark:bg-white/5">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Clients</p>
+                <p className="mt-3 text-3xl font-semibold tracking-[-0.05em] text-foreground">{isLoading ? "—" : totalClients}</p>
+                <p className="mt-1 text-sm text-muted-foreground">Organizations under active advisory support.</p>
+              </div>
+              <div className="rounded-[24px] border border-white/55 bg-white/80 p-4 shadow-xs dark:border-white/10 dark:bg-white/5">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Active Projects</p>
+                <p className="mt-3 text-3xl font-semibold tracking-[-0.05em] text-foreground">{isLoading ? "—" : activeProjects}</p>
+                <p className="mt-1 text-sm text-muted-foreground">Live engagements moving through delivery stages.</p>
+              </div>
+              <div className="rounded-[24px] border border-white/55 bg-white/80 p-4 shadow-xs dark:border-white/10 dark:bg-white/5">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Total Projects</p>
+                <p className="mt-3 text-3xl font-semibold tracking-[-0.05em] text-foreground">{isLoading ? "—" : totalProjects}</p>
+                <p className="mt-1 text-sm text-muted-foreground">Selection, IV&V, and health check workspaces.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="glass-panel rounded-[28px] p-5 sm:p-6">
+          <div className="flex h-full flex-col gap-4">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">Search</p>
+              <h2 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-foreground">Find work instantly</h2>
+            </div>
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input className="h-12 pl-11" placeholder="Search clients, projects, entities..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+            </div>
+            <div className="rounded-[24px] border border-dashed border-border/70 bg-background/40 p-4 text-sm text-muted-foreground">
+              {searchQuery.trim()
+                ? `${filteredClients.length} matching client${filteredClients.length === 1 ? "" : "s"}`
+                : "Tip: search by client name, state, project title, or entity type."}
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* Client Cards */}
       {isLoading ? (
-        <div className="space-y-3">
+        <div className="space-y-4">
           {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-24 w-full rounded-lg" />
+            <Skeleton key={i} className="h-36 w-full rounded-[28px]" />
           ))}
         </div>
       ) : clients && clients.length > 0 ? (
-        <div className="space-y-3">
-          {clients.filter((client) => {
-            if (!searchQuery.trim()) return true;
-            const q = searchQuery.toLowerCase();
-            return client.name.toLowerCase().includes(q) ||
-              client.state?.toLowerCase().includes(q) ||
-              client.entityType?.toLowerCase().includes(q) ||
-              client.projects.some(p => p.name.toLowerCase().includes(q));
-          }).map((client) => {
+        <div className="space-y-4">
+          {filteredClients.map((client) => {
             const isExpanded = expandedClients.has(client.id);
             const borderColor =
               ENTITY_BORDER_COLOR[client.entityType ?? ""] ?? "#1a2744";
@@ -416,73 +471,80 @@ export default function Dashboard() {
                 onOpenChange={() => toggleExpand(client.id)}
               >
                 <Card
-                  className="overflow-hidden transition-shadow hover:shadow-md"
-                  style={{ borderLeft: `4px solid ${borderColor}` }}
+                  className="overflow-hidden rounded-[30px] border-white/50 bg-white/72 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md dark:border-white/10 dark:bg-slate-950/40"
+                  style={{
+                    borderLeft: `4px solid ${borderColor}`,
+                    boxShadow: `0 24px 60px -42px ${borderColor}`,
+                  }}
                   data-testid={`card-client-${client.id}`}
                 >
                   <CardContent className="p-0">
                     {/* Collapsed header — always visible */}
                     <CollapsibleTrigger asChild>
                       <button
-                        className="w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-muted/30 transition-colors"
+                        className="w-full bg-gradient-to-r from-white/90 via-white/75 to-transparent px-5 py-5 text-left transition-colors hover:bg-white/75 dark:from-slate-950/40 dark:via-slate-950/20"
                         data-testid={`toggle-client-${client.id}`}
                       >
-                        {/* Chevron */}
-                        <span className="shrink-0 text-muted-foreground">
-                          {isExpanded ? (
-                            <ChevronDown className="w-4 h-4" />
-                          ) : (
-                            <ChevronRight className="w-4 h-4" />
-                          )}
-                        </span>
-
-                        {/* Client name + badges */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-bold text-base text-foreground truncate">
-                              {client.name}
-                            </span>
-                            <EntityTypeBadge type={client.entityType} />
-                            {client.state && (
-                              <span className="text-xs text-muted-foreground flex items-center gap-0.5">
-                                <MapPin className="w-3 h-3" />
-                                {client.state}
-                              </span>
-                            )}
+                        <div className="flex items-start gap-4">
+                          <div
+                            className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[20px] text-sm font-semibold text-white shadow-lg"
+                            style={{ backgroundColor: borderColor }}
+                          >
+                            {getInitials(client.name)}
                           </div>
-                          {/* Metadata row */}
-                          <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground flex-wrap">
-                            {client.population != null && (
-                              <span className="flex items-center gap-1">
-                                <Users className="w-3 h-3" />
-                                Pop. {formatNumber(client.population)}
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="truncate text-lg font-semibold tracking-[-0.03em] text-foreground">
+                                {client.name}
                               </span>
-                            )}
-                            {client.employeeCount != null && (
-                              <span className="flex items-center gap-1">
-                                <Briefcase className="w-3 h-3" />
-                                {formatNumber(client.employeeCount)} employees
-                              </span>
-                            )}
-                            {client.annualBudget && (
-                              <span className="flex items-center gap-1">
-                                <DollarSign className="w-3 h-3" />
-                                {client.annualBudget}
-                              </span>
-                            )}
+                              <EntityTypeBadge type={client.entityType} />
+                              {client.state && (
+                                <span className="inline-flex items-center gap-1 rounded-full bg-background/70 px-2.5 py-1 text-xs text-muted-foreground">
+                                  <MapPin className="w-3 h-3" />
+                                  {client.state}
+                                </span>
+                              )}
+                          </div>
+                            <div className="mt-3 flex flex-wrap items-center gap-2.5 text-sm text-muted-foreground">
+                              {client.population != null && (
+                                <span className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-background/50 px-3 py-1.5">
+                                  <Users className="w-3.5 h-3.5" />
+                                  Pop. {formatNumber(client.population)}
+                                </span>
+                              )}
+                              {client.employeeCount != null && (
+                                <span className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-background/50 px-3 py-1.5">
+                                  <Briefcase className="w-3.5 h-3.5" />
+                                  {formatNumber(client.employeeCount)} employees
+                                </span>
+                              )}
+                              {client.annualBudget && (
+                                <span className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-background/50 px-3 py-1.5">
+                                  <DollarSign className="w-3.5 h-3.5" />
+                                  {client.annualBudget}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="ml-auto flex shrink-0 items-center gap-3 pl-4">
+                            <span className="hidden rounded-full bg-foreground/[0.04] px-3 py-1.5 text-xs font-medium text-muted-foreground sm:inline-flex">
+                              {client.projectCount} project{client.projectCount !== 1 ? "s" : ""}
+                            </span>
+                            <span className="flex h-10 w-10 items-center justify-center rounded-2xl border border-border/60 bg-background/70 text-muted-foreground">
+                              {isExpanded ? (
+                                <ChevronDown className="w-4 h-4" />
+                              ) : (
+                                <ChevronRight className="w-4 h-4" />
+                              )}
+                            </span>
                           </div>
                         </div>
-
-                        {/* Project count pill */}
-                        <span className="shrink-0 text-xs text-muted-foreground font-medium bg-muted px-2 py-0.5 rounded-full">
-                          {client.projectCount} project{client.projectCount !== 1 ? "s" : ""}
-                        </span>
                       </button>
                     </CollapsibleTrigger>
 
                     {/* Expanded content */}
                     <CollapsibleContent>
-                      <div className="px-4 pb-4 pt-1 border-t border-border/50 space-y-3">
+                      <div className="space-y-4 border-t border-border/50 bg-background/35 px-5 pb-5 pt-4 dark:bg-slate-950/20">
                         {/* Expanded header: domain link + action buttons */}
                         <div className="flex items-center justify-between gap-2 flex-wrap">
                           <div className="flex items-center gap-3 flex-wrap text-sm text-muted-foreground">
@@ -491,7 +553,7 @@ export default function Dashboard() {
                                 href={`https://${client.domain}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="flex items-center gap-1 hover:text-accent transition-colors"
+                                className="flex items-center gap-1 rounded-full border border-border/60 bg-background/70 px-3 py-1.5 hover:text-accent transition-colors"
                                 data-testid={`link-domain-${client.id}`}
                                 onClick={(e) => e.stopPropagation()}
                               >
@@ -515,7 +577,7 @@ export default function Dashboard() {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                className="h-7 text-xs"
+                                className="h-9 rounded-2xl px-4 text-xs"
                                 data-testid={`button-view-profile-${client.id}`}
                               >
                                 View Profile
@@ -523,7 +585,7 @@ export default function Dashboard() {
                             </Link>
                             <Button
                               size="sm"
-                              className="h-7 text-xs bg-accent hover:bg-accent/90 text-accent-foreground gap-1"
+                              className="h-9 rounded-2xl bg-accent text-xs text-accent-foreground hover:bg-accent/90 gap-1"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 openNewProject(client.id, client.name);
@@ -536,7 +598,7 @@ export default function Dashboard() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-7 text-xs text-muted-foreground hover:text-destructive"
+                              className="h-9 w-9 rounded-2xl p-0 text-muted-foreground hover:text-destructive"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 if (
@@ -556,28 +618,35 @@ export default function Dashboard() {
 
                         {/* Project list */}
                         {client.projects.length > 0 ? (
-                          <div className="space-y-1.5">
+                          <div className="space-y-2">
                             {client.projects.map((project) => (
                               <div
                                 key={project.id}
-                                className="flex items-center gap-2 px-3 py-2 rounded-md bg-muted/40 hover:bg-muted/70 transition-colors group"
+                                className="group flex items-center gap-3 rounded-[24px] border border-white/55 bg-white/80 px-4 py-3 shadow-xs transition-all hover:-translate-y-0.5 hover:bg-white dark:border-white/10 dark:bg-white/5"
                                 data-testid={`row-project-${project.id}`}
                               >
                                 <Link
                                   href={`/projects/${project.id}`}
-                                  className="flex-1 min-w-0 flex items-center gap-2 no-underline"
+                                  className="flex min-w-0 flex-1 items-center gap-3 no-underline"
                                   data-testid={`link-project-${project.id}`}
                                 >
-                                  <span className="text-base font-medium truncate text-foreground group-hover:text-accent transition-colors">
-                                    {project.name}
+                                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary dark:bg-white/10 dark:text-white">
+                                    <FolderOpen className="h-4 w-4" />
                                   </span>
-                                  <MiniProgress projectId={project.id} />
-                                  <ModuleBadges modulesJson={project.engagementModules} />
+                                  <div className="min-w-0 flex-1">
+                                    <span className="block truncate text-base font-medium text-foreground transition-colors group-hover:text-accent">
+                                      {project.name}
+                                    </span>
+                                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                                      <MiniProgress projectId={project.id} />
+                                      <ModuleBadges modulesJson={project.engagementModules} />
+                                    </div>
+                                  </div>
                                 </Link>
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-opacity"
+                                  className="h-9 w-9 rounded-2xl p-0 opacity-0 text-muted-foreground transition-opacity hover:text-destructive group-hover:opacity-100"
                                   onClick={() => {
                                     if (
                                       confirm(
@@ -595,7 +664,7 @@ export default function Dashboard() {
                             ))}
                           </div>
                         ) : (
-                          <div className="text-center py-4 text-sm text-muted-foreground">
+                          <div className="rounded-[24px] border border-dashed border-border/70 bg-background/45 py-8 text-center text-sm text-muted-foreground">
                             No projects yet.{" "}
                             <button
                               className="underline text-accent hover:text-accent/80"
@@ -616,35 +685,35 @@ export default function Dashboard() {
         </div>
       ) : (
         /* Onboarding empty state */
-        <div className="max-w-lg mx-auto py-12 text-center space-y-8">
+        <div className="glass-panel mx-auto max-w-2xl rounded-[32px] px-8 py-12 text-center space-y-8">
           <div>
-            <div className="w-14 h-14 rounded-2xl bg-foreground mx-auto mb-4 flex items-center justify-center">
+            <div className="hero-surface mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-[22px]">
               <svg viewBox="0 0 20 20" fill="none" className="w-8 h-8">
                 <path d="M6 16L10 4L14 16" stroke="hsl(var(--background))" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
                 <line x1="7.5" y1="12" x2="12.5" y2="12" stroke="hsl(var(--background))" strokeWidth="1.8" strokeLinecap="round" />
               </svg>
             </div>
-            <h2 className="text-xl font-semibold">Welcome to Caliber</h2>
-            <p className="text-base text-muted-foreground mt-1">Get started in three steps</p>
+            <h2 className="text-3xl font-semibold tracking-[-0.04em]">Welcome to Caliber</h2>
+            <p className="text-base text-muted-foreground mt-2">Stand up your first advisory workspace in three steps.</p>
           </div>
 
           <div className="space-y-3 text-left">
-            <div className="flex items-start gap-4 p-4 rounded-lg border bg-card">
-              <span className="w-6 h-6 rounded-full bg-foreground text-background flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">1</span>
+            <div className="flex items-start gap-4 rounded-[24px] border bg-card/80 p-5">
+              <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-foreground text-xs font-bold text-background">1</span>
               <div className="flex-1">
                 <p className="text-sm font-medium">Create a client</p>
                 <p className="text-sm text-muted-foreground mt-0.5">Add your government entity with their website domain for automatic enrichment.</p>
               </div>
             </div>
-            <div className="flex items-start gap-4 p-4 rounded-lg border bg-card">
-              <span className="w-6 h-6 rounded-full bg-muted text-muted-foreground flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">2</span>
+            <div className="flex items-start gap-4 rounded-[24px] border bg-card/80 p-5">
+              <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-bold text-muted-foreground">2</span>
               <div className="flex-1">
                 <p className="text-sm font-medium">Create a project</p>
                 <p className="text-sm text-muted-foreground mt-0.5">Choose engagement modules — Selection, IV&V, Health Check — based on your scope.</p>
               </div>
             </div>
-            <div className="flex items-start gap-4 p-4 rounded-lg border bg-card">
-              <span className="w-6 h-6 rounded-full bg-muted text-muted-foreground flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">3</span>
+            <div className="flex items-start gap-4 rounded-[24px] border bg-card/80 p-5">
+              <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-bold text-muted-foreground">3</span>
               <div className="flex-1">
                 <p className="text-sm font-medium">Load requirements or upload documents</p>
                 <p className="text-sm text-muted-foreground mt-0.5">Import requirements for vendor evaluation, or upload status reports for health check analysis.</p>
@@ -794,7 +863,7 @@ export default function Dashboard() {
                 ).map((mod) => (
                   <label
                     key={mod.key}
-                    className="flex items-start gap-2.5 cursor-pointer border rounded-lg p-2.5 hover:bg-muted/50 transition-colors"
+                    className="flex cursor-pointer items-start gap-2.5 rounded-[20px] border p-3 hover:bg-muted/50 transition-colors"
                     style={
                       projectModules[mod.key]
                         ? {

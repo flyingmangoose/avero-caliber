@@ -104,7 +104,7 @@ export default function TemplateLibrary() {
       {/* Module list */}
       <div className="w-64 shrink-0 border-r bg-card/50 flex flex-col">
         <div className="p-3 border-b">
-          <h2 className="text-sm font-semibold flex items-center gap-1.5">
+          <h2 className="text-base font-semibold flex items-center gap-1.5">
             <BookTemplate className="w-4 h-4 text-primary dark:text-accent" />
             Template Library
           </h2>

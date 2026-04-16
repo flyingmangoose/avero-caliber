@@ -2,7 +2,6 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sparkles, SendHorizontal, Trash2, X } from "lucide-react";
 
 const API_BASE = "";
@@ -261,34 +260,44 @@ export function ChatPanel({ projectId, projectName }: ChatPanelProps) {
       {!open && (
         <button
           onClick={() => setOpen(true)}
-          className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg flex items-center justify-center transition-all hover:scale-105"
+          className="fixed bottom-6 right-6 z-50 flex h-16 items-center gap-3 rounded-full border border-white/40 bg-slate-950 px-4 text-white shadow-2xl shadow-slate-950/25 transition-all hover:scale-[1.02] hover:bg-slate-900 dark:border-white/10"
           title="Caliber AI"
           data-testid="chat-toggle-button"
         >
-          <Sparkles className="w-6 h-6" />
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-amber-400 text-slate-950">
+            <Sparkles className="w-5 h-5" />
+          </span>
+          <span className="hidden text-left sm:block">
+            <span className="block text-sm font-semibold">Caliber AI</span>
+            <span className="block text-xs text-white/65">Ask about project health</span>
+          </span>
         </button>
       )}
 
       {/* Panel */}
       {open && (
         <div
-          className="fixed top-0 right-0 z-40 h-full w-[420px] max-w-full bg-background border-l border-border/60 shadow-2xl flex flex-col animate-in slide-in-from-right duration-200"
+          className="glass-panel-strong fixed right-3 top-3 z-40 flex h-[calc(100%-1.5rem)] w-[440px] max-w-[calc(100%-1.5rem)] flex-col overflow-hidden rounded-[30px] border border-white/40 animate-in slide-in-from-right duration-200 dark:border-white/10"
           data-testid="chat-panel"
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-border/50 bg-card/50 shrink-0">
+          <div className="hero-surface shrink-0 border-b border-white/10 px-5 py-4 text-white">
+            <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-accent" />
+                <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/15 backdrop-blur">
+                  <Sparkles className="w-5 h-5 text-amber-100" />
+                </span>
               <div>
-                <h2 className="text-sm font-semibold">Caliber AI</h2>
-                <p className="text-xs text-muted-foreground truncate max-w-[200px]">{projectName}</p>
+                  <h2 className="text-base font-semibold tracking-[-0.03em]">Caliber AI</h2>
+                  <p className="max-w-[220px] truncate text-xs text-white/70">{projectName}</p>
+                  <p className="mt-1 text-xs text-white/60">Delivery copilot for summaries, risks, and readiness.</p>
               </div>
             </div>
-            <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1">
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                  className="h-9 w-9 rounded-2xl text-white/70 hover:bg-white/10 hover:text-white"
                 onClick={handleClear}
                 disabled={messages.length === 0}
                 data-testid="chat-clear-button"
@@ -298,32 +307,33 @@ export function ChatPanel({ projectId, projectName }: ChatPanelProps) {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                  className="h-9 w-9 rounded-2xl text-white/70 hover:bg-white/10 hover:text-white"
                 onClick={() => setOpen(false)}
                 data-testid="chat-close-button"
               >
                 <X className="w-4 h-4" />
               </Button>
             </div>
+            </div>
           </div>
 
           {/* Messages */}
-          <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3">
+          <div ref={scrollRef} className="flex-1 overflow-y-auto bg-[linear-gradient(180deg,rgba(255,255,255,0.45),rgba(255,255,255,0))] p-5 space-y-4 dark:bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0))]">
             {messages.length === 0 && !isStreaming && (
-              <div className="space-y-4 pt-8">
+              <div className="space-y-5 pt-8">
                 <div className="text-center">
-                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-accent/10 mb-3">
-                    <Sparkles className="w-6 h-6 text-accent" />
+                  <div className="inline-flex h-14 w-14 items-center justify-center rounded-[20px] bg-amber-400/15 mb-4">
+                    <Sparkles className="w-6 h-6 text-amber-500" />
                   </div>
-                  <h3 className="text-base font-semibold text-foreground">How can I help?</h3>
-                  <p className="text-sm text-muted-foreground mt-1">{projectId && projectId !== "0" ? "Ask me anything about your project" : "How can I help you get started?"}</p>
+                  <h3 className="text-xl font-semibold tracking-[-0.03em] text-foreground">How can I help?</h3>
+                  <p className="mt-2 text-sm text-muted-foreground">{projectId && projectId !== "0" ? "Ask me anything about this project workspace." : "Ask for setup help, process guidance, or delivery summaries."}</p>
                 </div>
                 <div className="flex flex-wrap gap-2 justify-center px-2">
                   {(projectId && projectId !== "0" ? PROJECT_SUGGESTIONS : GENERAL_SUGGESTIONS).map((s, i) => (
                     <button
                       key={i}
                       onClick={() => handleSend(s)}
-                      className="text-xs px-3 py-1.5 rounded-full border border-accent/30 text-accent dark:text-accent hover:bg-accent/10 transition-colors text-left"
+                      className="rounded-full border border-border/70 bg-background/70 px-4 py-2 text-left text-xs font-medium text-foreground shadow-xs transition-colors hover:border-amber-300/70 hover:bg-amber-50 dark:bg-white/5 dark:hover:bg-white/10"
                       data-testid={`chat-suggestion-${i}`}
                     >
                       {s}
@@ -336,14 +346,14 @@ export function ChatPanel({ projectId, projectName }: ChatPanelProps) {
             {messages.map((msg, i) => (
               <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
                 <div
-                  className={`max-w-[85%] px-3 py-2 rounded-lg ${
+                  className={`max-w-[85%] rounded-[24px] px-4 py-3 shadow-xs ${
                     msg.role === "user"
-                      ? "bg-primary text-primary-foreground rounded-br-sm"
-                      : "bg-gray-100 dark:bg-gray-800 text-foreground rounded-bl-sm"
+                      ? "hero-surface rounded-br-md text-white"
+                      : "border border-white/55 bg-white/85 text-foreground rounded-bl-md dark:border-white/10 dark:bg-white/5"
                   }`}
                 >
                   {msg.role === "assistant" ? (
-                    <div className="prose-sm">{renderMarkdown(msg.content)}</div>
+                    <div className="prose-sm text-sm leading-6">{renderMarkdown(msg.content)}</div>
                   ) : (
                     <p className="text-sm">{msg.content}</p>
                   )}
@@ -353,7 +363,7 @@ export function ChatPanel({ projectId, projectName }: ChatPanelProps) {
 
             {isStreaming && messages.length > 0 && messages[messages.length - 1].content === "" && (
               <div className="flex justify-start">
-                <div className="bg-gray-100 dark:bg-gray-800 rounded-lg rounded-bl-sm px-3 py-2">
+                <div className="rounded-[24px] rounded-bl-md border border-white/55 bg-white/85 px-4 py-3 dark:border-white/10 dark:bg-white/5">
                   <div className="flex gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-accent animate-bounce" style={{ animationDelay: "0ms" }} />
                     <span className="w-1.5 h-1.5 rounded-full bg-accent animate-bounce" style={{ animationDelay: "150ms" }} />
@@ -365,8 +375,8 @@ export function ChatPanel({ projectId, projectName }: ChatPanelProps) {
           </div>
 
           {/* Input */}
-          <div className="border-t border-border/50 p-3 shrink-0">
-            <div className="flex items-end gap-2">
+          <div className="shrink-0 border-t border-border/50 bg-background/60 p-4 backdrop-blur">
+            <div className="flex items-end gap-3 rounded-[24px] border border-white/55 bg-white/80 p-3 shadow-xs dark:border-white/10 dark:bg-white/5">
               <textarea
                 ref={textareaRef}
                 value={input}
@@ -374,13 +384,13 @@ export function ChatPanel({ projectId, projectName }: ChatPanelProps) {
                 onKeyDown={handleKeyDown}
                 placeholder="Ask about project health, risks, vendors..."
                 rows={1}
-                className="flex-1 resize-none rounded-lg border border-border/60 bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-accent/50 placeholder:text-muted-foreground"
+                className="flex-1 resize-none bg-transparent px-1 py-2 text-sm focus:outline-none placeholder:text-muted-foreground"
                 disabled={isStreaming}
                 data-testid="chat-input"
               />
               <Button
                 size="icon"
-                className="h-9 w-9 shrink-0 bg-accent hover:bg-accent/90 text-accent-foreground"
+                className="hero-surface h-11 w-11 shrink-0 rounded-2xl text-accent-foreground hover:opacity-95"
                 onClick={() => handleSend()}
                 disabled={!input.trim() || isStreaming}
                 data-testid="chat-send-button"
