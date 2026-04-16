@@ -1494,41 +1494,52 @@ export async function assessGoLiveReadiness(data: {
     } catch {}
   }
 
+  const criteriaDefs = [
+    { name: "SIT Completion", weight: 10, description: "Has System Integration Testing been completed? What % of test cases passed?" },
+    { name: "E2E Testing Exit", weight: 12, description: "Have end-to-end business process tests been completed and signed off?" },
+    { name: "UAT/UER Completion", weight: 12, description: "Has User Acceptance Testing been completed with sign-off from business owners?" },
+    { name: "Payroll Compare", weight: 8, description: "Have parallel payroll runs been completed and reconciled?" },
+    { name: "Critical/High Defect Resolution", weight: 15, description: "Have all critical and high-severity defects been resolved?" },
+    { name: "Defect Burn-down Trend", weight: 5, description: "Is the defect discovery/resolution trend positive?" },
+    { name: "Data Migration Quality", weight: 10, description: "Has data migration been validated with acceptable error rates?" },
+    { name: "Reconciliation Results", weight: 5, description: "Have financial and data reconciliation checks passed?" },
+    { name: "Cutover Plan Completeness", weight: 8, description: "Is the cutover plan documented, reviewed, and rehearsed?" },
+    { name: "Rollback Plan", weight: 3, description: "Is a rollback plan documented and tested?" },
+    { name: "Training Completion", weight: 5, description: "Have all end users been trained?" },
+    { name: "Support Model Activated", weight: 4, description: "Is the post-go-live support model (hypercare team, help desk) ready?" },
+    { name: "Hypercare Plan", weight: 3, description: "Is the hypercare plan documented with escalation procedures?" },
+  ];
+
+  const criteriaList = criteriaDefs.map((c, i) => `${i + 1}. "${c.name}" (weight: ${c.weight}) — ${c.description}`).join("\n");
+
   const text = await llmCall(`You are a senior IV&V consultant assessing go-live readiness for a government ERP implementation.
 
 PROJECT DATA:
 ${snapshot}
 
-Score each of the following 13 go-live readiness criteria on a scale of 0-10. For each criterion, provide:
-- score (0-10)
-- evidence (specific data points from the project that justify the score)
-- recommendation (what needs to happen before go-live)
-- confidence (high/medium/low — how confident you are in this score given available data)
+Score EACH of the following 13 go-live readiness criteria on a scale of 0-10 based on the project data above. If the project data does not contain information on a criterion, score it as 3 (assumed not yet addressed) with confidence "low" and recommendation to gather that information.
 
 CRITERIA:
-1. SIT Completion (weight: 10) — Has System Integration Testing been completed? What % of test cases passed?
-2. E2E Testing Exit (weight: 12) — Have end-to-end business process tests been completed and signed off?
-3. UAT/UER Completion (weight: 12) — Has User Acceptance Testing been completed with sign-off from business owners?
-4. Payroll Compare (weight: 8) — Have parallel payroll runs been completed and reconciled?
-5. Critical/High Defect Resolution (weight: 15) — Have all critical and high-severity defects been resolved?
-6. Defect Burn-down Trend (weight: 5) — Is the defect discovery/resolution trend positive?
-7. Data Migration Quality (weight: 10) — Has data migration been validated with acceptable error rates?
-8. Reconciliation Results (weight: 5) — Have financial and data reconciliation checks passed?
-9. Cutover Plan Completeness (weight: 8) — Is the cutover plan documented, reviewed, and rehearsed?
-10. Rollback Plan (weight: 3) — Is a rollback plan documented and tested?
-11. Training Completion (weight: 5) — Have all end users been trained?
-12. Support Model Activated (weight: 4) — Is the post-go-live support model (hypercare team, help desk) ready?
-13. Hypercare Plan (weight: 3) — Is the hypercare plan documented with escalation procedures?
+${criteriaList}
 
-Return JSON:
+For each criterion you MUST return:
+- name: exact criterion name from the list above
+- score: integer 0-10
+- evidence: specific 1-2 sentence explanation referencing the project data (or state that data is missing)
+- recommendation: 1 sentence action to improve readiness
+- confidence: "high" | "medium" | "low"
+
+Respond with ONLY this JSON structure (no markdown, no citations, no prose):
 {
   "criteria": [
-    {"name": "SIT Completion", "score": 4, "weight": 10, "evidence": "SIT at 34% completion per health check", "recommendation": "Extend SIT by 4 weeks minimum", "confidence": "high"},
-    ...all 13 criteria
+    {"name": "SIT Completion", "score": 4, "evidence": "...", "recommendation": "...", "confidence": "medium"},
+    {"name": "E2E Testing Exit", "score": 3, "evidence": "...", "recommendation": "...", "confidence": "low"},
+    ... all 13 criteria in the exact order listed above
   ],
-  "overallNotes": "2-3 sentence executive summary of go-live readiness"
-}
-Return ONLY valid JSON with no markdown fencing, no citations, no prose.`, undefined, 8192);
+  "overallNotes": "2-3 sentence executive summary"
+}`, undefined, 8192);
+
+  console.log("Go-live assess raw AI response (first 500 chars):", text.substring(0, 500));
 
   // Strip markdown code fences and citations like [1], [2]
   const cleaned = text
@@ -1538,15 +1549,34 @@ Return ONLY valid JSON with no markdown fencing, no citations, no prose.`, undef
     .trim();
 
   const jsonMatch = cleaned.match(/\{[\s\S]*"criteria"[\s\S]*\}/);
+
+  const normalize = (s: string) => (s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  const padWithDefaults = (parsed: any) => {
+    const returnedCriteria = Array.isArray(parsed?.criteria) ? parsed.criteria : [];
+    const filled = criteriaDefs.map(def => {
+      const match = returnedCriteria.find((c: any) => normalize(c.name) === normalize(def.name));
+      return {
+        name: def.name,
+        weight: def.weight,
+        score: typeof match?.score === "number" ? match.score : 3,
+        evidence: match?.evidence || "Data not available — needs review.",
+        recommendation: match?.recommendation || "Gather data and re-assess.",
+        confidence: match?.confidence || "low",
+      };
+    });
+    return { criteria: filled, overallNotes: parsed?.overallNotes || "" };
+  };
+
   if (!jsonMatch) {
-    console.error("Go-live assess: no JSON found. Raw response:", text.substring(0, 500));
-    return { criteria: [], overallNotes: "Unable to assess readiness — AI response format error." };
+    console.error("Go-live assess: no JSON found. Full response:", text);
+    return padWithDefaults({});
   }
   try {
-    return JSON.parse(jsonMatch[0]);
+    const parsed = JSON.parse(jsonMatch[0]);
+    return padWithDefaults(parsed);
   } catch (e: any) {
-    console.error("Go-live assess: JSON parse error.", e.message, "Raw:", jsonMatch[0].substring(0, 500));
-    return { criteria: [], overallNotes: "Parse error — try running Auto-Assess again." };
+    console.error("Go-live assess: JSON parse error.", e.message, "Raw:", jsonMatch[0].substring(0, 1000));
+    return padWithDefaults({});
   }
 }
 

@@ -874,7 +874,6 @@ Only include fields that are clearly present in the document. Return ONLY valid 
       const outcomes = storage.getOutcomes(projectId);
       const interviews = storage.getDiscoveryInterviews(projectId).filter(i => i.status === "completed");
 
-      const reqList = requirements.map(r => `[${r.id}] ${r.functionalArea} / ${r.description}`).join("\n");
       const painList = painPoints.map(p => `[${p.severity}] ${p.functionalArea}: ${p.description}`).join("\n");
       const outcomeList = outcomes.map((o: any) => `[${o.priority}] ${o.title}: ${o.description || ""}`).join("\n");
       const interviewSummary = interviews.map(i => {
@@ -884,34 +883,59 @@ Only include fields that are clearly present in the document. Return ONLY valid 
       }).join("\n");
 
       const { llmCall } = await import("./ai");
-      const text = await llmCall(`You are prioritizing ERP requirements for a government organization.
 
-REQUIREMENTS:
+      // Process in batches of 30 to avoid token limit truncation
+      const BATCH_SIZE = 30;
+      const batches: typeof requirements[] = [];
+      for (let i = 0; i < requirements.length; i += BATCH_SIZE) {
+        batches.push(requirements.slice(i, i + BATCH_SIZE));
+      }
+
+      let updated = 0;
+      const allAssignments: any[] = [];
+      for (const batch of batches) {
+        const reqList = batch.map(r => `[${r.id}] ${r.functionalArea} / ${(r.description || "").substring(0, 200)}`).join("\n");
+        const text = await llmCall(`You are prioritizing ERP requirements for a government organization.
+
+REQUIREMENTS (batch of ${batch.length}):
 ${reqList}
 
-PAIN POINTS (from discovery):
-${painList || "None documented"}
+PAIN POINTS:
+${painList || "None"}
 
 DESIRED OUTCOMES:
-${outcomeList || "None defined"}
+${outcomeList || "None"}
 
 DISCOVERY THEMES:
-${interviewSummary || "No interviews"}
+${interviewSummary || "None"}
 
-For each requirement, assign a criticality:
-- "Critical" = directly addresses a critical/high pain point or is essential for a high-priority outcome
+For EACH requirement above, assign a criticality:
+- "Critical" = directly addresses a critical/high pain point or a high-priority outcome
 - "Desired" = addresses a medium pain point or supports a medium-priority outcome
-- "Not Required" = nice-to-have, not directly tied to any pain point or outcome
+- "Not Required" = nice-to-have
 
-Return a JSON array: [{"id": <requirement id>, "criticality": "Critical"|"Desired"|"Not Required", "reason": "brief justification"}]
-Return ONLY valid JSON.`, undefined, 4096);
+Return ONLY a JSON array with one entry per requirement. Keep justifications under 15 words:
+[{"id": 123, "criticality": "Critical", "reason": "brief"}]
 
-      const jsonMatch = text.match(/\[[\s\S]*\]/);
-      if (!jsonMatch) return res.json({ updated: 0 });
+No markdown, no prose, no citations.`, undefined, 8192);
 
-      const assignments = JSON.parse(jsonMatch[0]);
-      let updated = 0;
-      for (const a of assignments) {
+        const cleaned = text.replace(/```json\s*/gi, "").replace(/```\s*/g, "").replace(/\[\d+\]/g, "").trim();
+        const jsonMatch = cleaned.match(/\[[\s\S]*\]/);
+        if (!jsonMatch) continue;
+        try {
+          const batchAssignments = JSON.parse(jsonMatch[0]);
+          allAssignments.push(...batchAssignments);
+        } catch (e: any) {
+          console.error(`Auto-prioritize batch parse error:`, e.message);
+          // Try extracting individual objects as a fallback
+          const objMatches = cleaned.matchAll(/\{[^{}]*"id"\s*:\s*(\d+)[^{}]*"criticality"\s*:\s*"([^"]+)"[^{}]*\}/g);
+          for (const m of objMatches) {
+            allAssignments.push({ id: parseInt(m[1]), criticality: m[2] });
+          }
+        }
+      }
+
+      for (const a of allAssignments) {
         if (a.id && a.criticality) {
           const result = storage.updateRequirement(a.id, {
             criticality: a.criticality,
