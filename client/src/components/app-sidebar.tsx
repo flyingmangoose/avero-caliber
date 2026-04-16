@@ -1,9 +1,8 @@
-import { LayoutDashboard, FolderOpen, BookTemplate, Sun, Moon, BarChart3, PieChart, MessageSquare, Shield, Rocket, Stethoscope, BookOpen, Compass, ArrowRightLeft, Building2, Radar, Info, Target, Trophy, LogOut, TrendingUp } from "lucide-react";
+import { LayoutDashboard, FolderOpen, BookTemplate, Sun, Moon, BarChart3, PieChart, MessageSquare, Shield, Rocket, Stethoscope, BookOpen, Compass, ArrowRightLeft, Building2, Radar, Info, Target, Trophy, LogOut, TrendingUp, ArrowUpRight, Sparkles } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useTheme } from "@/lib/theme";
-import { Badge } from "@/components/ui/badge";
 import {
   Sidebar,
   SidebarContent,
@@ -26,23 +25,6 @@ const navItems = [
   { title: "Knowledge Base", url: "/knowledge-base", icon: BookOpen },
   { title: "Vendor Intelligence", url: "/vendor-monitoring", icon: Radar },
 ];
-
-function AveroLogo() {
-  return (
-    <div className="w-7 h-7 shrink-0 rounded-lg bg-foreground dark:bg-foreground flex items-center justify-center">
-      <svg viewBox="0 0 20 20" fill="none" className="w-4 h-4" aria-label="Caliber logo">
-        <path d="M6 16L10 4L14 16" stroke="hsl(var(--background))" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-        <line x1="7.5" y1="12" x2="12.5" y2="12" stroke="hsl(var(--background))" strokeWidth="1.8" strokeLinecap="round" />
-      </svg>
-    </div>
-  );
-}
-
-const MODULE_BADGES: Record<string, { label: string; color: string }> = {
-  selection: { label: "SEL", color: "bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400" },
-  ivv: { label: "IV&V", color: "bg-purple-100 text-purple-700 dark:bg-purple-950/40 dark:text-purple-400" },
-  health_check: { label: "HC", color: "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400" },
-};
 
 export function AppSidebar() {
   const [location] = useLocation();
@@ -69,17 +51,29 @@ export function AppSidebar() {
   const hasModule = (m: string) => modules.includes(m);
 
   return (
-    <Sidebar data-testid="sidebar-nav">
-      <SidebarHeader className="px-4 py-4">
-        <Link href="/" className="flex items-center gap-2 no-underline">
-          <img src="/avero-logo.png" alt="Avero" className="h-6" />
-          <span className="text-xs font-medium text-sidebar-foreground/50">|</span>
-          <span className="text-sm font-semibold tracking-tight text-sidebar-foreground/90">Caliber</span>
+    <Sidebar variant="floating" data-testid="sidebar-nav">
+      <SidebarHeader className="px-4 pb-3 pt-4">
+        <Link href="/" className="rounded-[24px] border border-white/10 bg-white/5 p-3 no-underline transition-colors hover:bg-white/10">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-300 via-amber-400 to-orange-500 shadow-lg shadow-amber-950/20">
+              <img src="/avero-logo.png" alt="Avero" className="h-5 brightness-[0.12]" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-lg font-semibold tracking-tight text-sidebar-foreground">Caliber</span>
+                <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-medium text-sidebar-foreground/80">
+                  <Sparkles className="h-2.5 w-2.5" />
+                  AI
+                </span>
+              </div>
+              <p className="text-[11px] text-sidebar-foreground/55">by Avero Advisors</p>
+            </div>
+          </div>
         </Link>
       </SidebarHeader>
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-sidebar-foreground/50 text-xs uppercase tracking-widest font-semibold">Navigation</SidebarGroupLabel>
+        <SidebarGroup className="px-3">
+          <SidebarGroupLabel className="px-3 text-[11px] font-semibold uppercase tracking-[0.24em] text-sidebar-foreground/45">Navigation</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {navItems.map((item) => {
@@ -87,7 +81,7 @@ export function AppSidebar() {
                 return (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild isActive={isActive}>
-                      <Link href={item.url} data-testid={`nav-${item.title.toLowerCase().replace(/\s/g, '-')}`}>
+                      <Link href={item.url} className="rounded-2xl px-3 py-2.5" data-testid={`nav-${item.title.toLowerCase().replace(/\s/g, '-')}`}>
                         <item.icon className="w-4 h-4" />
                         <span>{item.title}</span>
                       </Link>
@@ -100,27 +94,30 @@ export function AppSidebar() {
         </SidebarGroup>
 
         {/* Project-context navigation */}
-          <SidebarGroup>
+          <SidebarGroup className="px-3">
             {projectId && client && (
-              <div className="px-3 pb-1">
-                <Link href={`/clients/${clientId}/profile`} className="text-xs font-semibold text-accent hover:underline truncate block">
-                  {client.name}
+              <div className="mx-1 mb-2 rounded-2xl border border-white/10 bg-white/5 p-3">
+                <p className="text-[11px] uppercase tracking-[0.18em] text-sidebar-foreground/45">Active Client</p>
+                <Link href={`/clients/${clientId}/profile`} className="mt-1 flex items-center gap-2 truncate text-sm font-semibold text-white transition-colors hover:text-amber-200">
+                  <span className="truncate">{client.name}</span>
+                  <ArrowUpRight className="h-3.5 w-3.5 shrink-0" />
                 </Link>
+                <p className="mt-1 text-xs text-sidebar-foreground/60">Project navigation adapts to the active engagement.</p>
               </div>
             )}
             {!projectId && (
-              <div className="px-3 py-2 mb-1 rounded-md bg-muted/40 mx-2">
-                <p className="text-xs text-muted-foreground text-center">Select or create a project to get started</p>
+              <div className="mx-1 mb-2 rounded-2xl border border-dashed border-white/10 bg-white/5 px-3 py-3">
+                <p className="text-xs text-sidebar-foreground/65 text-center">Select or create a project to unlock the delivery workspace.</p>
               </div>
             )}
-            <SidebarGroupLabel className="text-sidebar-foreground/50 text-xs uppercase tracking-widest font-semibold">Project</SidebarGroupLabel>
+            <SidebarGroupLabel className="px-3 text-[11px] font-semibold uppercase tracking-[0.24em] text-sidebar-foreground/45">Project</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu className={projectId ? "" : "opacity-40 pointer-events-none"}>
                 {/* ── DISCOVERY ── always visible */}
-                <p className="text-xs font-semibold text-sidebar-foreground/40 uppercase tracking-widest px-2.5 pt-2 pb-0.5">Discovery</p>
+                <p className="px-3 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-sidebar-foreground/35">Discovery</p>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={location === `/clients/${clientId}/profile`}>
-                    <Link href={`/projects/${projectId}/client-profile`} data-testid="nav-client-profile">
+                    <Link href={`/projects/${projectId}/client-profile`} className="rounded-2xl px-3 py-2.5" data-testid="nav-client-profile">
                       <Building2 className="w-4 h-4" />
                       <span>Client Profile</span>
                     </Link>
@@ -128,7 +125,7 @@ export function AppSidebar() {
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={location === `/projects/${projectId}/discovery`}>
-                    <Link href={`/projects/${projectId}/discovery`} data-testid="nav-discovery">
+                    <Link href={`/projects/${projectId}/discovery`} className="rounded-2xl px-3 py-2.5" data-testid="nav-discovery">
                       <Compass className="w-4 h-4" />
                       <span>Discovery</span>
                     </Link>
@@ -136,7 +133,7 @@ export function AppSidebar() {
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={location === `/projects/${projectId}/future-state`}>
-                    <Link href={`/projects/${projectId}/future-state`} data-testid="nav-future-state">
+                    <Link href={`/projects/${projectId}/future-state`} className="rounded-2xl px-3 py-2.5" data-testid="nav-future-state">
                       <ArrowRightLeft className="w-4 h-4" />
                       <span>Future State</span>
                     </Link>
@@ -145,10 +142,10 @@ export function AppSidebar() {
 
                 {/* ── SELECTION ── dimmed if not in modules */}
                 <div className={hasModule("selection") ? "" : "opacity-40"}>
-                  <p className="text-xs font-semibold text-sidebar-foreground/40 uppercase tracking-widest px-2.5 pt-2 pb-0.5">Selection</p>
+                  <p className="px-3 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-sidebar-foreground/35">Selection</p>
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild isActive={location === `/projects/${projectId}/outcomes`}>
-                      <Link href={`/projects/${projectId}/outcomes`} data-testid="nav-outcomes">
+                      <Link href={`/projects/${projectId}/outcomes`} className="rounded-2xl px-3 py-2.5" data-testid="nav-outcomes">
                         <Target className="w-4 h-4" />
                         <span>Outcomes</span>
                       </Link>
@@ -156,7 +153,7 @@ export function AppSidebar() {
                   </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild isActive={location === `/projects/${projectId}`}>
-                      <Link href={`/projects/${projectId}`} data-testid="nav-project-requirements">
+                      <Link href={`/projects/${projectId}`} className="rounded-2xl px-3 py-2.5" data-testid="nav-project-requirements">
                         <FolderOpen className="w-4 h-4" />
                         <span>Requirements</span>
                       </Link>
@@ -164,7 +161,7 @@ export function AppSidebar() {
                   </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild isActive={location === `/projects/${projectId}/evaluation`}>
-                      <Link href={`/projects/${projectId}/evaluation`} data-testid="nav-vendor-evaluation">
+                      <Link href={`/projects/${projectId}/evaluation`} className="rounded-2xl px-3 py-2.5" data-testid="nav-vendor-evaluation">
                         <BarChart3 className="w-4 h-4" />
                         <span>Vendor Evaluation</span>
                       </Link>
@@ -172,7 +169,7 @@ export function AppSidebar() {
                   </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild isActive={location === `/projects/${projectId}/stakeholder-feedback`}>
-                      <Link href={`/projects/${projectId}/stakeholder-feedback`} data-testid="nav-stakeholder-feedback">
+                      <Link href={`/projects/${projectId}/stakeholder-feedback`} className="rounded-2xl px-3 py-2.5" data-testid="nav-stakeholder-feedback">
                         <MessageSquare className="w-4 h-4" />
                         <span>Stakeholder Feedback</span>
                       </Link>
@@ -180,7 +177,7 @@ export function AppSidebar() {
                   </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild isActive={location === `/projects/${projectId}/scorecard`}>
-                      <Link href={`/projects/${projectId}/scorecard`} data-testid="nav-scorecard">
+                      <Link href={`/projects/${projectId}/scorecard`} className="rounded-2xl px-3 py-2.5" data-testid="nav-scorecard">
                         <Trophy className="w-4 h-4" />
                         <span>Scorecard</span>
                       </Link>
@@ -189,10 +186,10 @@ export function AppSidebar() {
                 </div>
 
                 {/* ── IMPLEMENTATION ── always visible for health_check/ivv */}
-                <p className="text-xs font-semibold text-sidebar-foreground/40 uppercase tracking-widest px-2.5 pt-2 pb-0.5">Implementation</p>
+                <p className="px-3 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-sidebar-foreground/35">Implementation</p>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={location === `/projects/${projectId}/compliance`}>
-                    <Link href={`/projects/${projectId}/compliance`} data-testid="nav-contract-compliance">
+                    <Link href={`/projects/${projectId}/compliance`} className="rounded-2xl px-3 py-2.5" data-testid="nav-contract-compliance">
                       <Shield className="w-4 h-4" />
                       <span>Contract Compliance</span>
                     </Link>
@@ -200,7 +197,7 @@ export function AppSidebar() {
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={location === `/projects/${projectId}/health-check`}>
-                    <Link href={`/projects/${projectId}/health-check`} data-testid="nav-health-check">
+                    <Link href={`/projects/${projectId}/health-check`} className="rounded-2xl px-3 py-2.5" data-testid="nav-health-check">
                       <Stethoscope className="w-4 h-4" />
                       <span>Health Check</span>
                     </Link>
@@ -208,7 +205,7 @@ export function AppSidebar() {
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={location === `/projects/${projectId}/go-live`}>
-                    <Link href={`/projects/${projectId}/go-live`} data-testid="nav-go-live">
+                    <Link href={`/projects/${projectId}/go-live`} className="rounded-2xl px-3 py-2.5" data-testid="nav-go-live">
                       <Rocket className="w-4 h-4" />
                       <span>Go-Live Readiness</span>
                     </Link>
@@ -218,39 +215,39 @@ export function AppSidebar() {
             </SidebarGroupContent>
           </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="px-3 py-2 border-t border-sidebar-border">
+      <SidebarFooter className="border-t border-sidebar-border/80 px-4 py-3">
         {(() => {
           // eslint-disable-next-line react-hooks/rules-of-hooks
           const { data: me } = useQuery<any>({ queryKey: ["/auth/me"], queryFn: () => fetch("/auth/me").then(r => r.json()), retry: false, staleTime: 5 * 60 * 1000 });
           return (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {me?.name && (
-                <div className="flex items-center gap-2 px-1">
-                  {me.picture && <img src={me.picture} alt="" className="w-6 h-6 rounded-full" />}
+                <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-3 py-2.5">
+                  {me.picture && <img src={me.picture} alt="" className="h-9 w-9 rounded-2xl object-cover" />}
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-sidebar-foreground truncate">{me.name}</p>
-                    <p className="text-[10px] text-sidebar-foreground/50 truncate">{me.email}</p>
+                    <p className="text-sm font-medium text-sidebar-foreground truncate">{me.name}</p>
+                    <p className="text-[11px] text-sidebar-foreground/50 truncate">{me.email}</p>
                   </div>
                 </div>
               )}
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-2">
                 {me?.role === "admin" && (
                   <Link href="/admin">
-                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-sidebar-foreground/50 hover:text-sidebar-foreground" title="Admin">
+                    <Button variant="ghost" size="sm" className="h-9 w-9 rounded-2xl p-0 text-sidebar-foreground/50 hover:bg-white/10 hover:text-sidebar-foreground" title="Admin">
                       <Shield className="w-3.5 h-3.5" />
                     </Button>
                   </Link>
                 )}
                 <Link href="/about">
-                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-sidebar-foreground/50 hover:text-sidebar-foreground" title="About">
+                  <Button variant="ghost" size="sm" className="h-9 w-9 rounded-2xl p-0 text-sidebar-foreground/50 hover:bg-white/10 hover:text-sidebar-foreground" title="About">
                     <Info className="w-3.5 h-3.5" />
                   </Button>
                 </Link>
-                <Button variant="ghost" size="sm" onClick={toggleTheme} className="h-7 w-7 p-0 text-sidebar-foreground/50 hover:text-sidebar-foreground" data-testid="button-theme-toggle" title={theme === "dark" ? "Light mode" : "Dark mode"}>
+                <Button variant="ghost" size="sm" onClick={toggleTheme} className="h-9 w-9 rounded-2xl p-0 text-sidebar-foreground/50 hover:bg-white/10 hover:text-sidebar-foreground" data-testid="button-theme-toggle" title={theme === "dark" ? "Light mode" : "Dark mode"}>
                   {theme === "dark" ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
                 </Button>
                 {me?.id && (
-                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-sidebar-foreground/50 hover:text-sidebar-foreground" title="Log out"
+                  <Button variant="ghost" size="sm" className="h-9 w-9 rounded-2xl p-0 text-sidebar-foreground/50 hover:bg-white/10 hover:text-sidebar-foreground" title="Log out"
                     onClick={() => { fetch("/auth/logout", { method: "POST" }).then(() => window.location.href = "/"); }}>
                     <LogOut className="w-3.5 h-3.5" />
                   </Button>
