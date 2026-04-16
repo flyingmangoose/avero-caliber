@@ -87,8 +87,24 @@ export default function GoLivePage() {
     if (scorecard?.criteria && !initialized) {
       try {
         const parsed = typeof scorecard.criteria === "string" ? JSON.parse(scorecard.criteria) : scorecard.criteria;
-        setCriteria(parsed);
+        // Merge saved criteria with DEFAULT_CRITERIA to restore category/key/weight if missing
+        const normalize = (s: string) => (s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+        const merged = DEFAULT_CRITERIA.map(def => {
+          const saved = parsed.find((p: any) => normalize(p.name) === normalize(def.name) || normalize(p.key) === normalize(def.key));
+          if (!saved) return def;
+          return {
+            ...def,
+            score: typeof saved.score === "number" ? saved.score : def.score,
+            evidence: saved.evidence ?? def.evidence,
+            recommendation: saved.recommendation ?? def.recommendation,
+            confidence: saved.confidence ?? def.confidence,
+            notes: saved.notes ?? def.notes,
+            isManual: saved.isManual ?? def.isManual,
+          };
+        });
+        setCriteria(merged);
         setAssessorNotes(scorecard.assessorNotes || "");
+        setAiNotes(scorecard.assessorNotes || "");
         setInitialized(true);
       } catch {}
     }
