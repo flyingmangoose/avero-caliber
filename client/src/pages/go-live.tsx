@@ -106,15 +106,21 @@ export default function GoLivePage() {
   const autoAssess = useMutation({
     mutationFn: () => apiRequest("POST", `/api/projects/${projectId}/go-live/auto-assess`).then(r => r.json()),
     onSuccess: (data: any) => {
-      // Merge AI scores into criteria, preserving manual overrides
+      if (!data.criteria || data.criteria.length === 0) {
+        toast({ title: "No criteria returned", description: data.overallNotes || "AI response was empty. Try again.", variant: "destructive" });
+        queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "compliance-summary"] });
+        return;
+      }
+      const normalize = (s: string) => (s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
       setCriteria(prev => prev.map((c, i) => {
-        const aiCriterion = data.criteria?.[i] || data.criteria?.find((ac: any) => ac.name === c.name);
+        const byName = data.criteria?.find((ac: any) => normalize(ac.name) === normalize(c.name));
+        const byKey = data.criteria?.find((ac: any) => ac.key && normalize(ac.key) === normalize(c.key));
+        const aiCriterion = byName || byKey || data.criteria?.[i];
         if (!aiCriterion) return c;
-        // Don't override if manually set
         if (c.isManual) return { ...c, evidence: aiCriterion.evidence || c.evidence, recommendation: aiCriterion.recommendation || c.recommendation, confidence: aiCriterion.confidence || "" };
         return {
           ...c,
-          score: aiCriterion.score ?? c.score,
+          score: typeof aiCriterion.score === "number" ? aiCriterion.score : c.score,
           evidence: aiCriterion.evidence || "",
           recommendation: aiCriterion.recommendation || "",
           confidence: aiCriterion.confidence || "",
@@ -123,13 +129,15 @@ export default function GoLivePage() {
       }));
       setAiNotes(data.overallNotes || "");
       setInitialized(true);
-      // Refetch compliance summary in case a contract baseline was auto-created
       queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "compliance-summary"] });
       queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "go-live", "history"] });
       queryClient.invalidateQueries({ queryKey: ["/api/contracts", contractId, "go-live-scorecard"] });
       toast({ title: `Auto-assessed: ${data.overallReadiness?.replace(/_/g, " ")} (${data.overallScore}/100)` });
     },
-    onError: (e: any) => toast({ title: "Auto-assess failed", description: e.message, variant: "destructive" }),
+    onError: (e: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "go-live", "history"] });
+      toast({ title: "Assessment may still be processing", description: "Results will appear shortly. Refresh if needed." });
+    },
   });
 
   // Calculate scores

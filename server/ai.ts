@@ -1528,11 +1528,26 @@ Return JSON:
   ],
   "overallNotes": "2-3 sentence executive summary of go-live readiness"
 }
-Return ONLY valid JSON.`, undefined, 4096);
+Return ONLY valid JSON with no markdown fencing, no citations, no prose.`, undefined, 8192);
 
-  const jsonMatch = text.match(/\{[\s\S]*"criteria"[\s\S]*\}/);
-  if (!jsonMatch) return { criteria: [], overallNotes: "Unable to assess readiness." };
-  try { return JSON.parse(jsonMatch[0]); } catch { return { criteria: [], overallNotes: "Parse error." }; }
+  // Strip markdown code fences and citations like [1], [2]
+  const cleaned = text
+    .replace(/```json\s*/gi, "")
+    .replace(/```\s*/g, "")
+    .replace(/\[\d+\]/g, "")
+    .trim();
+
+  const jsonMatch = cleaned.match(/\{[\s\S]*"criteria"[\s\S]*\}/);
+  if (!jsonMatch) {
+    console.error("Go-live assess: no JSON found. Raw response:", text.substring(0, 500));
+    return { criteria: [], overallNotes: "Unable to assess readiness — AI response format error." };
+  }
+  try {
+    return JSON.parse(jsonMatch[0]);
+  } catch (e: any) {
+    console.error("Go-live assess: JSON parse error.", e.message, "Raw:", jsonMatch[0].substring(0, 500));
+    return { criteria: [], overallNotes: "Parse error — try running Auto-Assess again." };
+  }
 }
 
 // ==================== PROCESS DESCRIPTIONS ====================
