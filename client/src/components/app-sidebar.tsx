@@ -49,11 +49,12 @@ export function AppSidebar() {
 
   const modules: string[] = project?.engagementModules ? (typeof project.engagementModules === "string" ? JSON.parse(project.engagementModules) : project.engagementModules) : ["selection"];
   const hasModule = (m: string) => modules.includes(m);
+  const moduleCount = modules.length;
 
   return (
     <Sidebar variant="floating" data-testid="sidebar-nav">
       <SidebarHeader className="px-4 pb-3 pt-4">
-        <Link href="/" className="rounded-[24px] border border-white/10 bg-white/5 p-3 no-underline transition-colors hover:bg-white/10">
+        <Link href="/" className="rounded-[28px] border border-white/10 bg-white/5 p-3.5 no-underline transition-colors hover:bg-white/10">
           <div className="flex items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-300 via-amber-400 to-orange-500 shadow-lg shadow-amber-950/20">
               <img src="/avero-logo.png" alt="Avero" className="h-5 brightness-[0.12]" />
@@ -68,6 +69,14 @@ export function AppSidebar() {
               </div>
               <p className="text-[11px] text-sidebar-foreground/55">by Avero Advisors</p>
             </div>
+          </div>
+          <div className="mt-3 rounded-2xl border border-white/8 bg-black/10 px-3 py-2.5">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-sidebar-foreground/55">
+              Delivery workspace
+            </p>
+            <p className="mt-1 text-xs leading-5 text-sidebar-foreground/72">
+              Selection, IV&amp;V, health checks, and executive reporting in one operating surface.
+            </p>
           </div>
         </Link>
       </SidebarHeader>
@@ -102,7 +111,9 @@ export function AppSidebar() {
                   <span className="truncate">{client.name}</span>
                   <ArrowUpRight className="h-3.5 w-3.5 shrink-0" />
                 </Link>
-                <p className="mt-1 text-xs text-sidebar-foreground/60">Project navigation adapts to the active engagement.</p>
+                <p className="mt-1 text-xs text-sidebar-foreground/60">
+                  {moduleCount} active module{moduleCount === 1 ? "" : "s"} in this engagement.
+                </p>
               </div>
             )}
             {!projectId && (

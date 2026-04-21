@@ -181,29 +181,52 @@ export default function GoLivePage() {
   }
 
   if (isLoading) {
-    return <div className="p-6 space-y-4"><Skeleton className="h-8 w-48" /><Skeleton className="h-64 w-full" /></div>;
+    return (
+      <div className="workspace-page">
+        <div className="workspace-stack">
+          <Skeleton className="h-10 w-48 rounded-2xl" />
+          <Skeleton className="h-40 w-full rounded-[2rem]" />
+          <Skeleton className="h-[30rem] w-full rounded-[2rem]" />
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-border/50 shrink-0">
-        <div className="flex items-center gap-3">
-          <Link href={`/projects/${projectId}`}>
-            <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-muted-foreground hover:text-foreground -ml-2">
-              <ChevronLeft className="w-4 h-4" />{project?.name || "Project"}
-            </Button>
-          </Link>
-          <span className="text-muted-foreground/40">/</span>
-          <h1 className="text-lg font-semibold flex items-center gap-2">
-            <Rocket className="w-5 h-5 text-accent" />Go-Live Readiness
-          </h1>
+    <div className="workspace-page h-full">
+      <div className="workspace-stack">
+        <div className="workspace-hero shrink-0">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center gap-2 text-white/90">
+                <Link href={`/projects/${projectId}`}>
+                  <Button variant="ghost" size="sm" className="h-8 gap-1.5 rounded-full border border-white/15 bg-white/10 px-3 text-white hover:bg-white/15 hover:text-white -ml-1">
+                    <ChevronLeft className="w-4 h-4" />{project?.name || "Project"}
+                  </Button>
+                </Link>
+                <span className="workspace-hero-kicker">Go-Live Readiness</span>
+              </div>
+              <div className="space-y-1">
+                <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
+                  <Rocket className="h-6 w-6 text-white" />Go-live readiness board
+                </h1>
+                <p className="max-w-2xl text-sm text-white/78">
+                  Convert testing, defects, data readiness, and cutover confidence into a single decision view for go/no-go discussions.
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <span className="workspace-stat-chip"><strong>{initialized ? overallScore : "—"}</strong> current score</span>
+              <span className="workspace-stat-chip"><strong>{initialized ? READINESS_LABELS[readiness] : "Draft"}</strong> posture</span>
+              <span className="workspace-stat-chip"><strong>{scorecardHistory?.length || 0}</strong> prior snapshots</span>
+            </div>
+          </div>
         </div>
-      </div>
 
-      <ScrollArea className="flex-1">
-        <div className="p-4 sm:p-6 space-y-5">
+        <ScrollArea className="app-scrollbar flex-1">
+        <div className="space-y-5">
           {/* Action buttons */}
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="workspace-toolbar flex items-center gap-2 flex-wrap">
             <Button size="sm" className="gap-1.5 text-xs" onClick={() => autoAssess.mutate()} disabled={autoAssess.isPending} data-testid="btn-auto-assess">
               {autoAssess.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
               {autoAssess.isPending ? "Assessing..." : "Auto-Assess from Project Data"}
@@ -222,7 +245,7 @@ export default function GoLivePage() {
 
           {/* AI Summary */}
           {aiNotes && (
-            <div className="p-3 rounded-lg bg-accent/5 border border-accent/20 text-sm text-muted-foreground">
+            <div className="workspace-subsection border-accent/20 bg-accent/5 text-sm text-muted-foreground">
               <span className="font-medium text-accent">AI Assessment: </span>{aiNotes}
             </div>
           )}
@@ -230,20 +253,75 @@ export default function GoLivePage() {
           {/* Score Overview */}
           {initialized && (
             <>
-              <div className="flex items-center gap-6">
-                <div className="text-center">
-                  <span className={`text-4xl font-bold ${scoreColor}`}>{overallScore}</span>
-                  <span className="text-lg text-muted-foreground">/100</span>
-                  <p className="text-xs text-muted-foreground mt-1">Overall Score</p>
+              <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr]">
+                <div className="workspace-subsection">
+                  <div className="flex flex-wrap items-center justify-between gap-4">
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Decision Signal</p>
+                      <h3 className="mt-1 text-lg font-semibold">Overall readiness posture</h3>
+                    </div>
+                    <Badge className={`text-sm px-3 py-1 ${READINESS_COLORS[readiness] || ""}`} data-testid="readiness-badge">
+                      {READINESS_LABELS[readiness]}
+                    </Badge>
+                  </div>
+                  <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                    <div className="rounded-[24px] border border-white/35 bg-background/70 p-4 text-center">
+                      <span className={`text-4xl font-bold ${scoreColor}`}>{overallScore}</span>
+                      <span className="text-lg text-muted-foreground">/100</span>
+                      <p className="mt-1 text-xs text-muted-foreground">Overall Score</p>
+                    </div>
+                    <div className="rounded-[24px] border border-white/35 bg-background/70 p-4">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Lowest Category</p>
+                      {(() => {
+                        const lowest = [...radarData].sort((a, b) => a.score - b.score)[0];
+                        return (
+                          <>
+                            <p className="mt-2 text-base font-semibold">{lowest?.category || "—"}</p>
+                            <p className="mt-1 text-sm text-muted-foreground">{lowest ? `${lowest.score}/10 current confidence` : "No data"}</p>
+                          </>
+                        );
+                      })()}
+                    </div>
+                    <div className="rounded-[24px] border border-white/35 bg-background/70 p-4">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Assessments Logged</p>
+                      <p className="mt-2 text-base font-semibold">{scorecardHistory?.length || 1}</p>
+                      <p className="mt-1 text-sm text-muted-foreground">Historical checkpoints</p>
+                    </div>
+                  </div>
                 </div>
-                <Badge className={`text-sm px-3 py-1 ${READINESS_COLORS[readiness] || ""}`} data-testid="readiness-badge">
-                  {READINESS_LABELS[readiness]}
-                </Badge>
+                <Card className="border-white/40">
+                  <CardContent className="pt-4">
+                    <h4 className="text-sm font-semibold text-muted-foreground uppercase mb-2">Category Radar</h4>
+                    <ResponsiveContainer width="100%" height={280}>
+                      <RadarChart data={radarData}>
+                        <PolarGrid stroke="hsl(var(--border))" />
+                        <PolarAngleAxis dataKey="category" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
+                        <PolarRadiusAxis angle={90} domain={[0, 10]} tick={{ fontSize: 9 }} />
+                        <Radar dataKey="score" stroke="hsl(var(--accent))" fill="hsl(var(--accent))" fillOpacity={0.3} />
+                      </RadarChart>
+                    </ResponsiveContainer>
+                    <div className="mt-3 space-y-1">
+                      {radarData.map(d => (
+                        <div key={d.category} className="flex justify-between text-xs">
+                          <span className="text-muted-foreground">{d.category}</span>
+                          <span className={`font-mono font-bold ${d.score <= 3 ? "text-red-600" : d.score <= 6 ? "text-amber-600" : "text-emerald-600"}`}>{d.score}/10</span>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 {/* Criteria Table */}
-                <div className="lg:col-span-2 overflow-x-auto">
+                <div className="workspace-subsection lg:col-span-2 overflow-x-auto">
+                  <div className="mb-4 flex items-center justify-between gap-4">
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Criteria Review</p>
+                      <h4 className="mt-1 text-lg font-semibold">Weighted readiness scorecard</h4>
+                    </div>
+                    <Badge variant="secondary" className="text-xs">{criteria.length} criteria</Badge>
+                  </div>
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -257,7 +335,12 @@ export default function GoLivePage() {
                       {categories.map(cat => (
                         <>
                           <TableRow key={`cat-${cat}`} className="bg-muted/30">
-                            <TableCell colSpan={4} className="text-sm font-semibold py-1.5">{cat}</TableCell>
+                            <TableCell colSpan={4} className="py-2">
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm font-semibold">{cat}</span>
+                                <Badge variant="outline" className="text-[10px]">{criteria.filter(c => c.category === cat).length} items</Badge>
+                              </div>
+                            </TableCell>
                           </TableRow>
                           {criteria.filter(c => c.category === cat).map(item => (
                             <TableRow key={item.key}>
@@ -300,33 +383,27 @@ export default function GoLivePage() {
                   <Textarea placeholder="Assessor notes — add context, conditions, or recommendations" className="mt-3 text-sm" rows={3} value={assessorNotes} onChange={e => setAssessorNotes(e.target.value)} data-testid="assessor-notes" />
                 </div>
 
-                {/* Radar Chart */}
-                <Card>
-                  <CardContent className="pt-4">
-                    <h4 className="text-sm font-semibold text-muted-foreground uppercase mb-2">Category Radar</h4>
-                    <ResponsiveContainer width="100%" height={280}>
-                      <RadarChart data={radarData}>
-                        <PolarGrid stroke="hsl(var(--border))" />
-                        <PolarAngleAxis dataKey="category" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
-                        <PolarRadiusAxis angle={90} domain={[0, 10]} tick={{ fontSize: 9 }} />
-                        <Radar dataKey="score" stroke="hsl(var(--accent))" fill="hsl(var(--accent))" fillOpacity={0.3} />
-                      </RadarChart>
-                    </ResponsiveContainer>
-                    <div className="mt-3 space-y-1">
-                      {radarData.map(d => (
-                        <div key={d.category} className="flex justify-between text-xs">
-                          <span className="text-muted-foreground">{d.category}</span>
-                          <span className={`font-mono font-bold ${d.score <= 3 ? "text-red-600" : d.score <= 6 ? "text-amber-600" : "text-emerald-600"}`}>{d.score}/10</span>
+                <div className="workspace-subsection">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Category Snapshot</p>
+                  <div className="mt-4 space-y-3">
+                    {radarData.map(d => (
+                      <div key={d.category} className="rounded-[20px] border border-white/30 bg-background/70 p-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium">{d.category}</span>
+                          <span className={`text-sm font-semibold ${d.score <= 3 ? "text-red-600" : d.score <= 6 ? "text-amber-600" : "text-emerald-600"}`}>{d.score}/10</span>
                         </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
+                        <div className="mt-2 h-2 rounded-full bg-muted/50">
+                          <div className={`h-2 rounded-full ${d.score <= 3 ? "bg-red-500" : d.score <= 6 ? "bg-amber-500" : "bg-emerald-500"}`} style={{ width: `${Math.max(d.score * 10, 8)}%` }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
 
               {/* Readiness Trend Over Time */}
               {scorecardHistory && scorecardHistory.length > 0 && (
-                <Card>
+                <Card className="border-white/40">
                   <CardContent className="pt-4">
                     <h4 className="text-sm font-semibold text-muted-foreground uppercase mb-3">Readiness Trend</h4>
                     <ResponsiveContainer width="100%" height={240}>
@@ -354,7 +431,7 @@ export default function GoLivePage() {
           )}
 
           {!initialized && !autoAssess.isPending && (
-            <Card className="p-8 text-center">
+            <Card className="border-white/40 p-8 text-center">
               <Rocket className="w-8 h-8 mx-auto text-muted-foreground/40 mb-3" />
               <p className="text-base font-medium">Go-Live Readiness Assessment</p>
               <p className="text-sm text-muted-foreground mt-1">Click "Auto-Assess from Project Data" to generate an AI-powered readiness assessment based on health check findings, RAID items, and project documents.</p>
@@ -362,6 +439,7 @@ export default function GoLivePage() {
           )}
         </div>
       </ScrollArea>
+      </div>
     </div>
   );
 }

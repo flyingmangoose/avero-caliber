@@ -273,7 +273,7 @@ function CostComparisonCard({ vendors, totalRequirements }: { vendors: VendorInf
   }));
 
   return (
-    <Card data-testid="card-cost-comparison">
+    <Card className="border-white/40" data-testid="card-cost-comparison">
       <CardHeader className="pb-3">
         <CardTitle className="text-base font-semibold text-foreground flex items-center gap-2">
           <DollarSign className="w-4 h-4 text-accent" />
@@ -290,7 +290,7 @@ function CostComparisonCard({ vendors, totalRequirements }: { vendors: VendorInf
         </div>
 
         {/* Enhanced cost table */}
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto rounded-[24px] border border-white/35 bg-background/70">
           <table className="w-full text-sm" data-testid="table-cost-comparison">
             <thead>
               <tr className="border-b border-border/50">
@@ -388,7 +388,7 @@ function CostComparisonCard({ vendors, totalRequirements }: { vendors: VendorInf
 
         {/* Cost per requirement KPI */}
         {totalRequirements && totalRequirements > 0 && (
-          <div className="flex items-center gap-6 p-3 rounded-lg bg-muted/30 border border-border/50" data-testid="kpi-cost-per-requirement">
+          <div className="workspace-subsection flex items-center gap-6 p-3" data-testid="kpi-cost-per-requirement">
             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Cost per Requirement (7-Year TCO)</span>
             <div className="flex items-center gap-4 ml-auto">
               {sorted.map(v => (
@@ -425,17 +425,17 @@ function VendorCard({
     <button
       data-testid={`vendor-card-${vendor.shortName}`}
       onClick={onToggle}
-      className={`relative flex flex-col items-start gap-1.5 p-3 rounded-lg border-2 text-left transition-all min-w-[160px] max-w-[200px] flex-shrink-0 ${
+      className={`relative flex min-w-[180px] max-w-[220px] flex-shrink-0 flex-col items-start gap-2 rounded-[24px] border-2 p-4 text-left transition-all ${
         isSelected
-          ? "border-accent bg-accent/8 shadow-md"
-          : "border-border/50 bg-card/60 hover:border-border hover:bg-card"
+          ? "border-accent bg-accent/8 shadow-[0_24px_48px_-32px_rgba(15,23,42,0.55)]"
+          : "border-white/35 bg-background/70 hover:border-border hover:bg-card"
       }`}
     >
       {isSelected && (
         <CheckCircle2 className="absolute top-2 right-2 w-4 h-4 text-accent" />
       )}
       <div
-        className="w-8 h-8 rounded-md flex items-center justify-center text-white text-xs font-bold shrink-0"
+        className="flex h-10 w-10 items-center justify-center rounded-2xl text-xs font-bold text-white shrink-0"
         style={{ backgroundColor: vendor.color }}
       >
         {vendor.shortName.slice(0, 2).toUpperCase()}
@@ -444,7 +444,7 @@ function VendorCard({
         <div className="flex items-center gap-1.5 pr-5">
           <p className="text-base font-semibold text-foreground leading-tight truncate">{vendor.name}</p>
           {vendor.platformType && (
-            <span className={`text-xs font-bold uppercase tracking-wider px-1.5 py-0 rounded-sm shrink-0 ${
+            <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.16em] ${
               vendor.platformType === "erp" ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
               : vendor.platformType === "eam" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
               : "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
@@ -573,7 +573,7 @@ function ScoringWeightsCard({
   }, [activeModules]);
 
   return (
-    <Card data-testid="card-scoring-weights">
+    <Card className="border-white/40" data-testid="card-scoring-weights">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div>
@@ -629,11 +629,18 @@ function ScoringWeightsCard({
           </DropdownMenu>
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-4">
+      <CardContent className="space-y-4">
+        <div className="workspace-toolbar flex items-center justify-between gap-4">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Weighting Model</p>
+            <p className="mt-1 text-sm text-muted-foreground">Use presets or tune the sliders to show what matters most in the final fit score.</p>
+          </div>
+          <Badge variant="secondary" className="text-xs">{activeModules.size} active modules</Badge>
+        </div>
+        <div className="grid grid-cols-1 gap-x-8 gap-y-4 lg:grid-cols-2">
           {categorizedModules.map(({ category, modules }) => (
-            <div key={category}>
-              <div className="flex items-center justify-between mb-2 pb-1 border-b border-border/40">
+            <div key={category} className="rounded-[24px] border border-white/35 bg-background/65 p-4">
+              <div className="mb-3 flex items-center justify-between border-b border-border/40 pb-2">
                 <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{category}</span>
                 <Badge variant="outline" className="text-xs px-1.5 py-0 font-semibold text-accent border-accent/30">
                   {getCategoryPercent(modules)}
@@ -641,7 +648,7 @@ function ScoringWeightsCard({
               </div>
               <div className="space-y-2.5">
                 {modules.map(module => (
-                  <div key={module} className="flex items-center gap-3" data-testid={`weight-row-${module.replace(/\s+/g, '-').toLowerCase()}`}>
+                  <div key={module} className="flex items-center gap-3 rounded-2xl border border-white/20 bg-white/40 px-3 py-2 dark:bg-slate-950/25" data-testid={`weight-row-${module.replace(/\s+/g, '-').toLowerCase()}`}>
                     <span className="text-sm text-foreground/80 w-[140px] shrink-0 truncate" title={module}>{module}</span>
                     <Slider
                       value={[weights[module] ?? 5]}
@@ -886,7 +893,7 @@ function GapAnalysisTab({
   return (
     <div className="space-y-4">
       {/* Filter bar */}
-      <div className="flex flex-wrap items-center gap-2 p-3 rounded-lg bg-muted/20 border border-border/40" data-testid="gap-filter-bar">
+      <div className="workspace-toolbar flex flex-wrap items-center gap-2" data-testid="gap-filter-bar">
         <Filter className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
         {/* Module filter */}
         <DropdownMenu>
@@ -985,16 +992,16 @@ function GapAnalysisTab({
       </div>
 
       {/* KPI summary cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3" data-testid="gap-kpi-row">
-        <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4" data-testid="gap-kpi-row">
+        <div className="rounded-[24px] border border-white/35 bg-background/70 p-4">
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total Gaps</p>
           <p className="text-xl font-bold text-foreground" data-testid="kpi-total-gaps">{totalGaps}</p>
         </div>
-        <div className="p-3 rounded-lg bg-red-500/5 border border-red-500/20">
+        <div className="rounded-[24px] border border-red-500/20 bg-red-500/5 p-4">
           <p className="text-xs font-semibold text-red-400 uppercase tracking-wider">Critical Gaps</p>
           <p className="text-xl font-bold text-red-400" data-testid="kpi-critical-gaps">{criticalGaps}</p>
         </div>
-        <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
+        <div className="rounded-[24px] border border-white/35 bg-background/70 p-4">
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">By Type</p>
           <div className="flex items-center gap-2 mt-1" data-testid="kpi-gap-types">
             {Object.entries(gapTypeCounts).map(([code, count]) => (
@@ -1004,7 +1011,7 @@ function GapAnalysisTab({
             ))}
           </div>
         </div>
-        <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
+        <div className="rounded-[24px] border border-white/35 bg-background/70 p-4">
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Most Affected</p>
           <p className="text-base font-semibold text-foreground mt-1 truncate" data-testid="kpi-most-affected" title={mostAffectedModule}>{mostAffectedModule}</p>
         </div>
@@ -1012,7 +1019,7 @@ function GapAnalysisTab({
 
       {/* Gap comparison chart */}
       {gapChartData.length > 0 && (
-        <div className="p-3 rounded-lg bg-muted/10 border border-border/40">
+        <div className="workspace-subsection p-3">
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Gap Distribution by Vendor</p>
           <div className="h-[160px]" data-testid="chart-gap-comparison">
             <ResponsiveContainer width="100%" height="100%">
@@ -1063,9 +1070,9 @@ function GapAnalysisTab({
               const isExpanded = expandedModules.has(module);
               const critCount = gaps.filter(g => g.criticality === "Critical").length;
               return (
-                <div key={module} className="border border-border/50 rounded-lg overflow-hidden">
+                <div key={module} className="overflow-hidden rounded-[24px] border border-white/35 bg-background/70">
                   <button
-                    className="w-full flex items-center justify-between px-4 py-3 bg-card hover:bg-muted/30 transition-colors text-left"
+                    className="flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-muted/30"
                     onClick={() => {
                       setExpandedModules(prev => {
                         const next = new Set(prev);
@@ -1862,10 +1869,12 @@ export default function VendorEvaluation() {
 
   if (isLoading) {
     return (
-      <div className="p-6 space-y-4">
-        <Skeleton className="h-8 w-48" />
-        <Skeleton className="h-32 w-full" />
-        <Skeleton className="h-64 w-full" />
+      <div className="workspace-page">
+        <div className="workspace-stack">
+          <Skeleton className="h-10 w-48 rounded-2xl" />
+          <Skeleton className="h-40 w-full rounded-[2rem]" />
+          <Skeleton className="h-[30rem] w-full rounded-[2rem]" />
+        </div>
       </div>
     );
   }
@@ -1877,29 +1886,43 @@ export default function VendorEvaluation() {
   const vendorsWithIntelligence = (data?.vendors || []).filter((v: any) => intelligenceByVendor[v.id]?.length > 0);
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="px-6 py-4 border-b border-border/50 bg-card/50 backdrop-blur-sm shrink-0">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link href={`/projects/${projectId}`}>
-              <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-muted-foreground hover:text-foreground -ml-2">
-                <ChevronLeft className="w-4 h-4" />
-                {project?.name || "Project"}
-              </Button>
-            </Link>
-            <span className="text-muted-foreground/40">/</span>
-            <h1 className="text-lg font-semibold text-foreground flex items-center gap-2">
-              <BarChart3 className="w-5 h-5 text-accent" />
-              Vendor Evaluation
-            </h1>
-          </div>
-          <div className="flex items-center gap-2">
+    <div className="workspace-page h-full">
+      <div className="workspace-stack">
+        <div className="workspace-hero shrink-0">
+          <div className="flex flex-col gap-5">
+            <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+              <div className="space-y-3">
+                <div className="flex flex-wrap items-center gap-2 text-white/90">
+                  <Link href={`/projects/${projectId}`}>
+                    <Button variant="ghost" size="sm" className="h-8 gap-1.5 rounded-full border border-white/15 bg-white/10 px-3 text-white hover:bg-white/15 hover:text-white -ml-1">
+                      <ChevronLeft className="w-4 h-4" />
+                      {project?.name || "Project"}
+                    </Button>
+                  </Link>
+                  <span className="workspace-hero-kicker">Vendor Evaluation</span>
+                </div>
+                <div className="space-y-1">
+                  <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
+                    <BarChart3 className="h-6 w-6 text-white" />
+                    Vendor evaluation command center
+                  </h1>
+                  <p className="max-w-2xl text-sm text-white/78">
+                    Compare vendor fit, proposal strength, and delivery posture with a clearer executive lens across requirements, scoring, and intelligence.
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <span className="workspace-stat-chip"><strong>{vendors.length}</strong> vendors loaded</span>
+                <span className="workspace-stat-chip"><strong>{selectedVendorIds.length}</strong> selected</span>
+                <span className="workspace-stat-chip"><strong>{hasScores ? "Live" : "Pending"}</strong> score state</span>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
             {!hasScores && (
               <Button
                 onClick={() => loadSampleRfpMutation.mutate()}
                 disabled={loadSampleRfpMutation.isPending || generateScoresMutation.isPending}
-                className="bg-accent hover:bg-accent/90 text-accent-foreground gap-2"
+                className="gap-2 border border-white/15 bg-white/10 text-white hover:bg-white/15"
                 data-testid="button-load-sample-rfp-header"
               >
                 <MapPin className="w-4 h-4" />
@@ -1913,7 +1936,7 @@ export default function VendorEvaluation() {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="gap-2 text-xs"
+                      className="gap-2 border-white/15 bg-white/10 text-xs text-white hover:bg-white/15 hover:text-white"
                       data-testid="button-download-report"
                     >
                       <Download className="w-3.5 h-3.5" />
@@ -1945,7 +1968,7 @@ export default function VendorEvaluation() {
                   variant="outline"
                   size="sm"
                   onClick={() => { setProposalStep(1); setProposalDialogOpen(true); }}
-                  className="gap-2 text-xs"
+                  className="gap-2 border-white/15 bg-white/10 text-xs text-white hover:bg-white/15 hover:text-white"
                   data-testid="button-analyze-proposal"
                 >
                   <Brain className="w-3.5 h-3.5 text-accent" />
@@ -1956,7 +1979,7 @@ export default function VendorEvaluation() {
                   size="sm"
                   onClick={() => generateScoresMutation.mutate()}
                   disabled={generateScoresMutation.isPending}
-                  className="gap-2 text-xs"
+                  className="gap-2 border-white/15 bg-white/10 text-xs text-white hover:bg-white/15 hover:text-white"
                   data-testid="button-regenerate-scores"
                 >
                   {generateScoresMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RotateCcw className="w-3.5 h-3.5" />}
@@ -1964,12 +1987,12 @@ export default function VendorEvaluation() {
                 </Button>
               </>
             )}
+            </div>
           </div>
         </div>
-      </div>
 
-      <ScrollArea className="flex-1">
-        <div className="p-6 space-y-5">
+        <ScrollArea className="app-scrollbar flex-1">
+          <div className="space-y-5">
 
           {/* Generate Scores CTA (when no scores yet) */}
           {!hasScores && (
@@ -2016,7 +2039,7 @@ export default function VendorEvaluation() {
           )}
 
           {/* Vendor Selection Bar */}
-          <Card data-testid="card-vendor-selection">
+          <Card className="border-white/40" data-testid="card-vendor-selection">
             <CardHeader className="pb-3">
               <CardTitle className="text-base font-semibold text-foreground flex items-center gap-2">
                 <Building2 className="w-4 h-4 text-accent" />
@@ -2042,7 +2065,7 @@ export default function VendorEvaluation() {
 
           {/* Vendor Intelligence Section */}
           {vendorsWithIntelligence.length > 0 && (
-            <Card data-testid="card-vendor-intelligence">
+            <Card className="border-white/40" data-testid="card-vendor-intelligence">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base font-semibold text-foreground flex items-center gap-2">
                   <Brain className="w-4 h-4 text-accent" />
@@ -2062,7 +2085,7 @@ export default function VendorEvaluation() {
                   }));
 
                   return (
-                    <div key={vendor.id} className="border border-border/40 rounded-lg p-4" data-testid={`vendor-intelligence-${vendor.id}`}>
+                    <div key={vendor.id} className="rounded-[22px] border border-white/35 bg-background/60 p-4" data-testid={`vendor-intelligence-${vendor.id}`}>
                       <div className="flex items-center gap-2 mb-3">
                         <span className="text-base font-semibold">{vendor.name}</span>
                         <Badge variant="outline" className="text-xs">{vendor.platformType}</Badge>
@@ -2119,7 +2142,7 @@ export default function VendorEvaluation() {
 
           {/* Score Overview — Weighted Fit Chart */}
           {hasScores && filteredEvaluation && chartData.length > 0 && (
-            <Card data-testid="card-score-overview">
+            <Card className="border-white/40" data-testid="card-score-overview">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base font-semibold text-foreground flex items-center gap-2">
                   <TrendingUp className="w-4 h-4 text-accent" />
@@ -2198,7 +2221,7 @@ export default function VendorEvaluation() {
 
           {/* Module Scores + Gap Analysis Tabs */}
           {hasScores && (
-            <Card data-testid="card-analysis-tabs">
+            <Card className="border-white/40" data-testid="card-analysis-tabs">
               <CardContent className="pt-4">
                 <Tabs defaultValue="modules">
                   <TabsList className="mb-4">
@@ -2220,20 +2243,20 @@ export default function VendorEvaluation() {
                       Custom Criteria
                     </TabsTrigger>
                   </TabsList>
-                  <TabsContent value="modules">
+                  <TabsContent value="modules" className="mt-4 workspace-subsection">
                     <ModuleScoresTab
                       evaluation={filteredEvaluation}
                       selectedVendors={selectedVendors}
                       weights={moduleWeights}
                     />
                   </TabsContent>
-                  <TabsContent value="gaps">
+                  <TabsContent value="gaps" className="mt-4 workspace-subsection">
                     <GapAnalysisTab
                       evaluation={filteredEvaluation}
                       selectedVendors={selectedVendors}
                     />
                   </TabsContent>
-                  <TabsContent value="customCriteria">
+                  <TabsContent value="customCriteria" className="mt-4 workspace-subsection">
                     <CustomCriteriaTab
                       projectId={projectId}
                       selectedVendors={selectedVendors}
@@ -2269,6 +2292,7 @@ export default function VendorEvaluation() {
           </Card>
         </div>
       </ScrollArea>
+      </div>
       {/* Analyze Proposal Dialog */}
       <Dialog open={proposalDialogOpen} onOpenChange={(open) => { if (!open && proposalStep !== 2) { setProposalDialogOpen(false); } }}>
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">

@@ -845,80 +845,93 @@ export default function ProjectView() {
 
   if (projectLoading) {
     return (
-      <div className="p-6 space-y-4">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-96 w-full" />
+      <div className="workspace-page">
+        <div className="workspace-stack">
+          <Skeleton className="h-10 w-64 rounded-2xl" />
+          <Skeleton className="h-40 w-full rounded-[2rem]" />
+          <Skeleton className="h-[32rem] w-full rounded-[2rem]" />
+        </div>
       </div>
     );
   }
 
   if (!project) {
     return (
-      <div className="p-6">
-        <p className="text-muted-foreground">Project not found.</p>
-        <Link href="/">
-          <Button variant="link" className="pl-0 mt-2">Back to Dashboard</Button>
-        </Link>
+      <div className="workspace-page">
+        <div className="workspace-subsection mx-auto max-w-2xl text-center">
+          <p className="text-muted-foreground">Project not found.</p>
+          <Link href="/">
+            <Button variant="link" className="mt-2 pl-0">Back to Dashboard</Button>
+          </Link>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex h-full" data-testid="page-project-view">
+    <div className="workspace-page h-full" data-testid="page-project-view">
+      <div className="flex h-full gap-4">
       {/* Module sidebar */}
-      <div className="hidden md:flex w-64 shrink-0 border-r bg-card/50 flex-col">
-        <div className="p-3 border-b">
-          <Link href="/" className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors no-underline mb-2">
+      <div className="glass-panel hidden w-72 shrink-0 overflow-hidden rounded-[30px] md:flex md:flex-col">
+        <div className="border-b border-white/40 px-5 py-4">
+          <Link href="/" className="mb-3 inline-flex items-center gap-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground no-underline">
             <ChevronLeft className="w-3 h-3" />
             All Projects
           </Link>
-          <h2 className="text-base font-semibold truncate" data-testid="text-project-name">{project.name}</h2>
-          <div className="flex items-center gap-2 mt-1 flex-wrap">
-            <Badge variant="outline" className="text-xs font-semibold uppercase">{project.status}</Badge>
-            <span className="text-xs text-muted-foreground">{project.stats.totalRequirements} reqs</span>
+          <div className="space-y-2">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">Requirements Hub</p>
+              <h2 className="mt-1 truncate text-lg font-semibold" data-testid="text-project-name">{project.name}</h2>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="outline" className="text-xs font-semibold uppercase">{project.status}</Badge>
+              <Badge variant="secondary" className="text-xs">{project.stats.totalRequirements} requirements</Badge>
+              <Badge variant="secondary" className="text-xs">{new Set(allRequirements.map(r => r.functionalArea)).size} modules</Badge>
+            </div>
           </div>
           {project.engagementModules && (() => {
             try {
               const mods: string[] = JSON.parse(project.engagementModules);
               const labels: Record<string, string> = { selection: "Selection", ivv: "IV&V", health_check: "Health Check" };
               return mods.length > 0 ? (
-                <div className="flex gap-1 mt-1.5 flex-wrap">
+                <div className="mt-3 flex flex-wrap gap-1.5">
                   {mods.map(m => <Badge key={m} className="text-xs bg-muted text-muted-foreground">{labels[m] || m}</Badge>)}
                 </div>
               ) : null;
             } catch { return null; }
           })()}
-          <Button variant="ghost" size="sm" className="h-7 text-xs gap-1.5 mt-2 w-full justify-start text-muted-foreground" onClick={() => setShowTeamDialog(true)}>
+          <Button variant="ghost" size="sm" className="mt-4 h-9 w-full justify-start gap-1.5 rounded-xl text-xs text-muted-foreground" onClick={() => setShowTeamDialog(true)}>
             <Users className="w-3.5 h-3.5" />Team
           </Button>
         </div>
-        <ScrollArea className="flex-1">
-          <div className="p-2">
+        <ScrollArea className="app-scrollbar flex-1">
+          <div className="p-3">
             <button
               onClick={() => handleSetSelectedArea(null)}
-              className={`w-full text-left px-2.5 py-1.5 rounded text-sm font-medium transition-colors mb-1 ${
-                !selectedArea ? "bg-primary text-primary-foreground dark:bg-accent dark:text-accent-foreground" : "text-muted-foreground hover:bg-muted"
+              className={`mb-1.5 flex w-full items-center justify-between rounded-2xl px-3 py-2 text-left text-sm font-medium transition-colors ${
+                !selectedArea ? "hero-surface text-white shadow-[0_18px_32px_-24px_rgba(15,23,42,0.9)]" : "text-muted-foreground hover:bg-muted/70"
               }`}
               data-testid="button-all-modules"
             >
-              All Modules ({allRequirements.length})
+              <span>All Modules</span>
+              <span className={`text-xs font-mono ${!selectedArea ? "text-white/80" : "text-muted-foreground"}`}>{allRequirements.length}</span>
             </button>
             {Object.entries(moduleTree).map(([cat, areas]) => (
               <div key={cat} className="mb-2">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2.5 py-1">{cat}</p>
+                <p className="px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{cat}</p>
                 {Object.entries(areas).map(([area, count]) => (
                   <button
                     key={area}
                     onClick={() => handleSetSelectedArea(area)}
-                    className={`w-full text-left px-2.5 py-1.5 rounded text-sm transition-colors flex items-center justify-between ${
+                    className={`flex w-full items-center justify-between rounded-2xl px-3 py-2 text-left text-sm transition-colors ${
                       selectedArea === area
-                        ? "bg-primary text-primary-foreground dark:bg-accent dark:text-accent-foreground"
-                        : "text-foreground/80 hover:bg-muted"
+                        ? "hero-surface text-white shadow-[0_18px_32px_-24px_rgba(15,23,42,0.9)]"
+                        : "text-foreground/80 hover:bg-muted/70"
                     }`}
                     data-testid={`button-module-${area.replace(/\s/g, '-').toLowerCase()}`}
                   >
                     <span className="truncate">{area}</span>
-                    <span className={`text-xs font-mono ${selectedArea === area ? "opacity-80" : "text-muted-foreground"}`}>{count}</span>
+                    <span className={`text-xs font-mono ${selectedArea === area ? "text-white/80" : "text-muted-foreground"}`}>{count}</span>
                   </button>
                 ))}
               </div>
@@ -935,10 +948,27 @@ export default function ProjectView() {
       </div>
 
       {/* Main content area */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Status Stepper */}
-        {/* Toolbar */}
-        <div className="flex items-center gap-2 p-3 border-b shrink-0 bg-background">
+      <div className="glass-panel-strong flex min-w-0 flex-1 flex-col overflow-hidden rounded-[30px] border border-white/40">
+        <div className="hero-surface mx-4 mt-4 rounded-[28px] px-5 py-5 text-white shrink-0">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+            <div className="space-y-3">
+              <span className="workspace-hero-kicker">Project Workspace</span>
+              <div className="space-y-1">
+                <h1 className="text-2xl font-semibold tracking-tight">Requirements command center</h1>
+                <p className="max-w-2xl text-sm text-white/78">
+                  Shape scope, load templates, and move from discovery into scored vendor evaluation without leaving the project workspace.
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <span className="workspace-stat-chip"><strong>{filteredRequirements.length}</strong> visible requirements</span>
+              <span className="workspace-stat-chip"><strong>{filteredRequirements.filter(r => r.criticality === "Critical").length}</strong> critical</span>
+              <span className="workspace-stat-chip"><strong>{selectedArea || "All modules"}</strong> active lens</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="mx-4 mb-4 mt-4 flex flex-wrap items-center gap-2 workspace-toolbar shrink-0">
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
             <Input
@@ -1069,7 +1099,7 @@ export default function ProjectView() {
 
         {/* Vendor Response Legend */}
         {showLegend && (
-          <div className="flex items-center gap-4 px-4 py-2 border-b bg-muted/30 text-xs">
+          <div className="mx-4 mb-3 flex items-center gap-4 workspace-subsection py-3 text-xs">
             <span className="font-semibold text-muted-foreground">Vendor Codes:</span>
             {Object.entries(VENDOR_RESPONSE_LABELS).map(([code, label]) => (
               <span key={code} className="flex items-center gap-1">
@@ -1085,7 +1115,7 @@ export default function ProjectView() {
 
         {/* Stats bar — shown when nothing is selected */}
         {selectedReqIds.size === 0 && (
-          <div className="flex items-center gap-5 px-4 py-2 border-b bg-muted/20 text-xs shrink-0">
+          <div className="mx-4 mb-3 flex items-center gap-5 workspace-subsection py-3 text-xs shrink-0">
             <span className="flex items-center gap-1.5 text-muted-foreground">
               <FileText className="w-3.5 h-3.5" />
               {filteredRequirements.length} requirements
@@ -1112,7 +1142,7 @@ export default function ProjectView() {
 
         {/* Bulk action toolbar — shown when rows are selected */}
         {selectedReqIds.size > 0 && (
-          <div className="flex items-center gap-3 px-4 py-2.5 border-b bg-primary/5 dark:bg-accent/5 text-xs shrink-0">
+          <div className="mx-4 mb-3 flex items-center gap-3 rounded-[24px] border border-primary/15 bg-primary/5 px-4 py-3 text-xs shrink-0 dark:border-accent/15 dark:bg-accent/5">
             <span className="font-semibold text-foreground">
               {selectedReqIds.size} selected
             </span>
@@ -1171,7 +1201,7 @@ export default function ProjectView() {
         )}
 
         {/* Requirements Table */}
-        <div className="flex-1 overflow-auto">
+        <div className="mx-4 mb-4 flex-1 overflow-auto rounded-[26px] border border-white/35 bg-background/75 shadow-[inset_0_1px_0_rgba(255,255,255,0.55)]">
           {reqsLoading ? (
             <div className="p-4 space-y-2">
               {[1,2,3,4,5].map(i => <Skeleton key={i} className="h-10 w-full" />)}
@@ -1272,6 +1302,7 @@ export default function ProjectView() {
             </div>
           )}
         </div>
+      </div>
       </div>
 
       {/* Add Requirement Dialog */}

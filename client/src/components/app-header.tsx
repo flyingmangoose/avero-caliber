@@ -4,14 +4,14 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { LogOut, Sparkles } from "lucide-react";
 
-const routeLabels: Record<string, { eyebrow: string; title: string }> = {
-  "/": { eyebrow: "Workspace", title: "Command Center" },
-  "/portfolio": { eyebrow: "Portfolio", title: "Delivery Portfolio" },
-  "/templates": { eyebrow: "Assets", title: "Template Library" },
-  "/knowledge-base": { eyebrow: "Knowledge", title: "Knowledge Base" },
-  "/vendor-monitoring": { eyebrow: "Market", title: "Vendor Intelligence" },
-  "/about": { eyebrow: "System", title: "About Caliber" },
-  "/admin": { eyebrow: "Admin", title: "Operations Console" },
+const routeLabels: Record<string, { eyebrow: string; title: string; description: string }> = {
+  "/": { eyebrow: "Workspace", title: "Command Center", description: "See the current advisory book, key client programs, and active delivery momentum." },
+  "/portfolio": { eyebrow: "Portfolio", title: "Delivery Portfolio", description: "Track cross-engagement performance, workload, and executive reporting." },
+  "/templates": { eyebrow: "Assets", title: "Template Library", description: "Browse curated requirements and reusable delivery content." },
+  "/knowledge-base": { eyebrow: "Knowledge", title: "Knowledge Base", description: "Reference methods, prior learnings, and reusable advisory guidance." },
+  "/vendor-monitoring": { eyebrow: "Market", title: "Vendor Intelligence", description: "Monitor vendors, market shifts, and external signals that affect delivery." },
+  "/about": { eyebrow: "System", title: "About Caliber", description: "Product context, platform details, and operating information." },
+  "/admin": { eyebrow: "Admin", title: "Operations Console", description: "Manage access, configuration, and platform administration." },
 };
 
 export function AppHeader() {
@@ -24,13 +24,13 @@ export function AppHeader() {
   });
 
   const routeMeta = routeLabels[location] ?? (location.startsWith("/projects/")
-    ? { eyebrow: "Project", title: "Engagement Workspace" }
+    ? { eyebrow: "Project", title: "Engagement Workspace", description: "Work inside the active engagement across requirements, evaluation, and oversight." }
     : location.startsWith("/clients/")
-      ? { eyebrow: "Client", title: "Client Profile" }
-      : { eyebrow: "Workspace", title: "Caliber" });
+      ? { eyebrow: "Client", title: "Client Profile", description: "Review the client context, profile data, and program background." }
+      : { eyebrow: "Workspace", title: "Caliber", description: "Navigate the platform and manage advisory delivery work." });
 
   return (
-    <header className="mb-3 flex min-h-[78px] items-center gap-3 rounded-[24px] border border-white/50 bg-white/60 px-4 py-3 shadow-xs backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/45 shrink-0">
+    <header className="mb-3 flex min-h-[88px] items-center gap-3 rounded-[28px] border border-white/50 bg-white/60 px-4 py-3 shadow-xs backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/45 shrink-0">
       <SidebarTrigger
         className="h-10 w-10 rounded-2xl bg-white/70 text-foreground shadow-xs hover:bg-white dark:bg-slate-900/70 dark:hover:bg-slate-900"
         data-testid="button-sidebar-toggle"
@@ -46,6 +46,9 @@ export function AppHeader() {
             Live workspace
           </span>
         </div>
+        <p className="hidden max-w-2xl truncate text-sm text-muted-foreground lg:block">
+          {routeMeta.description}
+        </p>
       </div>
       {user && (
         <div className="flex items-center gap-3 rounded-2xl border border-white/40 bg-white/70 px-3 py-2 shadow-xs dark:border-white/10 dark:bg-slate-900/70">

@@ -166,6 +166,7 @@
     @apply font-sans antialiased bg-background text-foreground;
     background-image: var(--shell-background);
     background-attachment: fixed;
+    color-scheme: light;
     font-size: 15px;
     line-height: 1.55;
     font-variant-numeric: tabular-nums lining-nums;
@@ -176,6 +177,9 @@
   }
   h1, h2, h3, h4 {
     letter-spacing: -0.035em;
+  }
+  .dark body {
+    color-scheme: dark;
   }
   html, body, #root {
     height: 100%;
@@ -194,6 +198,10 @@
   /* Dialog / sheet content text */
   [role="dialog"] p, [role="dialog"] span {
     font-size: inherit;
+  }
+  ::selection {
+    background: hsl(var(--accent) / 0.28);
+    color: hsl(var(--foreground));
   }
 }
 
@@ -279,10 +287,154 @@
     box-shadow: var(--shadow-lg);
   }
 
+  .shadcn-card {
+    position: relative;
+    overflow: hidden;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.7)),
+      var(--glass-background);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .dark .shadcn-card {
+    background:
+      linear-gradient(180deg, rgba(15, 23, 42, 0.78), rgba(15, 23, 42, 0.68)),
+      var(--glass-background);
+  }
+
+  .workspace-page {
+    position: relative;
+    min-height: 100%;
+    padding: 1rem;
+    background:
+      radial-gradient(circle at top right, rgba(212, 168, 83, 0.14), transparent 28%),
+      radial-gradient(circle at top left, rgba(15, 23, 42, 0.08), transparent 24%);
+  }
+
+  .workspace-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    min-height: 100%;
+  }
+
+  .workspace-hero {
+    position: relative;
+    overflow: hidden;
+    border-radius: 2rem;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    padding: 1.25rem;
+    color: white;
+    background-image: var(--hero-gradient);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .workspace-hero::after {
+    content: "";
+    position: absolute;
+    inset: auto -5% -35% auto;
+    width: 240px;
+    height: 240px;
+    border-radius: 9999px;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.2), transparent 68%);
+    pointer-events: none;
+  }
+
+  .workspace-hero-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    border-radius: 9999px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.12);
+    padding: 0.35rem 0.75rem;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.88);
+  }
+
+  .workspace-stat-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    border-radius: 9999px;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    background: rgba(255, 255, 255, 0.12);
+    padding: 0.55rem 0.9rem;
+    font-size: 0.82rem;
+    color: rgba(255, 255, 255, 0.94);
+  }
+
+  .workspace-stat-chip strong {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: white;
+  }
+
+  .workspace-toolbar {
+    border-radius: 1.5rem;
+    border: 1px solid var(--glass-border);
+    background: var(--glass-background);
+    padding: 1rem;
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .workspace-subsection {
+    border-radius: 1.5rem;
+    border: 1px solid var(--glass-border);
+    background: var(--glass-background);
+    padding: 1rem;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: var(--shadow-sm);
+  }
+
   .display-serif {
     font-family: var(--font-serif);
     font-style: italic;
     font-weight: 400;
     letter-spacing: -0.04em;
+  }
+
+  .app-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border)) transparent;
+  }
+
+  .app-scrollbar::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  .app-scrollbar::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border: 2px solid transparent;
+    border-radius: 999px;
+    background-clip: padding-box;
+  }
+
+  .app-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+@media (min-width: 640px) {
+  .workspace-page {
+    padding: 1.25rem;
+  }
+
+  .workspace-hero {
+    padding: 1.5rem;
+  }
+
+  .workspace-toolbar,
+  .workspace-subsection {
+    padding: 1.25rem;
   }
 }

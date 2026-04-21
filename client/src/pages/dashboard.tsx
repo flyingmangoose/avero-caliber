@@ -366,41 +366,42 @@ export default function Dashboard() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-4 sm:p-8" data-testid="page-dashboard">
-      <section className="hero-surface relative overflow-hidden rounded-[32px] px-6 py-7 text-white sm:px-8 sm:py-8">
-        <div className="absolute inset-0 opacity-20">
-          <div className="absolute -right-12 top-0 h-40 w-40 rounded-full bg-white/20 blur-3xl" />
-          <div className="absolute bottom-0 left-8 h-24 w-24 rounded-full bg-amber-200/30 blur-2xl" />
+      <section className="hero-surface relative overflow-hidden rounded-[32px] px-6 py-7 text-white sm:px-8 sm:py-9">
+        <div className="pointer-events-none absolute inset-0 opacity-25">
+          <div className="absolute -right-16 -top-12 h-56 w-56 rounded-full bg-white/20 blur-3xl" />
+          <div className="absolute bottom-[-3rem] left-10 h-32 w-32 rounded-full bg-amber-200/30 blur-3xl" />
         </div>
         <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-2xl">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-white/70">
-              Client Operations
+            <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-white/65">
+              Portfolio Command Center
             </p>
-            <h1 className="mt-3 text-4xl font-semibold tracking-[-0.05em] sm:text-5xl">
-              Modern program oversight,
-              <span className="display-serif ml-2 text-amber-100">without the clutter.</span>
+            <h1 className="mt-3 text-[40px] font-semibold leading-[1.05] tracking-[-0.045em] sm:text-5xl">
+              Your advisory book,
+              <span className="display-serif ml-2 text-amber-100">in one view.</span>
             </h1>
-            <p className="mt-4 max-w-xl text-sm leading-6 text-white/76 sm:text-base">
-              Manage client engagements, launch new work quickly, and keep project health visible across selection, IV&V, and health check programs.
+            <p className="mt-4 max-w-xl text-sm leading-6 text-white/75 sm:text-base">
+              Track client engagements, launch new work, and keep delivery health visible across Selection, IV&amp;V, and Health Check programs.
             </p>
           </div>
-          <div className="flex flex-col gap-3 sm:flex-row">
+          <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
             <Button
               onClick={openNewClient}
-              className="min-w-[170px] gap-2 bg-white text-slate-950 hover:bg-white/90"
+              className="min-w-[170px] gap-2 bg-white text-slate-950 shadow-lg shadow-slate-950/20 hover:bg-white/90"
               data-testid="button-new-client"
             >
               <Plus className="w-4 h-4" />
               New Client
             </Button>
-            <div className="rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-sm text-white/75 backdrop-blur">
-              Active delivery book across public-sector advisory work.
+            <div className="rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-xs leading-5 text-white/75 backdrop-blur">
+              <p className="font-semibold uppercase tracking-[0.18em] text-white/70">Delivery book</p>
+              <p>Public-sector advisory engagements, live.</p>
             </div>
           </div>
         </div>
       </section>
 
-      <section className="grid gap-4 lg:grid-cols-[minmax(0,1.8fr)_minmax(300px,1fr)]">
+      <section className="grid gap-4 lg:grid-cols-[minmax(0,1.8fr)_minmax(320px,1fr)]">
         <div className="glass-panel rounded-[28px] p-5 sm:p-6">
           <div className="flex flex-col gap-5">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
@@ -408,25 +409,25 @@ export default function Dashboard() {
                 <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">Portfolio Snapshot</p>
                 <h2 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-foreground">Clients and projects at a glance</h2>
               </div>
-              <p className="text-sm text-muted-foreground">Use search to jump straight to a client, project, or entity type.</p>
+              <p className="text-sm text-muted-foreground">Jump to any client, project, or entity from the right.</p>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-3">
-              <div className="rounded-[24px] border border-white/55 bg-white/80 p-4 shadow-xs dark:border-white/10 dark:bg-white/5">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Clients</p>
-                <p className="mt-3 text-3xl font-semibold tracking-[-0.05em] text-foreground">{isLoading ? "—" : totalClients}</p>
-                <p className="mt-1 text-sm text-muted-foreground">Organizations under active advisory support.</p>
-              </div>
-              <div className="rounded-[24px] border border-white/55 bg-white/80 p-4 shadow-xs dark:border-white/10 dark:bg-white/5">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Active Projects</p>
-                <p className="mt-3 text-3xl font-semibold tracking-[-0.05em] text-foreground">{isLoading ? "—" : activeProjects}</p>
-                <p className="mt-1 text-sm text-muted-foreground">Live engagements moving through delivery stages.</p>
-              </div>
-              <div className="rounded-[24px] border border-white/55 bg-white/80 p-4 shadow-xs dark:border-white/10 dark:bg-white/5">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Total Projects</p>
-                <p className="mt-3 text-3xl font-semibold tracking-[-0.05em] text-foreground">{isLoading ? "—" : totalProjects}</p>
-                <p className="mt-1 text-sm text-muted-foreground">Selection, IV&V, and health check workspaces.</p>
-              </div>
+              {[
+                { label: "Clients", value: totalClients, caption: "Active advisory organizations." },
+                { label: "Active Projects", value: activeProjects, caption: "In-flight engagements." },
+                { label: "Total Projects", value: totalProjects, caption: "Across all modules." },
+              ].map((stat) => (
+                <div
+                  key={stat.label}
+                  className="group relative overflow-hidden rounded-[24px] border border-white/55 bg-white/80 p-4 shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm dark:border-white/10 dark:bg-white/5"
+                >
+                  <div className="pointer-events-none absolute inset-x-4 -top-8 h-16 rounded-full bg-amber-300/15 blur-2xl opacity-0 transition-opacity group-hover:opacity-100" />
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{stat.label}</p>
+                  <p className="mt-3 text-3xl font-semibold tracking-[-0.05em] text-foreground">{isLoading ? "—" : stat.value}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">{stat.caption}</p>
+                </div>
+              ))}
             </div>
           </div>
         </div>
@@ -439,7 +440,12 @@ export default function Dashboard() {
             </div>
             <div className="relative">
               <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input className="h-12 pl-11" placeholder="Search clients, projects, entities..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+              <Input
+                className="h-12 pl-11"
+                placeholder="Search clients, projects, entities..."
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+              />
             </div>
             <div className="rounded-[24px] border border-dashed border-border/70 bg-background/40 p-4 text-sm text-muted-foreground">
               {searchQuery.trim()
@@ -698,27 +704,30 @@ export default function Dashboard() {
           </div>
 
           <div className="space-y-3 text-left">
-            <div className="flex items-start gap-4 rounded-[24px] border bg-card/80 p-5">
-              <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-foreground text-xs font-bold text-background">1</span>
-              <div className="flex-1">
-                <p className="text-sm font-medium">Create a client</p>
-                <p className="text-sm text-muted-foreground mt-0.5">Add your government entity with their website domain for automatic enrichment.</p>
+            {[
+              { n: "1", active: true, title: "Create a client", body: "Add your government entity with their website domain for automatic enrichment." },
+              { n: "2", active: false, title: "Create a project", body: "Choose engagement modules — Selection, IV&V, Health Check — based on your scope." },
+              { n: "3", active: false, title: "Load requirements or upload documents", body: "Import requirements for vendor evaluation, or upload status reports for health check analysis." },
+            ].map((step) => (
+              <div
+                key={step.n}
+                className="flex items-start gap-4 rounded-[24px] border border-white/55 bg-white/80 p-5 shadow-xs dark:border-white/10 dark:bg-white/5"
+              >
+                <span
+                  className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl text-xs font-bold ${
+                    step.active
+                      ? "bg-foreground text-background"
+                      : "bg-foreground/[0.06] text-muted-foreground"
+                  }`}
+                >
+                  {step.n}
+                </span>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-foreground">{step.title}</p>
+                  <p className="mt-0.5 text-sm text-muted-foreground">{step.body}</p>
+                </div>
               </div>
-            </div>
-            <div className="flex items-start gap-4 rounded-[24px] border bg-card/80 p-5">
-              <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-bold text-muted-foreground">2</span>
-              <div className="flex-1">
-                <p className="text-sm font-medium">Create a project</p>
-                <p className="text-sm text-muted-foreground mt-0.5">Choose engagement modules — Selection, IV&V, Health Check — based on your scope.</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-4 rounded-[24px] border bg-card/80 p-5">
-              <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-bold text-muted-foreground">3</span>
-              <div className="flex-1">
-                <p className="text-sm font-medium">Load requirements or upload documents</p>
-                <p className="text-sm text-muted-foreground mt-0.5">Import requirements for vendor evaluation, or upload status reports for health check analysis.</p>
-              </div>
-            </div>
+            ))}
           </div>
 
           <Button

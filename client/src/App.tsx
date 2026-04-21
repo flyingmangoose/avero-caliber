@@ -86,7 +86,7 @@ function AppLayout() {
         <AppSidebar />
         <div className="flex flex-col flex-1 min-w-0 px-3 py-3 md:pl-0 md:pr-4 md:py-4">
           <AppHeader />
-          <main className="glass-panel-strong flex-1 overflow-y-auto overscroll-contain rounded-[28px] border border-white/40">
+          <main className="glass-panel-strong app-scrollbar relative flex-1 overflow-y-auto overscroll-contain rounded-[30px] border border-white/40 shadow-[0_40px_120px_-56px_rgba(15,23,42,0.45)]">
             <Switch>
               <Route path="/" component={Dashboard} />
               <Route path="/portfolio" component={Portfolio} />

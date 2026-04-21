@@ -130,12 +130,13 @@ function SynthesisSummary({ projectId, synthesis, assessmentMap, raidItems, budg
   return (
     <div className="space-y-4">
       {/* Synthesize button + overall health banner */}
-      <div className={`rounded-lg border p-4 ${overallHealth ? HEALTH_BG[overallHealth] || "bg-muted/30 border-border" : "bg-muted/30 border-border"}`}>
-        <div className="flex items-center justify-between">
+      <div className={`workspace-subsection ${overallHealth ? HEALTH_BG[overallHealth] || "bg-muted/30 border-border" : "bg-muted/30 border-border"}`}>
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-3">
             <HealthIcon className={`w-8 h-8 ${overallHealth === "critical" ? "text-red-600" : overallHealth === "high" ? "text-red-500" : overallHealth === "medium" ? "text-amber-600" : overallHealth === "low" ? "text-blue-500" : overallHealth === "satisfactory" ? "text-emerald-500" : "text-muted-foreground"}`} />
             <div>
-              <h2 className="text-lg font-semibold">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Recovery Signal</p>
+              <h2 className="mt-1 text-lg font-semibold">
                 {overallHealth
                   ? <>Project Health: <span className="capitalize">{overallHealth === "satisfactory" ? "Satisfactory" : `${overallHealth.toUpperCase()} RISK`}</span></>
                   : "No Health Assessment Yet"
@@ -149,7 +150,7 @@ function SynthesisSummary({ projectId, synthesis, assessmentMap, raidItems, budg
               )}
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               variant="outline"
               size="sm"
@@ -273,7 +274,7 @@ function SynthesisSummary({ projectId, synthesis, assessmentMap, raidItems, budg
             : null;
 
           return (
-            <Card key={d.key} className="overflow-hidden">
+            <Card key={d.key} className="overflow-hidden border-white/40">
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-base flex items-center gap-2"><span>{d.icon}</span>{d.label}</CardTitle>
@@ -318,7 +319,7 @@ function SynthesisSummary({ projectId, synthesis, assessmentMap, raidItems, budg
         <div className="grid grid-cols-2 gap-4">
           {/* Top Risks */}
           {synthesis.topRisks?.length > 0 && (
-            <Card>
+            <Card className="border-white/40">
               <CardHeader className="pb-2">
                 <CardTitle className="text-base flex items-center gap-2"><AlertTriangle className="w-4 h-4 text-amber-500" />Top Risks</CardTitle>
               </CardHeader>
@@ -338,7 +339,7 @@ function SynthesisSummary({ projectId, synthesis, assessmentMap, raidItems, budg
 
           {/* Recommended Actions */}
           {synthesis.recommendedActions?.length > 0 && (
-            <Card>
+            <Card className="border-white/40">
               <CardHeader className="pb-2">
                 <CardTitle className="text-base flex items-center gap-2"><ArrowRight className="w-4 h-4 text-accent" />Recommended Actions</CardTitle>
               </CardHeader>
@@ -570,26 +571,41 @@ export default function HealthCheckPage() {
   }
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-border/50 bg-card/50 backdrop-blur-sm shrink-0">
-        <div className="flex items-center gap-3">
-          <Link href={`/projects/${projectId}`}>
-            <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-muted-foreground hover:text-foreground -ml-2">
-              <ChevronLeft className="w-4 h-4" />{project?.name || "Project"}
-            </Button>
-          </Link>
-          <span className="text-muted-foreground/40">/</span>
-          {clientData?.logoPath && <img src={clientData.logoPath} alt="" className="w-6 h-6 object-contain rounded" />}
-          <h1 className="text-lg font-semibold text-foreground flex items-center gap-2">
-            <Stethoscope className="w-5 h-5 text-accent" />Health Check & Rescue
-          </h1>
+    <div className="workspace-page h-full">
+      <div className="workspace-stack">
+        <div className="workspace-hero shrink-0">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center gap-2 text-white/90">
+                <Link href={`/projects/${projectId}`}>
+                  <Button variant="ghost" size="sm" className="h-8 gap-1.5 rounded-full border border-white/15 bg-white/10 px-3 text-white hover:bg-white/15 hover:text-white -ml-1">
+                    <ChevronLeft className="w-4 h-4" />{project?.name || "Project"}
+                  </Button>
+                </Link>
+                {clientData?.logoPath && <img src={clientData.logoPath} alt="" className="h-7 w-7 rounded-lg bg-white/85 p-1 object-contain" />}
+                <span className="workspace-hero-kicker">Health Check</span>
+              </div>
+              <div className="space-y-1">
+                <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
+                  <Stethoscope className="h-6 w-6 text-white" />Health Check & Rescue
+                </h1>
+                <p className="max-w-2xl text-sm text-white/78">
+                  Centralize documentary evidence, synthesize risk posture, and turn fragmented program signals into a grounded rescue plan.
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <span className="workspace-stat-chip"><strong>{Object.keys(assessmentMap).length}</strong> assessed domains</span>
+              <span className="workspace-stat-chip"><strong>{raidItems.length}</strong> RAID entries</span>
+              <span className="workspace-stat-chip"><strong>{assessmentHistoryData.length}</strong> history events</span>
+            </div>
+          </div>
         </div>
-      </div>
 
-      <ScrollArea className="flex-1">
-        <div className="p-4 sm:p-6">
-          <Tabs value={activeTab} onValueChange={setActiveTab} data-testid="health-check-tabs">
-            <TabsList className="mb-4">
+        <ScrollArea className="app-scrollbar flex-1">
+          <div className="space-y-4">
+            <Tabs value={activeTab} onValueChange={setActiveTab} data-testid="health-check-tabs">
+              <TabsList className="workspace-toolbar mb-0 h-auto w-full justify-start gap-2 rounded-[24px] bg-transparent p-2">
               <TabsTrigger value="documents" data-testid="tab-documents"><FileText className="w-4 h-4 mr-1 inline" />Documents</TabsTrigger>
               <TabsTrigger value="summary" data-testid="tab-summary"><Activity className="w-4 h-4 mr-1 inline" />Summary</TabsTrigger>
               <TabsTrigger value="assessment" data-testid="tab-assessment">Assessment</TabsTrigger>
@@ -598,7 +614,7 @@ export default function HealthCheckPage() {
             </TabsList>
 
             {/* TAB 0: Executive Summary */}
-            <TabsContent value="summary">
+            <TabsContent value="summary" className="mt-4">
               <SynthesisSummary
                 projectId={projectId}
                 synthesis={synthesis}
@@ -615,15 +631,26 @@ export default function HealthCheckPage() {
             </TabsContent>
 
             {/* TAB 1: Assessment Domains */}
-            <TabsContent value="assessment">
-              <div className="grid grid-cols-2 gap-4">
+            <TabsContent value="assessment" className="mt-4">
+              <div className="workspace-subsection space-y-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Domain Review</p>
+                    <h3 className="mt-1 text-lg font-semibold">Assessment domains</h3>
+                  </div>
+                  <Badge variant="secondary" className="text-xs">{Object.keys(assessmentMap).length} domains scored</Badge>
+                </div>
+              <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
                 {DOMAINS.map(d => {
                   const a = assessmentMap[d.key];
                   return (
-                    <Card key={d.key} className="cursor-pointer hover:border-accent/50 transition-colors" onClick={() => openAssessDialog(d.key)} data-testid={`domain-card-${d.key}`}>
+                    <Card key={d.key} className="cursor-pointer border-white/40 hover:border-accent/40 transition-colors" onClick={() => openAssessDialog(d.key)} data-testid={`domain-card-${d.key}`}>
                       <CardHeader className="pb-2">
                         <div className="flex items-center justify-between">
-                          <CardTitle className="text-base flex items-center gap-2"><span>{d.icon}</span>{d.label}</CardTitle>
+                          <CardTitle className="text-base flex items-center gap-3">
+                            <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-accent/10 text-lg">{d.icon}</span>
+                            <span>{d.label}</span>
+                          </CardTitle>
                           {a?.overallRating && <Badge className={`text-xs ${RATING_COLORS[a.overallRating] || ""}`}>{a.overallRating.toUpperCase()}</Badge>}
                         </div>
                       </CardHeader>
@@ -638,10 +665,12 @@ export default function HealthCheckPage() {
                   );
                 })}
               </div>
+              </div>
             </TabsContent>
 
             {/* TAB 2: RAID Log */}
-            <TabsContent value="raid">
+            <TabsContent value="raid" className="mt-4">
+              <div className="workspace-subsection">
               <div className="flex justify-between items-center mb-3">
                 <h3 className="text-base font-semibold flex items-center gap-2"><AlertTriangle className="w-4 h-4 text-amber-500" />RAID Log ({raidItems.length})</h3>
                 <Button size="sm" className="bg-accent hover:bg-accent/90 text-accent-foreground text-xs gap-1" onClick={() => setRaidDialog({ open: true, form: emptyRaid() })} data-testid="button-add-raid">
@@ -649,7 +678,7 @@ export default function HealthCheckPage() {
                 </Button>
               </div>
               {/* RAID Filters */}
-              <div className="flex gap-2 mb-3 flex-wrap">
+              <div className="workspace-toolbar mb-3 flex gap-2 flex-wrap">
                 <div className="relative flex-1 min-w-[160px]">
                   <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
                   <Input className="h-8 text-xs pl-8" placeholder="Search RAID items..." value={raidFilters.search} onChange={e => setRaidFilters(p => ({ ...p, search: e.target.value }))} />
@@ -692,7 +721,7 @@ export default function HealthCheckPage() {
                     {raidItems.length === 0 ? "No RAID items yet. Add risks, assumptions, issues, or dependencies." : `No items match filters (${raidItems.length} total)`}
                   </p>
                 ) : (
-                  <div className="overflow-x-auto"><Table>
+                  <div className="overflow-x-auto rounded-[24px] border border-white/35 bg-background/70"><Table>
                     <TableHeader>
                       <TableRow>
                         <TableHead className="text-xs w-24">Type</TableHead>
@@ -729,13 +758,14 @@ export default function HealthCheckPage() {
                   </Table></div>
                 );
               })()}
+              </div>
             </TabsContent>
 
             {/* TAB 3: Budget & Schedule */}
-            <TabsContent value="budget">
+            <TabsContent value="budget" className="mt-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                 {/* Budget Section */}
-                <div>
+                <div className="workspace-subsection">
                   <div className="flex justify-between items-center mb-3">
                     <h3 className="text-base font-semibold flex items-center gap-2"><DollarSign className="w-4 h-4 text-emerald-500" />Budget</h3>
                     <Button size="sm" className="bg-accent hover:bg-accent/90 text-accent-foreground text-xs gap-1" onClick={() => setBudgetDialog({ open: true, form: emptyBudget() })} data-testid="button-add-budget">
@@ -748,18 +778,18 @@ export default function HealthCheckPage() {
                       { label: "Change Orders", value: budgetSummary.totalChangeOrders },
                       { label: "Actual Spend", value: budgetSummary.totalActualSpend },
                     ].map(s => (
-                      <Card key={s.label} className="p-2">
+                      <Card key={s.label} className="border-white/35 p-2">
                         <p className="text-xs text-muted-foreground">{s.label}</p>
                         <p className="text-base font-semibold">${(s.value || 0).toLocaleString()}</p>
                       </Card>
                     ))}
                   </div>
-                  <Card className={`p-2 mb-3 ${budgetSummary.variance >= 0 ? "border-emerald-500/30" : "border-red-500/30"}`}>
+                  <Card className={`mb-3 p-2 ${budgetSummary.variance >= 0 ? "border-emerald-500/30" : "border-red-500/30"}`}>
                     <p className="text-xs text-muted-foreground">Variance</p>
                     <p className={`text-base font-bold ${budgetSummary.variance >= 0 ? "text-emerald-500" : "text-red-500"}`}>${(budgetSummary.variance || 0).toLocaleString()}</p>
                   </Card>
                   {budgetEntries.length > 0 && (
-                    <div className="overflow-x-auto"><Table>
+                    <div className="overflow-x-auto rounded-[24px] border border-white/35 bg-background/70"><Table>
                       <TableHeader><TableRow>
                         <TableHead className="text-xs">Category</TableHead>
                         <TableHead className="text-xs">Description</TableHead>
@@ -786,7 +816,7 @@ export default function HealthCheckPage() {
                 </div>
 
                 {/* Schedule Section */}
-                <div>
+                <div className="workspace-subsection">
                   <div className="flex justify-between items-center mb-3">
                     <h3 className="text-base font-semibold flex items-center gap-2"><Calendar className="w-4 h-4 text-blue-500" />Schedule Milestones</h3>
                     <Button size="sm" className="bg-accent hover:bg-accent/90 text-accent-foreground text-xs gap-1" onClick={() => setScheduleDialog({ open: true, form: emptySchedule() })} data-testid="button-add-schedule">
@@ -796,7 +826,7 @@ export default function HealthCheckPage() {
                   {scheduleItems.length === 0 ? (
                     <p className="text-sm text-muted-foreground text-center py-8">No milestones tracked yet.</p>
                   ) : (
-                    <div className="overflow-x-auto"><Table>
+                    <div className="overflow-x-auto rounded-[24px] border border-white/35 bg-background/70"><Table>
                       <TableHeader><TableRow>
                         <TableHead className="text-xs">Milestone</TableHead>
                         <TableHead className="text-xs">Original</TableHead>
@@ -847,6 +877,7 @@ export default function HealthCheckPage() {
           </Tabs>
         </div>
       </ScrollArea>
+      </div>
 
       {/* Assessment Dialog */}
       <Dialog open={assessDialog.open} onOpenChange={o => !o && setAssessDialog({ open: false, form: emptyAssessment() })}>

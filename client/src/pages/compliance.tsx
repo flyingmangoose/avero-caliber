@@ -263,9 +263,9 @@ function KpiCards({ summary }: { summary: ComplianceSummary | undefined }) {
   const totalOpenDev = (openDeviations.critical || 0) + (openDeviations.major || 0) + (openDeviations.minor || 0) + (openDeviations.observation || 0);
 
   return (
-    <div className="grid grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
       {/* Compliance % */}
-      <Card data-testid="kpi-compliance">
+      <Card className="border-white/40" data-testid="kpi-compliance">
         <CardContent className="pt-4 pb-4 flex items-center gap-4">
           {totalDev > 0 ? <ComplianceRing value={overallCompliance} /> : (
             <div className="w-[88px] h-[88px] flex items-center justify-center">
@@ -280,7 +280,7 @@ function KpiCards({ summary }: { summary: ComplianceSummary | undefined }) {
       </Card>
 
       {/* Deliverables */}
-      <Card data-testid="kpi-deliverables">
+      <Card className="border-white/40" data-testid="kpi-deliverables">
         <CardContent className="pt-4 pb-4">
           <p className="text-xs font-semibold text-muted-foreground uppercase">Deliverables</p>
           <p className="text-lg font-bold mt-1">{deliverableStats.accepted || 0} <span className="text-sm font-normal text-muted-foreground">of {totalDev} accepted</span></p>
@@ -299,7 +299,7 @@ function KpiCards({ summary }: { summary: ComplianceSummary | undefined }) {
       </Card>
 
       {/* Open Deviations */}
-      <Card data-testid="kpi-deviations">
+      <Card className="border-white/40" data-testid="kpi-deviations">
         <CardContent className="pt-4 pb-4">
           <p className="text-xs font-semibold text-muted-foreground uppercase">Open Deviations</p>
           <p className="text-lg font-bold mt-1">{totalOpenDev}</p>
@@ -312,7 +312,7 @@ function KpiCards({ summary }: { summary: ComplianceSummary | undefined }) {
       </Card>
 
       {/* Next Checkpoint */}
-      <Card data-testid="kpi-checkpoint">
+      <Card className="border-white/40" data-testid="kpi-checkpoint">
         <CardContent className="pt-4 pb-4">
           <p className="text-xs font-semibold text-muted-foreground uppercase">Next Checkpoint</p>
           {nextCp ? (
@@ -356,7 +356,7 @@ function PulseReportCard({ contractId }: { contractId: number }) {
   const trendArrow: Record<string, string> = { improving: "↑", stable: "→", declining: "↓" };
 
   return (
-    <Card className="mb-4" data-testid="pulse-report-card">
+    <Card className="mb-4 border-white/40" data-testid="pulse-report-card">
       <CardContent className="pt-4 pb-4">
         <div className="flex items-center justify-between mb-2">
           <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Latest Pulse</h4>
@@ -428,7 +428,7 @@ function EscalationBanner({ projectId }: { projectId: number }) {
   })[0];
 
   return (
-    <div className="mb-4 rounded-lg border border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-950/30 px-4 py-3" data-testid="escalation-banner">
+    <div className="mb-4 rounded-[24px] border border-red-300/90 bg-red-50/90 px-4 py-3 shadow-[0_18px_48px_-32px_rgba(220,38,38,0.5)] dark:border-red-800 dark:bg-red-950/30" data-testid="escalation-banner">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Bell className="w-4 h-4 text-red-500" />
@@ -573,10 +573,11 @@ function ContractBaselineTab({ projectId, contracts, vendors }: { projectId: num
       <PulseReportCard contractId={contract.id} />
 
       {/* Contract Summary */}
-      <Card>
+      <Card className="border-white/40">
         <CardContent className="pt-4 pb-4">
           <div className="flex items-center justify-between">
             <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Baseline Contract</p>
               <h3 className="text-base font-semibold">{contract.contractName}</h3>
               <div className="flex gap-4 mt-1 text-xs text-muted-foreground">
                 {contract.totalValue && <span>Value: {contract.totalValue}</span>}
@@ -594,7 +595,7 @@ function ContractBaselineTab({ projectId, contracts, vendors }: { projectId: num
       </Card>
 
       {/* Filters + Add */}
-      <div className="flex items-center gap-2">
+      <div className="workspace-toolbar flex items-center gap-2">
         <Select value={categoryFilter} onValueChange={setCategoryFilter}>
           <SelectTrigger className="w-[140px] h-8 text-xs" data-testid="filter-category">
             <SelectValue placeholder="Category" />
@@ -624,7 +625,10 @@ function ContractBaselineTab({ projectId, contracts, vendors }: { projectId: num
       </div>
 
       {/* Deliverables Table */}
-      <Card>
+      <Card className="border-white/40">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base font-semibold">Deliverables and obligations</CardTitle>
+        </CardHeader>
         <Table>
           <TableHeader>
             <TableRow>
@@ -655,9 +659,9 @@ function ContractBaselineTab({ projectId, contracts, vendors }: { projectId: num
                     <TableCell><Badge className={`text-xs ${PRIORITY_COLORS[d.priority] || ""}`}>{formatLabel(d.priority)}</Badge></TableCell>
                     <TableCell>
                       <Select value={d.status} onValueChange={(val) => { updateDeliverableMutation.mutate({ id: d.id, data: { status: val, completedDate: val === "accepted" ? new Date().toISOString().split("T")[0] : d.completedDate } }); }}>
-                        <SelectTrigger className="h-6 w-[130px] text-xs px-2" data-testid={`status-select-${d.id}`}>
-                          <Badge className={`text-xs ${DELIVERABLE_STATUS_COLORS[d.status] || ""}`}>{formatLabel(d.status)}</Badge>
-                        </SelectTrigger>
+                            <SelectTrigger className="h-6 w-[130px] text-xs px-2" data-testid={`status-select-${d.id}`}>
+                              <Badge className={`text-xs ${DELIVERABLE_STATUS_COLORS[d.status] || ""}`}>{formatLabel(d.status)}</Badge>
+                            </SelectTrigger>
                         <SelectContent>
                           {["not_started", "in_progress", "delivered", "accepted", "at_risk", "non_compliant", "waived"].map(s => (
                             <SelectItem key={s} value={s}>{formatLabel(s)}</SelectItem>
@@ -2370,37 +2374,51 @@ export default function CompliancePage() {
 
   if (isLoading) {
     return (
-      <div className="p-6 space-y-4">
-        <Skeleton className="h-8 w-48" />
-        <div className="grid grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-28" />)}
+      <div className="workspace-page">
+        <div className="workspace-stack">
+          <Skeleton className="h-10 w-48 rounded-2xl" />
+          <Skeleton className="h-40 w-full rounded-[2rem]" />
+          <Skeleton className="h-[32rem] w-full rounded-[2rem]" />
         </div>
-        <Skeleton className="h-64 w-full" />
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="px-6 py-4 border-b border-border/50 bg-card/50 backdrop-blur-sm shrink-0">
-        <div className="flex items-center gap-3">
-          <Link href={`/projects/${projectId}`}>
-            <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-muted-foreground hover:text-foreground -ml-2">
-              <ChevronLeft className="w-4 h-4" />
-              {project?.name || "Project"}
-            </Button>
-          </Link>
-          <span className="text-muted-foreground/40">/</span>
-          <h1 className="text-lg font-semibold text-foreground flex items-center gap-2">
-            <Shield className="w-5 h-5 text-accent" />
-            Contract Compliance
-          </h1>
+    <div className="workspace-page h-full">
+      <div className="workspace-stack">
+        <div className="workspace-hero shrink-0">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center gap-2 text-white/90">
+                <Link href={`/projects/${projectId}`}>
+                  <Button variant="ghost" size="sm" className="h-8 gap-1.5 rounded-full border border-white/15 bg-white/10 px-3 text-white hover:bg-white/15 hover:text-white -ml-1">
+                    <ChevronLeft className="w-4 h-4" />
+                    {project?.name || "Project"}
+                  </Button>
+                </Link>
+                <span className="workspace-hero-kicker">Compliance</span>
+              </div>
+              <div className="space-y-1">
+                <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
+                  <Shield className="h-6 w-6 text-white" />
+                  Contract compliance command center
+                </h1>
+                <p className="max-w-2xl text-sm text-white/78">
+                  Track commitments, surface deviations, and tie evidence, checkpoints, and go-live decisions back to the contract baseline.
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <span className="workspace-stat-chip"><strong>{contracts.length}</strong> contracts</span>
+              <span className="workspace-stat-chip"><strong>{summary?.overallCompliance ?? 0}%</strong> compliance</span>
+              <span className="workspace-stat-chip"><strong>{primaryContractId ? "Active" : "Setup"}</strong> baseline state</span>
+            </div>
+          </div>
         </div>
-      </div>
 
-      <ScrollArea className="flex-1">
-        <div className="p-6 space-y-5">
+        <ScrollArea className="app-scrollbar flex-1">
+        <div className="space-y-5">
           {/* Escalation Banner */}
           <EscalationBanner projectId={projectId} />
 
@@ -2409,7 +2427,7 @@ export default function CompliancePage() {
 
           {/* Tabs */}
           <Tabs defaultValue="baseline" className="w-full">
-            <TabsList className="w-full justify-start" data-testid="compliance-tabs">
+            <TabsList className="workspace-toolbar h-auto w-full justify-start gap-2 rounded-[24px] bg-transparent p-2" data-testid="compliance-tabs">
               <TabsTrigger value="baseline" data-testid="tab-baseline">Contract Baseline</TabsTrigger>
               <TabsTrigger value="checkpoints" data-testid="tab-checkpoints">IV&V Assessments</TabsTrigger>
               <TabsTrigger value="deviations" data-testid="tab-deviations">Deviations</TabsTrigger>
@@ -2418,27 +2436,27 @@ export default function CompliancePage() {
               <TabsTrigger value="golive" data-testid="tab-golive">Go-Live</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="baseline" className="mt-4">
+            <TabsContent value="baseline" className="mt-4 workspace-subsection">
               <ContractBaselineTab projectId={projectId} contracts={contracts} vendors={vendors || []} />
             </TabsContent>
 
-            <TabsContent value="checkpoints" className="mt-4">
+            <TabsContent value="checkpoints" className="mt-4 workspace-subsection">
               <CheckpointsTab contractId={primaryContractId} projectId={projectId} />
             </TabsContent>
 
-            <TabsContent value="deviations" className="mt-4">
+            <TabsContent value="deviations" className="mt-4 workspace-subsection">
               <DeviationsTab contractId={primaryContractId} projectId={projectId} />
             </TabsContent>
 
-            <TabsContent value="evidence" className="mt-4">
+            <TabsContent value="evidence" className="mt-4 workspace-subsection">
               <EvidenceLogTab contractId={primaryContractId} projectId={projectId} />
             </TabsContent>
 
-            <TabsContent value="integrations" className="mt-4">
+            <TabsContent value="integrations" className="mt-4 workspace-subsection">
               <IntegrationsTab projectId={projectId} contractId={primaryContractId} />
             </TabsContent>
 
-            <TabsContent value="golive" className="mt-4">
+            <TabsContent value="golive" className="mt-4 workspace-subsection">
               <div className="flex flex-col items-center py-12 gap-4 text-center">
                 <Rocket className="w-10 h-10 text-muted-foreground/30" />
                 <div>
@@ -2455,6 +2473,7 @@ export default function CompliancePage() {
           </Tabs>
         </div>
       </ScrollArea>
+      </div>
 
     </div>
   );

@@ -260,7 +260,7 @@ export function ChatPanel({ projectId, projectName }: ChatPanelProps) {
       {!open && (
         <button
           onClick={() => setOpen(true)}
-          className="fixed bottom-6 right-6 z-50 flex h-16 items-center gap-3 rounded-full border border-white/40 bg-slate-950 px-4 text-white shadow-2xl shadow-slate-950/25 transition-all hover:scale-[1.02] hover:bg-slate-900 dark:border-white/10"
+          className="fixed bottom-6 right-6 z-50 flex h-16 items-center gap-3 rounded-full border border-white/40 bg-slate-950/95 px-4 text-white shadow-2xl shadow-slate-950/25 transition-all hover:scale-[1.02] hover:bg-slate-900 dark:border-white/10"
           title="Caliber AI"
           data-testid="chat-toggle-button"
         >
@@ -269,7 +269,7 @@ export function ChatPanel({ projectId, projectName }: ChatPanelProps) {
           </span>
           <span className="hidden text-left sm:block">
             <span className="block text-sm font-semibold">Caliber AI</span>
-            <span className="block text-xs text-white/65">Ask about project health</span>
+            <span className="block text-xs text-white/65">Ask about delivery health</span>
           </span>
         </button>
       )}
@@ -318,7 +318,7 @@ export function ChatPanel({ projectId, projectName }: ChatPanelProps) {
           </div>
 
           {/* Messages */}
-          <div ref={scrollRef} className="flex-1 overflow-y-auto bg-[linear-gradient(180deg,rgba(255,255,255,0.45),rgba(255,255,255,0))] p-5 space-y-4 dark:bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0))]">
+          <div ref={scrollRef} className="app-scrollbar flex-1 overflow-y-auto bg-[linear-gradient(180deg,rgba(255,255,255,0.45),rgba(255,255,255,0))] p-5 space-y-4 dark:bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0))]">
             {messages.length === 0 && !isStreaming && (
               <div className="space-y-5 pt-8">
                 <div className="text-center">
@@ -340,6 +340,9 @@ export function ChatPanel({ projectId, projectName }: ChatPanelProps) {
                     </button>
                   ))}
                 </div>
+                <p className="text-center text-xs text-muted-foreground">
+                  Executive summaries, risk scans, and program status are great places to start.
+                </p>
               </div>
             )}
 
@@ -398,6 +401,9 @@ export function ChatPanel({ projectId, projectName }: ChatPanelProps) {
                 <SendHorizontal className="w-4 h-4" />
               </Button>
             </div>
+            <p className="mt-2 px-1 text-[11px] text-muted-foreground">
+              Press Enter to send. Use Shift+Enter for a new line.
+            </p>
           </div>
         </div>
       )}
