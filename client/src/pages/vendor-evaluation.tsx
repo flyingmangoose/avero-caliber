@@ -1585,10 +1585,16 @@ export default function VendorEvaluation() {
   });
 
   // Fetch project info
-  const { data: project } = useQuery({
+  const { data: project } = useQuery<any>({
     queryKey: ["/api/projects", projectId],
     queryFn: () => apiRequest("GET", `/api/projects/${projectId}`).then(r => r.json()),
     enabled: !!projectId,
+  });
+
+  const { data: clientData } = useQuery<any>({
+    queryKey: ["/api/clients", project?.clientId],
+    queryFn: () => apiRequest("GET", `/api/clients/${project.clientId}`).then(r => r.json()),
+    enabled: !!project?.clientId,
   });
 
   // Initialize local state from server data
@@ -1899,6 +1905,7 @@ export default function VendorEvaluation() {
                       {project?.name || "Project"}
                     </Button>
                   </Link>
+                  {clientData?.logoPath && <img src={clientData.logoPath} alt="" className="h-7 w-7 rounded-lg bg-white/85 p-1 object-contain" />}
                   <span className="workspace-hero-kicker">Vendor Evaluation</span>
                 </div>
                 <div className="space-y-1">

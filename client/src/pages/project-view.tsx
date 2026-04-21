@@ -354,6 +354,12 @@ export default function ProjectView() {
     queryKey: ["/api/projects", projectId],
   });
 
+  const { data: clientData } = useQuery<any>({
+    queryKey: ["/api/clients", (project as any)?.clientId],
+    queryFn: () => apiRequest("GET", `/api/clients/${(project as any).clientId}`).then(r => r.json()),
+    enabled: !!(project as any)?.clientId,
+  });
+
   const { data: allRequirements = [], isLoading: reqsLoading } = useQuery<Requirement[]>({
     queryKey: ["/api/projects", projectId, "requirements"],
     queryFn: async () => {
@@ -952,7 +958,10 @@ export default function ProjectView() {
         <div className="hero-surface mx-4 mt-4 rounded-[28px] px-5 py-5 text-white shrink-0">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div className="space-y-3">
-              <span className="workspace-hero-kicker">Project Workspace</span>
+              <div className="flex flex-wrap items-center gap-2 text-white/90">
+                {clientData?.logoPath && <img src={clientData.logoPath} alt="" className="h-7 w-7 rounded-lg bg-white/85 p-1 object-contain" />}
+                <span className="workspace-hero-kicker">Project Workspace</span>
+              </div>
               <div className="space-y-1">
                 <h1 className="text-2xl font-semibold tracking-tight">Requirements command center</h1>
                 <p className="max-w-2xl text-sm text-white/78">

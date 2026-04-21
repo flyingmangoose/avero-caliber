@@ -2358,6 +2358,12 @@ export default function CompliancePage() {
     enabled: !!projectId,
   });
 
+  const { data: clientData } = useQuery<any>({
+    queryKey: ["/api/clients", project?.clientId],
+    queryFn: () => apiRequest("GET", `/api/clients/${project.clientId}`).then(r => r.json()),
+    enabled: !!project?.clientId,
+  });
+
   const { data: summary, isLoading } = useQuery<ComplianceSummary>({
     queryKey: ["/api/projects", projectId, "compliance-summary"],
     queryFn: () => apiRequest("GET", `/api/projects/${projectId}/compliance-summary`).then(r => r.json()),
@@ -2397,6 +2403,7 @@ export default function CompliancePage() {
                     {project?.name || "Project"}
                   </Button>
                 </Link>
+                {clientData?.logoPath && <img src={clientData.logoPath} alt="" className="h-7 w-7 rounded-lg bg-white/85 p-1 object-contain" />}
                 <span className="workspace-hero-kicker">Compliance</span>
               </div>
               <div className="space-y-1">

@@ -63,6 +63,12 @@ export default function GoLivePage() {
     enabled: !!projectId,
   });
 
+  const { data: clientData } = useQuery<any>({
+    queryKey: ["/api/clients", project?.clientId],
+    queryFn: () => apiRequest("GET", `/api/clients/${project.clientId}`).then(r => r.json()),
+    enabled: !!project?.clientId,
+  });
+
   const { data: summary } = useQuery<any>({
     queryKey: ["/api/projects", projectId, "compliance-summary"],
     queryFn: () => apiRequest("GET", `/api/projects/${projectId}/compliance-summary`).then(r => r.json()),
@@ -204,6 +210,7 @@ export default function GoLivePage() {
                     <ChevronLeft className="w-4 h-4" />{project?.name || "Project"}
                   </Button>
                 </Link>
+                {clientData?.logoPath && <img src={clientData.logoPath} alt="" className="h-7 w-7 rounded-lg bg-white/85 p-1 object-contain" />}
                 <span className="workspace-hero-kicker">Go-Live Readiness</span>
               </div>
               <div className="space-y-1">
