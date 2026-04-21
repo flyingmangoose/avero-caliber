@@ -1,4 +1,3 @@
-import express from "express";
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
@@ -11,22 +10,10 @@ import * as os from "os";
 import multer from "multer";
 import * as XLSX from "xlsx";
 
-// Persistent directory for uploaded client logos — lives outside dist/ so it
-// survives deploys (dist/ is wiped on every build).
-const LOGOS_DIR = path.resolve("logos");
-function resolveClientLogoDiskPath(logoPath: string | null | undefined): string {
-  if (!logoPath) return "";
-  return path.resolve(LOGOS_DIR, path.basename(logoPath));
-}
-
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
-
-  // Ensure persistent logos dir exists and serve it at /logos
-  if (!fs.existsSync(LOGOS_DIR)) fs.mkdirSync(LOGOS_DIR, { recursive: true });
-  app.use("/logos", express.static(LOGOS_DIR));
 
   // ==================== AUTHORIZATION HELPERS ====================
 
@@ -460,8 +447,9 @@ Return ONLY the JSON.`);
     if (!req.file) return res.status(400).json({ error: "No file uploaded" });
 
     const ext = req.file.originalname.split(".").pop()?.toLowerCase() || "png";
-    if (!fs.existsSync(LOGOS_DIR)) fs.mkdirSync(LOGOS_DIR, { recursive: true });
-    const destPath = path.join(LOGOS_DIR, `client-${clientId}.${ext}`);
+    const destDir = path.resolve("dist/public/logos");
+    if (!fs.existsSync(destDir)) fs.mkdirSync(destDir, { recursive: true });
+    const destPath = path.join(destDir, `client-${clientId}.${ext}`);
     fs.copyFileSync(req.file.path, destPath);
     try { fs.unlinkSync(req.file.path); } catch {}
 
@@ -520,8 +508,9 @@ Return ONLY the JSON.`);
         clearTimeout(logoTimeout);
         if (logoRes.ok) {
           const logoBuffer = Buffer.from(await logoRes.arrayBuffer());
-          if (!fs.existsSync(LOGOS_DIR)) fs.mkdirSync(LOGOS_DIR, { recursive: true });
-          const destPath = path.join(LOGOS_DIR, `client-${clientId}.png`);
+          const destDir = path.resolve("dist/public/logos");
+          if (!fs.existsSync(destDir)) fs.mkdirSync(destDir, { recursive: true });
+          const destPath = path.join(destDir, `client-${clientId}.png`);
           fs.writeFileSync(destPath, logoBuffer);
           data.logoPath = `/logos/client-${clientId}.png`;
         }
@@ -3587,7 +3576,7 @@ Write in professional consulting tone covering: overall posture assessment, key 
       let logoPath = path.resolve("client/public/avero-logo.png");
       if (!fs.existsSync(logoPath)) logoPath = path.resolve("dist/public/avero-logo.png");
       const hasLogo = fs.existsSync(logoPath);
-      let clientLogoPath = resolveClientLogoDiskPath(client?.logoPath);
+      let clientLogoPath = client?.logoPath ? path.resolve("dist/public" + client.logoPath) : "";
       const hasClientLogo = clientLogoPath && fs.existsSync(clientLogoPath);
 
       // ========== COVER PAGE ==========
@@ -5320,7 +5309,7 @@ Return ONLY valid JSON.`, undefined, 8192);
       let logoPath = path.resolve("client/public/avero-logo.png");
       if (!fs.existsSync(logoPath)) logoPath = path.resolve("dist/public/avero-logo.png");
       const hasLogo = fs.existsSync(logoPath);
-      let clientLogoPath = resolveClientLogoDiskPath(client?.logoPath);
+      let clientLogoPath = client?.logoPath ? path.resolve("dist/public" + client.logoPath) : "";
       const hasClientLogo = clientLogoPath && fs.existsSync(clientLogoPath);
 
       // ========== COVER PAGE ==========
@@ -5826,7 +5815,7 @@ Return ONLY valid JSON.`, undefined, 8192);
       let logoPath = path.resolve("client/public/avero-logo.png");
       if (!fs.existsSync(logoPath)) logoPath = path.resolve("dist/public/avero-logo.png");
       const hasLogo = fs.existsSync(logoPath);
-      let clientLogoPath = resolveClientLogoDiskPath(client?.logoPath);
+      let clientLogoPath = client?.logoPath ? path.resolve("dist/public" + client.logoPath) : "";
       const hasClientLogo = clientLogoPath && fs.existsSync(clientLogoPath);
 
       // ========== COVER ==========
