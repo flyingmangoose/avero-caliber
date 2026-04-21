@@ -56,6 +56,25 @@ async function llmStream(prompt: string, systemPrompt?: string, maxTokens = 4096
   });
 }
 
+// Chat backend — prefers non-search models (xAI grok, OpenAI) over Perplexity.
+// Perplexity's sonar-pro auto-runs web searches that derail project-context
+// questions, so it's only used as a last resort for chat.
+const chatClient = xaiClient || (process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY }) : null) || perplexityClient || primaryClient;
+const CHAT_MODEL = xaiClient ? "grok-3-mini" : process.env.OPENAI_API_KEY ? "gpt-4o" : "sonar-pro";
+
+async function llmStreamChat(prompt: string, systemPrompt: string | undefined, history: { role: "user" | "assistant"; content: string }[], maxTokens = 4096) {
+  const messages: any[] = [];
+  if (systemPrompt) messages.push({ role: "system", content: systemPrompt });
+  for (const h of history) messages.push({ role: h.role, content: h.content });
+  messages.push({ role: "user", content: prompt });
+  return chatClient.chat.completions.create({
+    model: CHAT_MODEL,
+    max_tokens: maxTokens,
+    messages,
+    stream: true,
+  });
+}
+
 const CHAT_SYSTEM_PROMPT = `You are Caliber AI, an expert consulting assistant embedded in Avero Caliber — a government ERP implementation management platform built by Avero Advisors. You have complete access to this project's data across all modules.
 
 PROJECT CONTEXT:
@@ -1972,4 +1991,4 @@ export function getVendorKbContext(
   }).join("\n\n");
 }
 
-export { xai, CHAT_SYSTEM_PROMPT, PROPOSAL_ANALYSIS_PROMPT, llmCall, llmStream };
+export { xai, CHAT_SYSTEM_PROMPT, PROPOSAL_ANALYSIS_PROMPT, llmCall, llmStream, llmStreamChat };

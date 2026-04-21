@@ -2411,18 +2411,17 @@ No markdown, no prose, no citations.`, undefined, 8192);
     if (project) storage.addChatMessage(projectId, "user", message);
 
     // Build project context
-    const { buildProjectContext, llmCall, llmStream, CHAT_SYSTEM_PROMPT } = await import("./ai");
+    const { buildProjectContext, llmStreamChat, CHAT_SYSTEM_PROMPT } = await import("./ai");
     const projectContext = project ? buildProjectContext(projectId) : "No project selected. User is on the dashboard. Help them understand Caliber's capabilities and guide them to create or select a project.";
     const systemPrompt = CHAT_SYSTEM_PROMPT.replace("{projectContext}", projectContext);
 
-    // Build messages array from history + new message
-    const messages: { role: "user" | "assistant"; content: string }[] = [];
+    // Normalize history for the chat client
+    const normalizedHistory: { role: "user" | "assistant"; content: string }[] = [];
     if (history && Array.isArray(history)) {
       for (const h of history) {
-        messages.push({ role: h.role as "user" | "assistant", content: h.content });
+        normalizedHistory.push({ role: h.role as "user" | "assistant", content: h.content });
       }
     }
-    messages.push({ role: "user", content: message });
 
     // Set SSE headers
     res.writeHead(200, {
@@ -2432,8 +2431,7 @@ No markdown, no prose, no citations.`, undefined, 8192);
     });
 
     try {
-      const userMessage = messages[messages.length - 1]?.content || "";
-      const stream = await llmStream(userMessage, systemPrompt, 4096);
+      const stream = await llmStreamChat(message, systemPrompt, normalizedHistory, 4096);
 
       let fullResponse = "";
 
