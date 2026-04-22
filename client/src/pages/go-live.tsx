@@ -429,13 +429,6 @@ export default function GoLivePage() {
                         </RadarChart>
                       </ResponsiveContainer>
 
-                      {/* Center overall-score callout — Apple Watch-style */}
-                      <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                        <div className="flex flex-col items-center">
-                          <span className={`text-[44px] font-bold leading-none tabular-nums ${scoreColor} drop-shadow-sm`}>{overallScore}</span>
-                          <span className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">of 100</span>
-                        </div>
-                      </div>
                     </div>
 
                     {/* Rich category cards with icons */}
