@@ -175,7 +175,7 @@ export default function GoLivePage() {
     const items = criteria.filter(c => c.category === cat);
     const catWeight = items.reduce((s, i) => s + i.weight, 0);
     const catSum = items.reduce((s, i) => s + i.weight * i.score, 0);
-    return { category: cat, score: catWeight > 0 ? Math.round((catSum / catWeight) * 10) / 10 : 0, fullMark: 10 };
+    return { category: cat, score: catWeight > 0 ? Math.round((catSum / catWeight) * 10) / 10 : 0, target: 8.5, fullMark: 10 };
   });
 
   function updateCriterion(key: string, field: string, value: any) {
@@ -296,27 +296,106 @@ export default function GoLivePage() {
                     </div>
                   </div>
                 </div>
-                <Card className="border-white/40">
-                  <CardContent className="pt-4">
-                    <h4 className="text-sm font-semibold text-muted-foreground uppercase mb-2">Category Radar</h4>
-                    <ResponsiveContainer width="100%" height={280}>
-                      <RadarChart data={radarData}>
-                        <PolarGrid stroke="hsl(var(--border))" />
-                        <PolarAngleAxis dataKey="category" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
-                        <PolarRadiusAxis angle={90} domain={[0, 10]} tick={{ fontSize: 9 }} />
-                        <Radar dataKey="score" stroke="hsl(var(--accent))" fill="hsl(var(--accent))" fillOpacity={0.3} />
+                <div className="workspace-subsection relative overflow-hidden">
+                  <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-amber-300/25 blur-3xl" />
+                  <div className="pointer-events-none absolute -bottom-12 -left-10 h-40 w-40 rounded-full bg-blue-400/15 blur-3xl" />
+                  <div className="relative">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Category Confidence</p>
+                        <h3 className="mt-1 text-lg font-semibold">Readiness across the five signals</h3>
+                      </div>
+                      <span className="inline-flex items-center gap-1.5 rounded-full border border-white/35 bg-background/70 px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                        Target 8.5+
+                      </span>
+                    </div>
+                    <ResponsiveContainer width="100%" height={320}>
+                      <RadarChart data={radarData} margin={{ top: 16, right: 28, bottom: 8, left: 28 }} outerRadius="78%">
+                        <defs>
+                          <radialGradient id="radar-fill" cx="50%" cy="50%" r="65%" fx="50%" fy="50%">
+                            <stop offset="0%" stopColor="hsl(var(--accent))" stopOpacity={0.08} />
+                            <stop offset="60%" stopColor="hsl(var(--accent))" stopOpacity={0.32} />
+                            <stop offset="100%" stopColor="hsl(var(--accent))" stopOpacity={0.55} />
+                          </radialGradient>
+                          <radialGradient id="radar-target" cx="50%" cy="50%" r="65%" fx="50%" fy="50%">
+                            <stop offset="0%" stopColor="#10b981" stopOpacity={0} />
+                            <stop offset="100%" stopColor="#10b981" stopOpacity={0.1} />
+                          </radialGradient>
+                        </defs>
+                        <PolarGrid stroke="hsl(var(--border))" strokeDasharray="3 4" strokeOpacity={0.6} />
+                        <PolarAngleAxis
+                          dataKey="category"
+                          tick={{ fontSize: 11, fontWeight: 600, fill: "hsl(var(--foreground))" }}
+                          tickLine={false}
+                        />
+                        <PolarRadiusAxis
+                          angle={90}
+                          domain={[0, 10]}
+                          tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }}
+                          tickCount={6}
+                          axisLine={false}
+                          stroke="hsl(var(--border))"
+                        />
+                        {/* Target threshold overlay at 8.5 */}
+                        <Radar
+                          name="Target"
+                          dataKey="target"
+                          stroke="#10b981"
+                          strokeWidth={1.25}
+                          strokeDasharray="4 4"
+                          fill="url(#radar-target)"
+                          isAnimationActive={false}
+                          dot={false}
+                        />
+                        <Radar
+                          name="Score"
+                          dataKey="score"
+                          stroke="hsl(var(--accent))"
+                          strokeWidth={2.25}
+                          fill="url(#radar-fill)"
+                          dot={{ r: 4, fill: "hsl(var(--accent))", stroke: "#fff", strokeWidth: 1.5 }}
+                          activeDot={{ r: 6, fill: "hsl(var(--accent))", stroke: "#fff", strokeWidth: 2 }}
+                          animationDuration={650}
+                        />
+                        <Tooltip
+                          cursor={{ stroke: "hsl(var(--accent))", strokeWidth: 1, strokeDasharray: "3 3" }}
+                          contentStyle={{
+                            borderRadius: 12,
+                            border: "1px solid hsl(var(--border))",
+                            background: "hsl(var(--background) / 0.95)",
+                            boxShadow: "0 10px 30px -10px rgba(15,23,42,0.25)",
+                            fontSize: 12,
+                          }}
+                          formatter={(value: any, name: any) => [`${value}/10`, name]}
+                        />
                       </RadarChart>
                     </ResponsiveContainer>
-                    <div className="mt-3 space-y-1">
-                      {radarData.map(d => (
-                        <div key={d.category} className="flex justify-between text-xs">
-                          <span className="text-muted-foreground">{d.category}</span>
-                          <span className={`font-mono font-bold ${d.score <= 3 ? "text-red-600" : d.score <= 6 ? "text-amber-600" : "text-emerald-600"}`}>{d.score}/10</span>
-                        </div>
-                      ))}
+                    <div className="mt-2 grid grid-cols-5 gap-2">
+                      {radarData.map(d => {
+                        const tone = d.score <= 3
+                          ? { dot: "bg-red-500", text: "text-red-600", ring: "ring-red-500/20" }
+                          : d.score <= 6
+                          ? { dot: "bg-amber-500", text: "text-amber-600", ring: "ring-amber-500/20" }
+                          : { dot: "bg-emerald-500", text: "text-emerald-600", ring: "ring-emerald-500/20" };
+                        return (
+                          <div
+                            key={d.category}
+                            className={`rounded-2xl border border-white/40 bg-background/70 px-2.5 py-2 text-center ring-1 ${tone.ring}`}
+                          >
+                            <div className="flex items-center justify-center gap-1.5 text-[10px] font-medium text-muted-foreground">
+                              <span className={`h-1.5 w-1.5 rounded-full ${tone.dot}`} />
+                              {d.category}
+                            </div>
+                            <p className={`mt-1 text-base font-semibold tabular-nums ${tone.text}`}>
+                              {d.score.toFixed(1)}<span className="text-xs text-muted-foreground font-normal">/10</span>
+                            </p>
+                          </div>
+                        );
+                      })}
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
