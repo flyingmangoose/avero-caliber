@@ -13,7 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Rocket, ChevronLeft, Check, Loader2, Sparkles, AlertTriangle, Download } from "lucide-react";
+import { Rocket, ChevronLeft, Check, Loader2, Sparkles, AlertTriangle, Download, FlaskConical, Bug, Database, ArrowRightLeft, ShieldCheck } from "lucide-react";
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine } from "recharts";
 
 const DEFAULT_CRITERIA = [
@@ -45,6 +45,14 @@ const READINESS_LABELS: Record<string, string> = {
 
 const CONFIDENCE_COLORS: Record<string, string> = {
   high: "text-emerald-600", medium: "text-amber-600", low: "text-red-600",
+};
+
+const CATEGORY_ICONS: Record<string, any> = {
+  Testing: FlaskConical,
+  Defects: Bug,
+  Data: Database,
+  Cutover: ArrowRightLeft,
+  Readiness: ShieldCheck,
 };
 
 export default function GoLivePage() {
@@ -175,7 +183,7 @@ export default function GoLivePage() {
     const items = criteria.filter(c => c.category === cat);
     const catWeight = items.reduce((s, i) => s + i.weight, 0);
     const catSum = items.reduce((s, i) => s + i.weight * i.score, 0);
-    return { category: cat, score: catWeight > 0 ? Math.round((catSum / catWeight) * 10) / 10 : 0, target: 8.5, fullMark: 10 };
+    return { category: cat, score: catWeight > 0 ? Math.round((catSum / catWeight) * 10) / 10 : 0, target: 8.5, critical: 5, fullMark: 10 };
   });
 
   function updateCriterion(key: string, field: string, value: any) {
@@ -297,99 +305,164 @@ export default function GoLivePage() {
                   </div>
                 </div>
                 <div className="workspace-subsection relative overflow-hidden">
-                  <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-amber-300/25 blur-3xl" />
-                  <div className="pointer-events-none absolute -bottom-12 -left-10 h-40 w-40 rounded-full bg-blue-400/15 blur-3xl" />
+                  {/* Ambient glows — more saturated */}
+                  <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-amber-400/35 blur-[110px]" />
+                  <div className="pointer-events-none absolute -bottom-16 -left-16 h-56 w-56 rounded-full bg-blue-500/25 blur-[110px]" />
+                  <div className="pointer-events-none absolute left-1/2 top-1/2 h-32 w-32 -translate-x-1/2 -translate-y-1/2 rounded-full bg-rose-400/15 blur-3xl" />
+
                   <div className="relative">
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Category Confidence</p>
                         <h3 className="mt-1 text-lg font-semibold">Readiness across the five signals</h3>
                       </div>
-                      <span className="inline-flex items-center gap-1.5 rounded-full border border-white/35 bg-background/70 px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground">
-                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                        Target 8.5+
-                      </span>
+                      <div className="flex flex-col items-end gap-1">
+                        <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-700 dark:text-emerald-400">
+                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                          TARGET 8.5+
+                        </span>
+                        <span className="inline-flex items-center gap-1.5 rounded-full border border-rose-500/30 bg-rose-500/10 px-2.5 py-0.5 text-[10px] font-semibold text-rose-600 dark:text-rose-400">
+                          <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
+                          CRITICAL &lt; 5
+                        </span>
+                      </div>
                     </div>
-                    <ResponsiveContainer width="100%" height={320}>
-                      <RadarChart data={radarData} margin={{ top: 16, right: 28, bottom: 8, left: 28 }} outerRadius="78%">
-                        <defs>
-                          <radialGradient id="radar-fill" cx="50%" cy="50%" r="65%" fx="50%" fy="50%">
-                            <stop offset="0%" stopColor="hsl(var(--accent))" stopOpacity={0.08} />
-                            <stop offset="60%" stopColor="hsl(var(--accent))" stopOpacity={0.32} />
-                            <stop offset="100%" stopColor="hsl(var(--accent))" stopOpacity={0.55} />
-                          </radialGradient>
-                          <radialGradient id="radar-target" cx="50%" cy="50%" r="65%" fx="50%" fy="50%">
-                            <stop offset="0%" stopColor="#10b981" stopOpacity={0} />
-                            <stop offset="100%" stopColor="#10b981" stopOpacity={0.1} />
-                          </radialGradient>
-                        </defs>
-                        <PolarGrid stroke="hsl(var(--border))" strokeDasharray="3 4" strokeOpacity={0.6} />
-                        <PolarAngleAxis
-                          dataKey="category"
-                          tick={{ fontSize: 11, fontWeight: 600, fill: "hsl(var(--foreground))" }}
-                          tickLine={false}
-                        />
-                        <PolarRadiusAxis
-                          angle={90}
-                          domain={[0, 10]}
-                          tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }}
-                          tickCount={6}
-                          axisLine={false}
-                          stroke="hsl(var(--border))"
-                        />
-                        {/* Target threshold overlay at 8.5 */}
-                        <Radar
-                          name="Target"
-                          dataKey="target"
-                          stroke="#10b981"
-                          strokeWidth={1.25}
-                          strokeDasharray="4 4"
-                          fill="url(#radar-target)"
-                          isAnimationActive={false}
-                          dot={false}
-                        />
-                        <Radar
-                          name="Score"
-                          dataKey="score"
-                          stroke="hsl(var(--accent))"
-                          strokeWidth={2.25}
-                          fill="url(#radar-fill)"
-                          dot={{ r: 4, fill: "hsl(var(--accent))", stroke: "#fff", strokeWidth: 1.5 }}
-                          activeDot={{ r: 6, fill: "hsl(var(--accent))", stroke: "#fff", strokeWidth: 2 }}
-                          animationDuration={650}
-                        />
-                        <Tooltip
-                          cursor={{ stroke: "hsl(var(--accent))", strokeWidth: 1, strokeDasharray: "3 3" }}
-                          contentStyle={{
-                            borderRadius: 12,
-                            border: "1px solid hsl(var(--border))",
-                            background: "hsl(var(--background) / 0.95)",
-                            boxShadow: "0 10px 30px -10px rgba(15,23,42,0.25)",
-                            fontSize: 12,
-                          }}
-                          formatter={(value: any, name: any) => [`${value}/10`, name]}
-                        />
-                      </RadarChart>
-                    </ResponsiveContainer>
-                    <div className="mt-2 grid grid-cols-5 gap-2">
+
+                    <div className="relative mt-2">
+                      <ResponsiveContainer width="100%" height={340}>
+                        <RadarChart data={radarData} margin={{ top: 22, right: 40, bottom: 16, left: 40 }} outerRadius="74%">
+                          <defs>
+                            {/* Critical zone (0–5): rose wash */}
+                            <radialGradient id="radar-critical" cx="50%" cy="50%" r="50%">
+                              <stop offset="0%" stopColor="#f43f5e" stopOpacity={0.18} />
+                              <stop offset="100%" stopColor="#f43f5e" stopOpacity={0.0} />
+                            </radialGradient>
+                            {/* Target zone (≥8.5): emerald wash */}
+                            <radialGradient id="radar-target" cx="50%" cy="50%" r="50%">
+                              <stop offset="0%" stopColor="#10b981" stopOpacity={0} />
+                              <stop offset="100%" stopColor="#10b981" stopOpacity={0.14} />
+                            </radialGradient>
+                            {/* Main score fill: vibrant amber → orange gradient */}
+                            <linearGradient id="radar-fill" x1="0%" y1="0%" x2="100%" y2="100%">
+                              <stop offset="0%" stopColor="hsl(var(--accent))" stopOpacity={0.75} />
+                              <stop offset="100%" stopColor="#e35c23" stopOpacity={0.55} />
+                            </linearGradient>
+                            {/* Soft drop-shadow glow for the polygon */}
+                            <filter id="radar-glow" x="-30%" y="-30%" width="160%" height="160%">
+                              <feGaussianBlur stdDeviation="4" result="blur" />
+                              <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                            </filter>
+                            <filter id="radar-shadow" x="-30%" y="-30%" width="160%" height="160%">
+                              <feDropShadow dx="0" dy="6" stdDeviation="6" floodColor="#e35c23" floodOpacity="0.35" />
+                            </filter>
+                          </defs>
+
+                          <PolarGrid stroke="hsl(var(--border))" strokeDasharray="2 5" strokeOpacity={0.5} />
+                          <PolarAngleAxis
+                            dataKey="category"
+                            tick={{ fontSize: 12, fontWeight: 700, fill: "hsl(var(--foreground))", letterSpacing: "0.04em" }}
+                            tickLine={false}
+                          />
+                          <PolarRadiusAxis
+                            angle={90}
+                            domain={[0, 10]}
+                            tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }}
+                            tickCount={6}
+                            axisLine={false}
+                            stroke="hsl(var(--border))"
+                          />
+
+                          {/* Critical zone (score 5) — rose wash */}
+                          <Radar
+                            name="Critical"
+                            dataKey="critical"
+                            stroke="#f43f5e"
+                            strokeWidth={0.75}
+                            strokeDasharray="1 3"
+                            strokeOpacity={0.5}
+                            fill="url(#radar-critical)"
+                            isAnimationActive={false}
+                            dot={false}
+                          />
+
+                          {/* Target threshold (score 8.5) — emerald dashed ring */}
+                          <Radar
+                            name="Target"
+                            dataKey="target"
+                            stroke="#10b981"
+                            strokeWidth={1.5}
+                            strokeDasharray="5 4"
+                            fill="url(#radar-target)"
+                            isAnimationActive={false}
+                            dot={false}
+                          />
+
+                          {/* Actual score polygon with drop shadow */}
+                          <Radar
+                            name="Score"
+                            dataKey="score"
+                            stroke="hsl(var(--accent))"
+                            strokeWidth={2.75}
+                            fill="url(#radar-fill)"
+                            style={{ filter: "url(#radar-shadow)" } as any}
+                            dot={{ r: 5, fill: "hsl(var(--accent))", stroke: "#fff", strokeWidth: 2 }}
+                            activeDot={{ r: 7, fill: "hsl(var(--accent))", stroke: "#fff", strokeWidth: 2.5 }}
+                            animationBegin={150}
+                            animationDuration={900}
+                          />
+
+                          <Tooltip
+                            cursor={{ stroke: "hsl(var(--accent))", strokeWidth: 1, strokeDasharray: "3 3" }}
+                            contentStyle={{
+                              borderRadius: 14,
+                              border: "1px solid hsl(var(--border))",
+                              background: "hsl(var(--background) / 0.96)",
+                              boxShadow: "0 16px 40px -12px rgba(15,23,42,0.3)",
+                              fontSize: 12,
+                              padding: "8px 12px",
+                            }}
+                            formatter={(value: any, name: any) => {
+                              if (name === "Critical" || name === "Target") return null as any;
+                              return [`${value}/10`, name];
+                            }}
+                          />
+                        </RadarChart>
+                      </ResponsiveContainer>
+
+                      {/* Center overall-score callout — Apple Watch-style */}
+                      <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                        <div className="flex flex-col items-center">
+                          <span className={`text-[44px] font-bold leading-none tabular-nums ${scoreColor} drop-shadow-sm`}>{overallScore}</span>
+                          <span className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">of 100</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Rich category cards with icons */}
+                    <div className="mt-4 grid grid-cols-5 gap-2">
                       {radarData.map(d => {
+                        const Icon = CATEGORY_ICONS[d.category] || ShieldCheck;
                         const tone = d.score <= 3
-                          ? { dot: "bg-red-500", text: "text-red-600", ring: "ring-red-500/20" }
+                          ? { dotBg: "bg-rose-500", iconBg: "bg-rose-500/15", iconText: "text-rose-600 dark:text-rose-400", text: "text-rose-600 dark:text-rose-400", ring: "ring-rose-500/30", bar: "from-rose-500 to-rose-400" }
                           : d.score <= 6
-                          ? { dot: "bg-amber-500", text: "text-amber-600", ring: "ring-amber-500/20" }
-                          : { dot: "bg-emerald-500", text: "text-emerald-600", ring: "ring-emerald-500/20" };
+                          ? { dotBg: "bg-amber-500", iconBg: "bg-amber-500/15", iconText: "text-amber-600 dark:text-amber-400", text: "text-amber-600 dark:text-amber-400", ring: "ring-amber-500/30", bar: "from-amber-500 to-orange-400" }
+                          : { dotBg: "bg-emerald-500", iconBg: "bg-emerald-500/15", iconText: "text-emerald-600 dark:text-emerald-400", text: "text-emerald-600 dark:text-emerald-400", ring: "ring-emerald-500/30", bar: "from-emerald-500 to-teal-400" };
+                        const pct = Math.max(0, Math.min(100, (d.score / 10) * 100));
                         return (
                           <div
                             key={d.category}
-                            className={`rounded-2xl border border-white/40 bg-background/70 px-2.5 py-2 text-center ring-1 ${tone.ring}`}
+                            className={`group relative overflow-hidden rounded-2xl border border-white/40 bg-background/75 px-2.5 py-2.5 text-center ring-1 ${tone.ring} transition-transform hover:-translate-y-0.5 hover:shadow-md`}
                           >
-                            <div className="flex items-center justify-center gap-1.5 text-[10px] font-medium text-muted-foreground">
-                              <span className={`h-1.5 w-1.5 rounded-full ${tone.dot}`} />
-                              {d.category}
+                            <div className={`mx-auto flex h-7 w-7 items-center justify-center rounded-xl ${tone.iconBg} ${tone.iconText}`}>
+                              <Icon className="h-3.5 w-3.5" strokeWidth={2.25} />
                             </div>
-                            <p className={`mt-1 text-base font-semibold tabular-nums ${tone.text}`}>
-                              {d.score.toFixed(1)}<span className="text-xs text-muted-foreground font-normal">/10</span>
+                            <p className="mt-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{d.category}</p>
+                            <p className={`mt-1 text-lg font-bold leading-none tabular-nums ${tone.text}`}>
+                              {d.score.toFixed(1)}<span className="text-[10px] text-muted-foreground font-normal">/10</span>
                             </p>
+                            <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-muted/60">
+                              <div className={`h-full rounded-full bg-gradient-to-r ${tone.bar} transition-[width] duration-700`} style={{ width: `${pct}%` }} />
+                            </div>
                           </div>
                         );
                       })}
